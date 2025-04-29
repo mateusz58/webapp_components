@@ -1,69 +1,178 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Component Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
-</head>
-<body>
-    <div class="container mt-5">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h1 class="h3 mb-0">Component Management System</h1>
-            </div>
-            <div class="card-body">
-                <p class="lead">System is running on port 6002</p>
-                <p>Configured to use database: <code>promo_database</code> at <code>192.168.100.35:5432</code></p>
-                <p>Using schema: <code>component_app</code></p>
-                
-                <div class="mt-4">
-                    <button id="testBtn" class="btn btn-primary">Test Database Connection</button>
+{% extends "base.html" %}
+
+{% block title %}Components List{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Components List</h1>
+
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Components</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('main.index') }}">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" value="{{ search }}">
+                        <small class="text-muted">Search by product number or description</small>
+                    </div>
                 </div>
-                
-                <div class="mt-4" id="resultArea" style="display: none;">
-                    <div class="card">
-                        <div class="card-header" id="resultHeader">Connection Test Results</div>
-                        <div class="card-body">
-                            <pre id="resultContent" class="bg-light p-3"></pre>
-                        </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if request.args.get('category_id')|int == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="supplier_id" class="form-label">Supplier</label>
+                        <select class="form-select" id="supplier_id" name="supplier_id">
+                            <option value="">All Suppliers</option>
+                            {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}" {% if request.args.get('supplier_id')|int == supplier.id %}selected{% endif %}>
+                                    {{ supplier.supplier_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="color_id" class="form-label">Color</label>
+                        <select class="form-select" id="color_id" name="color_id">
+                            <option value="">All Colors</option>
+                            {% for color in colors %}
+                                <option value="{{ color.id }}" {% if request.args.get('color_id')|int == color.id %}selected{% endif %}>
+                                    {{ color.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-3">
+                        <label for="material_id" class="form-label">Material</label>
+                        <select class="form-select" id="material_id" name="material_id">
+                            <option value="">All Materials</option>
+                            {% for material in materials %}
+                                <option value="{{ material.id }}" {% if request.args.get('material_id')|int == material.id %}selected{% endif %}>
+                                    {{ material.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
             </div>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary ms-2">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Components Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Components</h5>
+        <div>
+            <a href="{{ url_for('main.new_component') }}" class="btn btn-success">Add Component</a>
+            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-primary">Bulk Upload</a>
         </div>
     </div>
-    
-    <script>
-        document.getElementById('testBtn').addEventListener('click', function() {
-            fetch('/test-connection')
-                .then(response => response.json())
-                .then(data => {
-                    const resultArea = document.getElementById('resultArea');
-                    const resultHeader = document.getElementById('resultHeader');
-                    const resultContent = document.getElementById('resultContent');
-                    
-                    resultArea.style.display = 'block';
-                    
-                    if (data.success) {
-                        resultHeader.className = 'card-header bg-success text-white';
-                        resultHeader.textContent = 'Connection Successful';
-                    } else {
-                        resultHeader.className = 'card-header bg-danger text-white';
-                        resultHeader.textContent = 'Connection Failed';
-                    }
-                    
-                    resultContent.textContent = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    const resultArea = document.getElementById('resultArea');
-                    const resultHeader = document.getElementById('resultHeader');
-                    const resultContent = document.getElementById('resultContent');
-                    
-                    resultArea.style.display = 'block';
-                    resultHeader.className = 'card-header bg-danger text-white';
-                    resultHeader.textContent = 'Connection Failed';
-                    resultContent.textContent = 'Error: ' + error.message;
-                });
-        });
-    </script>
-</body>
-</html>
+    <div class="card-body">
+        {% if components.items %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product #</th>
+                            <th>Description</th>
+                            <th>Supplier</th>
+                            <th>Category</th>
+                            <th>Color</th>
+                            <th>Material</th>
+                            <th>Pictures</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for component in components.items %}
+                            <tr>
+                                <td>{{ component.product_number }}</td>
+                                <td>{{ component.description|truncate(50) }}</td>
+                                <td>{{ component.supplier.supplier_code }}</td>
+                                <td>{{ component.category.name }}</td>
+                                <td>{{ component.color.name }}</td>
+                                <td>{{ component.material.name }}</td>
+                                <td>{{ component.pictures|length }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-sm btn-info">View</a>
+                                    <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ component.id }}">Delete</button>
+                                    
+                                    <!-- Delete Modal -->
+                                    <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ component.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel{{ component.id }}">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% for page_num in components.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == components.page %}
+                                <li class="page-item active">
+                                    <a class="page-link" href="#">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.index', page=page_num, search=search, category_id=request.args.get('category_id'), supplier_id=request.args.get('supplier_id'), color_id=request.args.get('color_id'), material_id=request.args.get('material_id')) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
+        {% else %}
+            <div class="alert alert-info">No components found.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
