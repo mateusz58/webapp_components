@@ -16,12 +16,19 @@ def create_app(config_class=Config):
     # Initialize extensions with the app
     db.init_app(app)
     
-    # Set up migrations with explicit schema for alembic version table
-    migrate.init_app(app, db, compare_type=True, render_as_batch=True, 
-                   version_table_schema='component_app')
+    # Set up migrations without auto migration
+    migrate.init_app(
+        app, 
+        db, 
+        compare_type=True,
+        render_as_batch=True,
+        version_table_schema='component_app'
+    )
 
     # Create upload directory if it doesn't exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    uploads_dir = app.config.get('UPLOAD_FOLDER')
+    if uploads_dir:
+        os.makedirs(uploads_dir, exist_ok=True)
     
     # Register blueprints
     from app.routes import main

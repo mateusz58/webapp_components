@@ -8,8 +8,11 @@ while ! nc -z 192.168.100.35 5432; do
 done
 echo "PostgreSQL is accessible"
 
-# Skip migrations for now to get the app running
+# Set Flask configuration
 export FLASK_APP=run.py
+
+# Do not run migrations automatically to avoid permission issues
+# Instead, we'll need to run them manually as a superuser
 
 # Start the application
 echo "Starting Flask application..."

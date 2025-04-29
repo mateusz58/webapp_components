@@ -10,9 +10,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies with specific versions
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir numpy==1.20.3
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
@@ -22,11 +21,11 @@ COPY . .
 COPY docker/app/init.sh /init.sh
 RUN chmod +x /init.sh
 
-# Expose port
+# Expose port 6002 instead of 5000
 EXPOSE 6002
 
 # Use the initialization script as entrypoint
 ENTRYPOINT ["/init.sh"]
 
 # Command to run the application
-CMD ["flask", "run", "--host=0.0.0.0"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=6002"]

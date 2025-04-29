@@ -5,17 +5,11 @@ services:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
+    container_name: component_app
     ports:
-      - "6002:5000"
-    volumes:
-      - .:/app
+      - "6002:6002"
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+      - PORT=6002
