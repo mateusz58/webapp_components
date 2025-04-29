@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}CSV Template Guide{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>CSV Template Guide</h1>
+    <div>
+        <a href="{{ url_for('main.upload_csv') }}" class="btn btn-primary">Back to Upload</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">CSV Format</h5>
+    </div>
+    <div class="card-body">
+        <p>Your CSV file should use semicolons (;) as separators and include the following headers:</p>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Column</th>
+                        <th>Description</th>
+                        <th>Required</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>product_number</code></td>
+                        <td>Unique identifier for the component</td>
+                        <td>Yes</td>
+                        <td>ABC123</td>
+                    </tr>
+                    <tr>
+                        <td><code>description</code></td>
+                        <td>Detailed description of the component</td>
+                        <td>Yes</td>
+                        <td>High quality resistor</td>
+                    </tr>
+                    <tr>
+                        <td><code>supplier_code</code></td>
+                        <td>Code of the supplier (will be created if doesn't exist)</td>
+                        <td>Yes</td>
+                        <td>SUPP001</td>
+                    </tr>
+                    <tr>
+                        <td><code>category_name</code></td>
+                        <td>Name of the category (will be created if doesn't exist)</td>
+                        <td>Yes</td>
+                        <td>Electronics</td>
+                    </tr>
+                    <tr>
+                        <td><code>color_name</code></td>
+                        <td>Name of the color (will be created if doesn't exist)</td>
+                        <td>Yes</td>
+                        <td>Black</td>
+                    </tr>
+                    <tr>
+                        <td><code>material_name</code></td>
+                        <td>Name of the material (will be created if doesn't exist)</td>
+                        <td>Yes</td>
+                        <td>Silicon</td>
+                    </tr>
+                    <tr>
+                        <td><code>picture_1_name</code></td>
+                        <td>Name of the first picture</td>
+                        <td>No</td>
+                        <td>front_view.jpg</td>
+                    </tr>
+                    <tr>
+                        <td><code>picture_1_url</code></td>
+                        <td>URL of the first picture</td>
+                        <td>No</td>
+                        <td>http://example.com/images/front_view.jpg</td>
+                    </tr>
+                    <tr>
+                        <td><code>picture_1_order</code></td>
+                        <td>Display order of the first picture</td>
+                        <td>No</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">Additional picture columns follow the same pattern (picture_2_*, picture_3_*, etc.)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Example CSV</h5>
+    </div>
+    <div class="card-body">
+        <p>Here's an example of how your CSV file should look:</p>
+        
+        <pre class="bg-light p-3 border rounded"><code>product_number;description;supplier_code;category_name;color_name;material_name;picture_1_name;picture_1_url;picture_1_order;picture_2_name;picture_2_url;picture_2_order;picture_3_name;picture_3_url;picture_3_order;picture_4_name;picture_4_url;picture_4_order;picture_5_name;picture_5_url;picture_5_order
+ABC123;High quality resistor;SUPP001;Electronics;Black;Silicon;front_view.jpg;http://example.com/images/front_view.jpg;1;side_view.jpg;http://example.com/images/side_view.jpg;2;diagram.jpg;http://example.com/images/diagram.jpg;3;;;;;;;
+XYZ456;Capacitor 1000uF;SUPP002;Electronic Parts;Blue;Ceramic;main.jpg;http://example.com/images/main.jpg;1;;;;;;;;;;;;;
+</code></pre>
+
+        <div class="alert alert-info mt-3">
+            <strong>Note:</strong> You can have up to 5 pictures per component. Leave picture fields empty if not needed.
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Processing Rules</h5>
+    </div>
+    <div class="card-body">
+        <ul>
+            <li>If a component with the same <code>product_number</code> already exists in the database, it will be updated.</li>
+            <li>If a supplier, category, color, or material doesn't exist, it will be created automatically.</li>
+            <li>For existing components, all pictures will be replaced with the ones specified in the CSV.</li>
+            <li>Empty picture fields will be ignored.</li>
+            <li>The system will validate the required fields and report any errors.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# Flask stuff
+instance/
+.webassets-cache
+flask_session/
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+*.sql
+
+# Migrations
+# migrations/ 
+# Uncomment if you don't want to track migrations
+
+# Uploads
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Environment variables
+.env
+.flaskenv
+*.env

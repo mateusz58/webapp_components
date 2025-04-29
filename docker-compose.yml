@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - "6002:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

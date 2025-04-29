@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Component{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Edit Component</h1>
+    <div>
+        <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Component Information</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <!-- Basic Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="product_number" class="form-label">Product Number *</label>
+                        <input type="text" class="form-control" id="product_number" name="product_number" value="{{ component.product_number }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="supplier_id" class="form-label">Supplier *</label>
+                        <select class="form-select" id="supplier_id" name="supplier_id" required>
+                            <option value="">Select Supplier</option>
+                            {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}" {% if supplier.id == component.supplier_id %}selected{% endif %}>
+                                    {{ supplier.supplier_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category *</label>
+                        <select class="form-select" id="category_id" name="category_id" required>
+                            <option value="">Select Category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category.id == component.category_id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="color_id" class="form-label">Color *</label>
+                        <select class="form-select" id="color_id" name="color_id" required>
+                            <option value="">Select Color</option>
+                            {% for color in colors %}
+                                <option value="{{ color.id }}" {% if color.id == component.color_id %}selected{% endif %}>
+                                    {{ color.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="material_id" class="form-label">Material *</label>
+                        <select class="form-select" id="material_id" name="material_id" required>
+                            <option value="">Select Material</option>
+                            {% for material in materials %}
+                                <option value="{{ material.id }}" {% if material.id == component.material_id %}selected{% endif %}>
+                                    {{ material.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ component.description }}</textarea>
+            </div>
+            
+            <hr>
+            
+            <!-- Pictures -->
+            <h5 class="mb-3">Pictures (up to 5)</h5>
+            
+            {% set sorted_pictures = component.pictures|sort(attribute='picture_order') %}
+            {% for i in range(1, 6) %}
+                <div class="card mb-3 picture-card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Picture {{ i }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                {% if i <= sorted_pictures|length %}
+                                    <img src="{{ sorted_pictures[i-1].url }}" class="img-thumbnail mb-2" alt="{{ sorted_pictures[i-1].picture_name }}">
+                                    <input type="hidden" name="existing_picture_{{ i }}_name" value="{{ sorted_pictures[i-1].picture_name }}">
+                                    <input type="hidden" name="existing_picture_{{ i }}_url" value="{{ sorted_pictures[i-1].url }}">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <div class="mb-3">
+                                    <label for="picture_{{ i }}" class="form-label">{% if i <= sorted_pictures|length %}Replace{% else %}Add{% endif %} Image</label>
+                                    <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*">
+                                    <small class="text-muted">Leave empty to {% if i <= sorted_pictures|length %}keep current image{% else %}skip{% endif %}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="picture_{{ i }}_order" class="form-label">Display Order</label>
+                                    <input type="number" class="form-control" id="picture_{{ i }}_order" name="picture_{{ i }}_order" 
+                                           value="{% if i <= sorted_pictures|length %}{{ sorted_pictures[i-1].picture_order }}{% else %}{{ i }}{% endif %}" min="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Update Component</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add some basic validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            const productNumber = document.getElementById('product_number').value;
+            if (!productNumber) {
+                alert('Product Number is required');
+                event.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %}

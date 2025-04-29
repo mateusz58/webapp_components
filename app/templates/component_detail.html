@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Component: {{ component.product_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Component Details</h1>
+    <div>
+        <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-warning">Edit</a>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</button>
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+<!-- Component Info Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Basic Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table">
+                    <tr>
+                        <th style="width: 30%">Product Number:</th>
+                        <td>{{ component.product_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>Supplier:</th>
+                        <td>{{ component.supplier.supplier_code }}</td>
+                    </tr>
+                    <tr>
+                        <th>Category:</th>
+                        <td>{{ component.category.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Color:</th>
+                        <td>{{ component.color.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Material:</th>
+                        <td>{{ component.material.name }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h5>Description:</h5>
+                <p>{{ component.description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pictures Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Pictures</h5>
+    </div>
+    <div class="card-body">
+        {% if component.pictures %}
+            <div class="row">
+                {% for picture in component.pictures|sort(attribute='picture_order') %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <img src="{{ picture.url }}" class="card-img-top" alt="{{ picture.picture_name }}">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ picture.picture_name }}</h6>
+                                <p class="card-text">Order: {{ picture.picture_order }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">No pictures available for this component.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
