@@ -323,31 +323,49 @@ def download_csv_template():
     # For simplicity, we'll just render a page with the template structure
     return render_template('csv_template.html')
 
+
 @main.route('/suppliers')
 def suppliers():
     """List all suppliers."""
     suppliers = Supplier.query.all()
     return render_template('suppliers.html', suppliers=suppliers)
 
+
 @main.route('/supplier/new', methods=['GET', 'POST'])
 def new_supplier():
     """Create a new supplier."""
     if request.method == 'POST':
-        supplier_code = request.form.get('supplier_code')
-        address = request.form.get('address')
+        supplier_code = request.form.get('supplier_code', '').strip()
+        address = request.form.get('address', '').strip()
+        
+        # Validate input
+        errors = []
+        if not supplier_code:
+            errors.append('Supplier code is required.')
         
         # Check if supplier_code already exists
         existing = Supplier.query.filter_by(supplier_code=supplier_code).first()
         if existing:
-            flash('Supplier code already exists.', 'danger')
-            return render_template('supplier_form.html')
+            errors.append(f'Supplier code "{supplier_code}" already exists.')
         
-        supplier = Supplier(supplier_code=supplier_code, address=address)
-        db.session.add(supplier)
-        db.session.commit()
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+            return render_template('supplier_form.html', 
+                                   supplier_code=supplier_code, 
+                                   address=address)
         
-        flash('Supplier created successfully!', 'success')
-        return redirect(url_for('main.suppliers'))
+        try:
+            # Create new supplier
+            supplier = Supplier(supplier_code=supplier_code, address=address)
+            db.session.add(supplier)
+            db.session.commit()
+            
+            flash('Supplier created successfully!', 'success')
+            return redirect(url_for('main.suppliers'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating supplier: {str(e)}', 'danger')
     
     return render_template('supplier_form.html')
 
