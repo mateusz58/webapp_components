@@ -1,39 +1,467 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Database Connection Error</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
-</head>
-<body>
-    <div class="container mt-5">
-        <div class="card">
-            <div class="card-header bg-danger text-white">
-                <h1 class="h3 mb-0">Database Connection Error</h1>
+<!-- 404 Error Page Template -->
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .error-content {
+        text-align: center;
+        max-width: 600px;
+        padding: 2rem;
+    }
+
+    .error-code {
+        font-size: 8rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+        margin-bottom: 1rem;
+        animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-30px);
+        }
+        60% {
+            transform: translateY(-15px);
+        }
+    }
+
+    .error-illustration {
+        width: 200px;
+        height: 200px;
+        margin: 2rem auto;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .error-illustration::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 30%, rgba(102, 126, 234, 0.1), transparent 70%);
+    }
+
+    .error-icon {
+        width: 80px;
+        height: 80px;
+        color: var(--color-secondary);
+        z-index: 2;
+    }
+
+    .error-actions {
+        margin-top: 3rem;
+    }
+
+    .search-suggestions {
+        background: #f8fafc;
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        margin-top: 3rem;
+        text-align: left;
+    }
+
+    .suggestion-list {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0;
+    }
+
+    .suggestion-list li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+    }
+
+    .suggestion-list li:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 1rem;
+        color: var(--color-primary);
+    }
+
+    .breadcrumb-nav {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    @media (max-width: 768px) {
+        .error-code {
+            font-size: 4rem;
+        }
+        
+        .error-illustration {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .error-icon {
+            width: 60px;
+            height: 60px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container fade-in">
+    <div class="error-content">
+        <!-- Error Code -->
+        <div class="error-code">404</div>
+        
+        <!-- Error Illustration -->
+        <div class="error-illustration">
+            <i data-lucide="search-x" class="error-icon"></i>
+        </div>
+        
+        <!-- Error Message -->
+        <h1 class="h3 mb-3 text-dark">Page Not Found</h1>
+        <p class="text-muted mb-4">
+            Sorry, we couldn't find the page you're looking for. 
+            It might have been moved, deleted, or you entered the wrong URL.
+        </p>
+        
+        <!-- Error Actions -->
+        <div class="error-actions">
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary-modern btn-modern">
+                    <i data-lucide="home" class="me-2" style="width: 16px; height: 16px;"></i>
+                    Go Home
+                </a>
+                <button class="btn btn-outline-primary" onclick="history.back()">
+                    <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                    Go Back
+                </button>
+                <a href="{{ url_for('main.new_component') }}" class="btn btn-success-modern btn-modern">
+                    <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                    Add Component
+                </a>
             </div>
-            <div class="card-body">
-                <p class="lead">The application couldn't connect to the database.</p>
-                <p>Please check your database configuration and ensure the database server is running.</p>
-                <div class="alert alert-danger">
-                    <strong>Error:</strong> {{ error }}
+        </div>
+        
+        <!-- Search Suggestions -->
+        <div class="search-suggestions">
+            <h5 class="fw-bold mb-3">
+                <i data-lucide="lightbulb" class="me-2" style="width: 20px; height: 20px;"></i>
+                Maybe you're looking for:
+            </h5>
+            <ul class="suggestion-list">
+                <li>
+                    <i data-lucide="grid-3x3" class="suggestion-icon"></i>
+                    <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+                        Browse all components
+                    </a>
+                </li>
+                <li>
+                    <i data-lucide="truck" class="suggestion-icon"></i>
+                    <a href="{{ url_for('main.suppliers') }}" class="text-decoration-none">
+                        Manage suppliers
+                    </a>
+                </li>
+                <li>
+                    <i data-lucide="upload" class="suggestion-icon"></i>
+                    <a href="{{ url_for('main.upload_csv') }}" class="text-decoration-none">
+                        Bulk upload components
+                    </a>
+                </li>
+                <li>
+                    <i data-lucide="plus-circle" class="suggestion-icon"></i>
+                    <a href="{{ url_for('main.new_component') }}" class="text-decoration-none">
+                        Create new component
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Quick Search -->
+        <div class="mt-4">
+            <div class="position-relative" style="max-width: 400px; margin: 0 auto;">
+                <input type="text" 
+                       class="form-control form-control-modern" 
+                       placeholder="Search components..." 
+                       id="quickSearch">
+                <button class="btn btn-primary position-absolute top-50 end-0 translate-middle-y me-2" 
+                        onclick="performQuickSearch()">
+                    <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Error Page Template -->
+<template id="connectionErrorTemplate">
+    <div class="error-container fade-in">
+        <div class="error-content">
+            <!-- Error Code -->
+            <div class="error-code">500</div>
+            
+            <!-- Error Illustration -->
+            <div class="error-illustration">
+                <i data-lucide="wifi-off" class="error-icon"></i>
+            </div>
+            
+            <!-- Error Message -->
+            <h1 class="h3 mb-3 text-dark">Connection Error</h1>
+            <p class="text-muted mb-4">
+                We're having trouble connecting to our servers. This could be a temporary issue.
+            </p>
+            
+            <!-- Technical Details (collapsible) -->
+            <div class="mt-4">
+                <button class="btn btn-link text-muted" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#technicalDetails">
+                    <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
+                    Show Technical Details
+                </button>
+                <div class="collapse mt-3" id="technicalDetails">
+                    <div class="alert alert-modern alert-warning text-start">
+                        <h6 class="fw-bold">Database Connection Details:</h6>
+                        <ul class="mb-0">
+                            <li>Host: 192.168.100.35</li>
+                            <li>Port: 5432</li>
+                            <li>Database: promo_database</li>
+                            <li>Schema: component_app</li>
+                        </ul>
+                    </div>
                 </div>
-                
-                <div class="mt-4">
-                    <p><strong>Connection Details:</strong></p>
-                    <ul>
-                        <li>Host: 192.168.100.35</li>
-                        <li>Port: 5432</li>
-                        <li>Database: promo_database</li>
-                        <li>Schema: component_app</li>
-                    </ul>
+            </div>
+            
+            <!-- Error Actions -->
+            <div class="error-actions">
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <button class="btn btn-primary-modern btn-modern" onclick="location.reload()">
+                        <i data-lucide="refresh-cw" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Try Again
+                    </button>
+                    <a href="/test-connection" class="btn btn-outline-primary">
+                        <i data-lucide="activity" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Test Connection
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="history.back()">
+                        <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Go Back
+                    </button>
                 </div>
-                
-                <div class="mt-4">
-                    <a href="/test-connection" class="btn btn-primary">Test Connection</a>
-                    <a href="/" class="btn btn-secondary ms-2">Retry</a>
+            </div>
+            
+            <!-- Troubleshooting Tips -->
+            <div class="search-suggestions">
+                <h5 class="fw-bold mb-3">
+                    <i data-lucide="tool" class="me-2" style="width: 20px; height: 20px;"></i>
+                    Troubleshooting Tips:
+                </h5>
+                <ul class="suggestion-list">
+                    <li>
+                        <i data-lucide="wifi" class="suggestion-icon"></i>
+                        <span>Check your internet connection</span>
+                    </li>
+                    <li>
+                        <i data-lucide="server" class="suggestion-icon"></i>
+                        <span>Verify database server is running</span>
+                    </li>
+                    <li>
+                        <i data-lucide="settings" class="suggestion-icon"></i>
+                        <span>Check database configuration settings</span>
+                    </li>
+                    <li>
+                        <i data-lucide="refresh-cw" class="suggestion-icon"></i>
+                        <span>Try refreshing the page in a few moments</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Access Denied Error Page Template -->
+<template id="accessDeniedTemplate">
+    <div class="error-container fade-in">
+        <div class="error-content">
+            <!-- Error Code -->
+            <div class="error-code">403</div>
+            
+            <!-- Error Illustration -->
+            <div class="error-illustration">
+                <i data-lucide="lock" class="error-icon"></i>
+            </div>
+            
+            <!-- Error Message -->
+            <h1 class="h3 mb-3 text-dark">Access Denied</h1>
+            <p class="text-muted mb-4">
+                You don't have permission to access this resource. 
+                Please contact your administrator if you believe this is an error.
+            </p>
+            
+            <!-- Error Actions -->
+            <div class="error-actions">
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary-modern btn-modern">
+                        <i data-lucide="home" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Go Home
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="history.back()">
+                        <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Go Back
+                    </button>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i data-lucide="mail" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Contact Support
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</template>
+
+<!-- Maintenance Mode Template -->
+<template id="maintenanceTemplate">
+    <div class="error-container fade-in">
+        <div class="error-content">
+            <!-- Maintenance Illustration -->
+            <div class="error-illustration">
+                <i data-lucide="wrench" class="error-icon"></i>
+            </div>
+            
+            <!-- Maintenance Message -->
+            <h1 class="h3 mb-3 text-dark">Under Maintenance</h1>
+            <p class="text-muted mb-4">
+                We're currently performing scheduled maintenance to improve your experience. 
+                We'll be back shortly!
+            </p>
+            
+            <!-- Estimated Time -->
+            <div class="alert alert-modern alert-info">
+                <div class="d-flex align-items-center">
+                    <i data-lucide="clock" class="me-2" style="width: 20px; height: 20px;"></i>
+                    <div>
+                        <strong>Estimated completion time:</strong>
+                        <span id="maintenanceCountdown">2 hours</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- What's Being Updated -->
+            <div class="search-suggestions">
+                <h5 class="fw-bold mb-3">
+                    <i data-lucide="zap" class="me-2" style="width: 20px; height: 20px;"></i>
+                    What we're improving:
+                </h5>
+                <ul class="suggestion-list">
+                    <li>
+                        <i data-lucide="database" class="suggestion-icon"></i>
+                        <span>Database performance optimizations</span>
+                    </li>
+                    <li>
+                        <i data-lucide="shield" class="suggestion-icon"></i>
+                        <span>Security updates and patches</span>
+                    </li>
+                    <li>
+                        <i data-lucide="zap" class="suggestion-icon"></i>
+                        <span>New features and improvements</span>
+                    </li>
+                    <li>
+                        <i data-lucide="bug" class="suggestion-icon"></i>
+                        <span>Bug fixes and stability improvements</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Contact Info -->
+            <div class="mt-4">
+                <p class="text-muted">
+                    <i data-lucide="mail" class="me-2" style="width: 16px; height: 16px;"></i>
+                    For urgent matters, contact: 
+                    <a href="mailto:support@componenthub.com">support@componenthub.com</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function performQuickSearch() {
+    const query = document.getElementById('quickSearch').value.trim();
+    if (query) {
+        window.location.href = `{{ url_for('main.index') }}?search=${encodeURIComponent(query)}`;
+    }
+}
+
+// Allow Enter key to trigger search
+document.getElementById('quickSearch')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performQuickSearch();
+    }
+});
+
+// Auto-focus search input
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('quickSearch');
+    if (searchInput) {
+        searchInput.focus();
+    }
+});
+
+// Maintenance countdown (if in maintenance mode)
+function startMaintenanceCountdown() {
+    const countdownElement = document.getElementById('maintenanceCountdown');
+    if (!countdownElement) return;
+    
+    // Set target time (2 hours from now)
+    const targetTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    
+    function updateCountdown() {
+        const now = new Date();
+        const timeDiff = targetTime - now;
+        
+        if (timeDiff <= 0) {
+            countdownElement.textContent = 'Completing maintenance...';
+            return;
+        }
+        
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        countdownElement.textContent = `${hours}h ${minutes}m`;
+    }
+    
+    updateCountdown();
+    setInterval(updateCountdown, 60000); // Update every minute
+}
+
+// Initialize maintenance countdown if needed
+startMaintenanceCountdown();
+</script>
+{% endblock %}

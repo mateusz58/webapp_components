@@ -1,68 +1,7 @@
-# NEW: Status management methods (ONLY for master components)
-    def update_proto_status(self, status, comment=None):
-        """Update proto status (only for master components)"""
-        if not self.is_master_component:
-            raise ValueError("Status can only be updated on master components")
-        
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.proto_status = status
-        self.proto_comment = comment
-        self.proto_date = datetime.utcnow()
-    
-    def update_sms_status(self, status, comment=None):
-        """Update SMS status (only for master components)"""
-        if not self.is_master_component:
-            raise ValueError("Status can only be updated on master components")
-        
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.sms_status = status
-        self.sms_comment = comment
-        self.sms_date = datetime.utcnow()
-    
-    def update_pps_status(self, status, comment=None):
-        """Update PPS status (only for master components)"""
-        if not self.is_master_component:
-            raise ValueError("Status can only be updated on master components")
-        
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.pps_status = status
-        self.pps_comment = comment
-        self.pps_date = datetime.utcnow()
-    
-    def get_status_for_display(self):
-        """Get status (from master if this is a variant)"""
-        if self.is_master_component:
-            return {
-                'proto': {'status': self.proto_status, 'comment': self.proto_comment, 'date': self.proto_date},
-                'sms': {'status': self.sms_status, 'comment': self.sms_comment, 'date': self.sms_date},
-                'pps': {'status': self.pps_status, 'comment': self.pps_comment, 'date': self.pps_date}
-            }
-        else:
-            # Get status from master component
-            master = self.master_component
-            if master:
-                return {
-                    'proto': {'status': master.proto_status, 'comment': master.proto_comment, 'date': master.proto_date},
-                    'sms': {'status': master.sms_status, 'comment': master.sms_comment, 'date': master.sms_date},
-                    'pps': {'status': master.pps_status, 'comment': master.pps_comment, 'date': master.pps_date}
-                }
-        return {'proto': {'status': 'pending'}, 'sms': {'status': 'pending'}, 'pps': {'status': 'pending'}}
-    
-    def get_overall_status(self):
-        """Get overall approval status (from master component)"""
-        status_info = self.get_status_for_display()
-        
-        if status_info['pps']['status'] == 'ok':
-            return 'approved'
-        elif (status_info['pps']['status'] == 'not_from app import db
+from app import db
 from datetime import datetime
 import json
+from sqlalchemy.orm.attributes import flag_modified
 
 # Define a base class with the schema setting
 class Base(db.Model):
@@ -82,8 +21,10 @@ class ComponentType(Base):
         return f'<ComponentType {self.name}>'
 
 class Supplier(Base):
+    __tablename__ = 'supplier'
+    
     id = db.Column(db.Integer, primary_key=True)
-    supplier_code = db.Column(db.String(50), unique=True, nullable=False)
+    supplier_code = db.Column(db.String(50), unique=True, nullable=False, default='NO CODE')
     address = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -95,6 +36,8 @@ class Supplier(Base):
         return f'<Supplier {self.supplier_code}>'
 
 class Category(Base):
+    __tablename__ = 'category'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     
@@ -105,13 +48,20 @@ class Category(Base):
         return f'<Category {self.name}>'
 
 class Color(Base):
+    __tablename__ = 'color'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
+    
+    # Relationship to component variants
+    component_variants = db.relationship('ComponentVariant', backref='color', lazy=True)
 
     def __repr__(self):
         return f'<Color {self.name}>'
 
 class Material(Base):
+    __tablename__ = 'material'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
 
@@ -119,6 +69,8 @@ class Material(Base):
         return f'<Material {self.name}>'
 
 class Keyword(Base):
+    __tablename__ = 'keyword'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
 
@@ -172,11 +124,11 @@ class Component(Base):
                               backref=db.backref('components', lazy=True))
     
     # Pictures that belong to the main component (not variant-specific)
-    component_pictures = db.relationship('Picture', 
-                                       foreign_keys='Picture.component_id',
-                                       backref='parent_component', 
-                                       lazy=True, 
-                                       cascade='all, delete-orphan')
+    pictures = db.relationship('Picture', 
+                              foreign_keys='Picture.component_id',
+                              backref='parent_component', 
+                              lazy=True, 
+                              cascade='all, delete-orphan')
 
     __table_args__ = (
         db.UniqueConstraint('product_number', 'supplier_id', name='_product_supplier_uc'),
@@ -186,17 +138,18 @@ class Component(Base):
     def __repr__(self):
         return f'<Component {self.product_number}>'
     
-    # Helper methods for properties (existing)
+    # Helper methods for properties
     def get_property(self, key, default=None):
-        """Get a property value from the JSONB properties field"""
-        if key in self.properties:
+        """Get a property value from the JSON properties field"""
+        if self.properties and key in self.properties:
             prop = self.properties[key]
             if isinstance(prop, dict) and 'value' in prop:
                 return prop['value']
+            return prop
         return default
     
     def set_property(self, key, value, prop_type='text'):
-        """Set a property in the JSONB properties field with proper structure"""
+        """Set a property in the JSON properties field with proper structure"""
         if self.properties is None:
             self.properties = {}
         
@@ -215,7 +168,6 @@ class Component(Base):
         }
         
         # Mark as modified for SQLAlchemy
-        db.session.merge(self)
         flag_modified(self, 'properties')
     
     # Variant management methods
@@ -324,25 +276,25 @@ class Component(Base):
         }
         return status_display.get(status, 'Unknown')
     
-    # Helper methods for properties
+    # Helper methods for common properties
     def get_material(self):
-        """Get material property (for components that have materials)"""
+        """Get material property"""
         return self.get_property('material')
     
     def set_material(self, material_name):
         """Set material property"""
         self.set_property('material', material_name, 'text')
     
-    def get_color(self):
+    def get_color_property(self):
         """Get color property (for components that have colors)"""
         return self.get_property('color')
     
-    def set_color(self, color_name):
+    def set_color_property(self, color_name):
         """Set color property"""
         self.set_property('color', color_name, 'text')
     
     def get_gender(self):
-        """Get gender property (for components that have gender targeting)"""
+        """Get gender property"""
         return self.get_property('gender')
     
     def set_gender(self, gender_list):
@@ -358,7 +310,7 @@ class Component(Base):
         self.set_property('brand', brand_name, 'text')
     
     def get_style(self):
-        """Get style property (for components that have styles)"""
+        """Get style property"""
         return self.get_property('style')
     
     def set_style(self, style_list):
@@ -377,9 +329,6 @@ class ComponentVariant(Base):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # RELATIONSHIPS
-    color = db.relationship('Color', backref='component_variants')
     
     # Pictures that belong to this specific variant
     variant_pictures = db.relationship('Picture', 
@@ -426,6 +375,8 @@ class ComponentVariant(Base):
 
 
 class Picture(Base):
+    __tablename__ = 'picture'
+    
     id = db.Column(db.Integer, primary_key=True)
     
     # Picture can belong to either component OR variant (not both)
@@ -465,213 +416,4 @@ class Picture(Base):
         if self.component_id:
             return self.parent_component
         else:
-            return self.variant 'variant_name', 
-                           name='component_unique_variant'),
-        {'schema': 'component_app'}
-    )
-
-    def __repr__(self):
-        if self.is_master_component:
-            return f'<Component(Master) {self.product_number}>'
-        else:
-            return f'<Component(Variant) {self.product_number} - {self.variant_name}>'
-    
-    # Helper methods for properties (existing)
-    def get_property(self, key, default=None):
-        """Get a property value from the JSONB properties field"""
-        if key in self.properties:
-            prop = self.properties[key]
-            if isinstance(prop, dict) and 'value' in prop:
-                return prop['value']
-        return default
-    
-    def set_property(self, key, value, prop_type='text'):
-        """Set a property in the JSONB properties field with proper structure"""
-        if self.properties is None:
-            self.properties = {}
-        
-        now = datetime.utcnow().isoformat() + 'Z'
-        
-        # If property exists, keep created_at, update updated_at
-        created_at = now
-        if key in self.properties and isinstance(self.properties[key], dict):
-            created_at = self.properties[key].get('created_at', now)
-        
-        self.properties[key] = {
-            'value': value,
-            'type': prop_type,
-            'created_at': created_at,
-            'updated_at': now
-        }
-        
-        # Mark as modified for SQLAlchemy
-        db.session.merge(self)
-        flag_modified(self, 'properties')
-    
-    # NEW: Variant management methods
-    def is_variant(self):
-        """Check if this is a variant component"""
-        return not self.is_master_component
-    
-    def get_master(self):
-        """Get the master component for this variant"""
-        if self.is_master_component:
-            return self
-        return self.master_component
-    
-    def get_all_variants(self):
-        """Get all variants of this component (only works for master components)"""
-        if not self.is_master_component:
-            return []
-        return self.variants
-    
-    def create_variant(self, variant_name, variant_color_id=None, **kwargs):
-        """Create a new variant of this component"""
-        if not self.is_master_component:
-            raise ValueError("Only master components can have variants")
-        
-        # Generate variant product number
-        variant_product_number = f"{self.product_number}-{variant_name.upper()}"
-        
-        variant = Component(
-            product_number=variant_product_number,
-            description=f"{self.description} - {variant_name} variant",
-            component_type_id=self.component_type_id,
-            supplier_id=self.supplier_id,
-            category_id=self.category_id,
-            is_master_component=False,
-            parent_component_id=self.id,
-            variant_color_id=variant_color_id,
-            variant_name=variant_name,
-            **kwargs
-        )
-        
-        return variant
-    
-    # NEW: Status management methods
-    def update_proto_status(self, status, comment=None):
-        """Update proto status"""
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.proto_status = status
-        self.proto_comment = comment
-        self.proto_date = datetime.utcnow()
-    
-    def update_sms_status(self, status, comment=None):
-        """Update SMS status"""
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.sms_status = status
-        self.sms_comment = comment
-        self.sms_date = datetime.utcnow()
-    
-    def update_pps_status(self, status, comment=None):
-        """Update PPS status"""
-        if status not in ['pending', 'ok', 'not_ok']:
-            raise ValueError("Status must be 'pending', 'ok', or 'not_ok'")
-        
-        self.pps_status = status
-        self.pps_comment = comment
-        self.pps_date = datetime.utcnow()
-    
-    def get_overall_status(self):
-        """Get overall approval status"""
-        if self.pps_status == 'ok':
-            return 'approved'
-        elif self.pps_status == 'not_ok' or self.sms_status == 'not_ok' or self.proto_status == 'not_ok':
-            return 'rejected'
-        elif self.proto_status == 'ok' and self.sms_status == 'ok' and self.pps_status == 'pending':
-            return 'pending_pps'
-        elif self.proto_status == 'ok' and self.sms_status == 'pending':
-            return 'pending_sms'
-        elif self.proto_status == 'pending':
-            return 'pending_proto'
-        else:
-            return 'in_progress'
-    
-    def get_status_badge_class(self):
-        """Get CSS class for status badge"""
-        status = self.get_overall_status()
-        status_classes = {
-            'approved': 'bg-success',
-            'rejected': 'bg-danger', 
-            'pending_pps': 'bg-warning',
-            'pending_sms': 'bg-info',
-            'pending_proto': 'bg-secondary',
-            'in_progress': 'bg-primary'
-        }
-        return status_classes.get(status, 'bg-secondary')
-    
-    def get_status_display(self):
-        """Get human-readable status display"""
-        status = self.get_overall_status()
-        status_display = {
-            'approved': 'Approved',
-            'rejected': 'Rejected',
-            'pending_pps': 'Pending PPS',
-            'pending_sms': 'Pending SMS', 
-            'pending_proto': 'Pending Proto',
-            'in_progress': 'In Progress'
-        }
-        return status_display.get(status, 'Unknown')
-    
-    # Existing helper methods for properties
-    def get_material(self):
-        """Get material property (for components that have materials)"""
-        return self.get_property('material')
-    
-    def set_material(self, material_name):
-        """Set material property"""
-        self.set_property('material', material_name, 'text')
-    
-    def get_color(self):
-        """Get color property (for components that have colors)"""
-        return self.get_property('color')
-    
-    def set_color(self, color_name):
-        """Set color property"""
-        self.set_property('color', color_name, 'text')
-    
-    def get_gender(self):
-        """Get gender property (for components that have gender targeting)"""
-        return self.get_property('gender')
-    
-    def set_gender(self, gender_list):
-        """Set gender property (can be array)"""
-        self.set_property('gender', gender_list, 'array')
-    
-    def get_brand(self):
-        """Get brand property"""
-        return self.get_property('brand')
-    
-    def set_brand(self, brand_name):
-        """Set brand property"""
-        self.set_property('brand', brand_name, 'text')
-    
-    def get_style(self):
-        """Get style property (for components that have styles)"""
-        return self.get_property('style')
-    
-    def set_style(self, style_list):
-        """Set style property (can be array)"""
-        self.set_property('style', style_list, 'array')
-
-class Picture(Base):
-    id = db.Column(db.Integer, primary_key=True)
-    component_id = db.Column(db.Integer, db.ForeignKey('component_app.component.id'), nullable=False)
-    picture_name = db.Column(db.String(255), nullable=False)
-    url = db.Column(db.String(255), nullable=False)
-    picture_order = db.Column(db.Integer, nullable=False)
-    
-    __table_args__ = (
-        db.UniqueConstraint('component_id', 'picture_order', name='_component_picture_order_uc'),
-        {'schema': 'component_app'}
-    )
-
-    def __repr__(self):
-        return f'<Picture {self.picture_name}>'
-
-# Import flag_modified for JSONB updates
-from sqlalchemy.orm.attributes import flag_modified
+            return self.variant

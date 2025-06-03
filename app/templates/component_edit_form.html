@@ -1,151 +1,1164 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Component{% endblock %}
+{% block title %}{{ 'Edit' if component else 'New' }} Component - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-wizard {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 2rem;
+    }
+
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+
+    .wizard-step {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .wizard-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        right: -50%;
+        left: 50%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.3);
+        z-index: 1;
+    }
+
+    .wizard-step.completed:not(:last-child)::after {
+        background: rgba(255, 255, 255, 0.8);
+    }
+
+    .step-indicator {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 0.75rem;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s ease;
+    }
+
+    .wizard-step.active .step-indicator {
+        background: white;
+        color: var(--color-primary);
+        transform: scale(1.1);
+    }
+
+    .wizard-step.completed .step-indicator {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--color-primary);
+    }
+
+    .step-title {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .wizard-content {
+        padding: 2rem;
+    }
+
+    .step-content {
+        display: none;
+    }
+
+    .step-content.active {
+        display: block;
+        animation: fadeInUp 0.4s ease;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .form-section {
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--color-primary);
+    }
+
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--color-dark);
+        display: flex;
+        align-items: center;
+    }
+
+    .image-upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        text-align: center;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .image-upload-area:hover {
+        border-color: var(--color-primary);
+        background: #f0f7ff;
+    }
+
+    .image-upload-area.dragover {
+        border-color: var(--color-primary);
+        background: #e0f2fe;
+        transform: scale(1.02);
+    }
+
+    .upload-placeholder {
+        color: var(--color-secondary);
+    }
+
+    .image-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .preview-item {
+        position: relative;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        background: white;
+    }
+
+    .preview-image {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+    }
+
+    .preview-info {
+        padding: 0.75rem;
+    }
+
+    .preview-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .preview-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .preview-btn:hover {
+        background: rgba(0, 0, 0, 0.9);
+        transform: scale(1.1);
+    }
+
+    .keyword-input-container {
+        position: relative;
+    }
+
+    .keyword-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .keyword-suggestions.show {
+        display: block;
+    }
+
+    .suggestion-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .suggestion-item:hover {
+        background: #f8fafc;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .keyword-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        min-height: 38px;
+        padding: 0.5rem;
+        border: 2px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        background: white;
+    }
+
+    .keyword-tag {
+        background: var(--color-primary);
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .keyword-remove {
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .keyword-remove:hover {
+        opacity: 1;
+    }
+
+    .wizard-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .properties-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .property-field {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .validation-error {
+        color: var(--color-danger);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .progress-bar {
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+        transition: width 0.3s ease;
+        border-radius: 2px;
+    }
+
+    .live-preview {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        border: 1px solid #e2e8f0;
+        position: sticky;
+        top: 120px;
+    }
+
+    .preview-card {
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        background: white;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .preview-image-area {
+        height: 150px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-secondary);
+    }
+
+    .auto-save-indicator {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: var(--color-success);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+
+    .auto-save-indicator.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Edit Component</h1>
-    <div>
-        <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-secondary">Cancel</a>
+<div x-data="componentForm()" class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-dark fw-bold">
+                {{ 'Edit Component' if component else 'Create New Component' }}
+            </h1>
+            <p class="text-muted mb-0">
+                {{ 'Modify component details and properties' if component else 'Add a new component to your library' }}
+            </p>
+        </div>
+        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+            <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+            Back to List
+        </a>
     </div>
-</div>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">Component Information</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" enctype="multipart/form-data">
-            <!-- Basic Information -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="product_number" class="form-label">Product Number *</label>
-                        <input type="text" class="form-control" id="product_number" name="product_number" value="{{ component.product_number }}" required>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="supplier_id" class="form-label">Supplier *</label>
-                        <select class="form-select" id="supplier_id" name="supplier_id" required>
-                            <option value="">Select Supplier</option>
-                            {% for supplier in suppliers %}
-                                <option value="{{ supplier.id }}" {% if supplier.id == component.supplier_id %}selected{% endif %}>
-                                    {{ supplier.supplier_code }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="category_id" class="form-label">Category *</label>
-                        <select class="form-select" id="category_id" name="category_id" required>
-                            <option value="">Select Category</option>
-                            {% for category in categories %}
-                                <option value="{{ category.id }}" {% if category.id == component.category_id %}selected{% endif %}>
-                                    {{ category.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="color_id" class="form-label">Color *</label>
-                        <select class="form-select" id="color_id" name="color_id" required>
-                            <option value="">Select Color</option>
-                            {% for color in colors %}
-                                <option value="{{ color.id }}" {% if color.id == component.color_id %}selected{% endif %}>
-                                    {{ color.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="material_id" class="form-label">Material *</label>
-                        <select class="form-select" id="material_id" name="material_id" required>
-                            <option value="">Select Material</option>
-                            {% for material in materials %}
-                                <option value="{{ material.id }}" {% if material.id == component.material_id %}selected{% endif %}>
-                                    {{ material.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <label for="description" class="form-label">Description</label>
-                <textarea class="form-control" id="description" name="description" rows="3">{{ component.description }}</textarea>
-            </div>
-            
-            <hr>
-            
-            <!-- Pictures -->
-            <h5 class="mb-3">Pictures (up to 5)</h5>
-            
-            {% set sorted_pictures = component.pictures|sort(attribute='picture_order') %}
-            {% for i in range(1, 6) %}
-                <div class="card mb-3 picture-card">
-                    <div class="card-header">
-                        <h6 class="mb-0">Picture {{ i }}</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                {% if i <= sorted_pictures|length %}
-                                    <img src="{{ sorted_pictures[i-1].url }}" class="img-thumbnail mb-2" alt="{{ sorted_pictures[i-1].picture_name }}">
-                                    <input type="hidden" name="existing_picture_{{ i }}_name" value="{{ sorted_pictures[i-1].picture_name }}">
-                                    <input type="hidden" name="existing_picture_{{ i }}_url" value="{{ sorted_pictures[i-1].url }}">
-                                {% endif %}
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <form method="POST" enctype="multipart/form-data" x-ref="mainForm" @submit="handleSubmit">
+                <div class="form-wizard">
+                    <!-- Wizard Header -->
+                    <div class="wizard-header">
+                        <!-- Progress Bar -->
+                        <div class="progress-bar">
+                            <div class="progress-fill" :style="{ width: ((currentStep) / totalSteps * 100) + '%' }"></div>
+                        </div>
+
+                        <!-- Wizard Steps -->
+                        <div class="wizard-steps">
+                            <div class="wizard-step" :class="{ 'active': currentStep === 1, 'completed': currentStep > 1 }">
+                                <div class="step-indicator">
+                                    <i data-lucide="info" x-show="currentStep !== 1 || currentStep <= 1" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="check" x-show="currentStep > 1" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="step-title">Basic Information</div>
                             </div>
-                            <div class="col-md-5">
+                            <div class="wizard-step" :class="{ 'active': currentStep === 2, 'completed': currentStep > 2 }">
+                                <div class="step-indicator">
+                                    <i data-lucide="settings" x-show="currentStep !== 2 || currentStep <= 2" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="check" x-show="currentStep > 2" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="step-title">Properties</div>
+                            </div>
+                            <div class="wizard-step" :class="{ 'active': currentStep === 3, 'completed': currentStep > 3 }">
+                                <div class="step-indicator">
+                                    <i data-lucide="images" x-show="currentStep !== 3 || currentStep <= 3" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="check" x-show="currentStep > 3" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="step-title">Images</div>
+                            </div>
+                            <div class="wizard-step" :class="{ 'active': currentStep === 4, 'completed': currentStep > 4 }">
+                                <div class="step-indicator">
+                                    <i data-lucide="tag" x-show="currentStep !== 4 || currentStep <= 4" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="check" x-show="currentStep > 4" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="step-title">Keywords & Review</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wizard Content -->
+                    <div class="wizard-content">
+                        <!-- Step 1: Basic Information -->
+                        <div class="step-content" :class="{ 'active': currentStep === 1 }">
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="info" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Component Details
+                                </h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="product_number" class="form-label form-label-modern">
+                                                Product Number *
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control form-control-modern" 
+                                                   id="product_number" 
+                                                   name="product_number" 
+                                                   x-model="formData.product_number"
+                                                   @input="autoSave()"
+                                                   value="{{ component.product_number if component else '' }}" 
+                                                   required>
+                                            <div class="form-text">e.g., F-WL001 for Fabrics, S-WL0001 for Shapes</div>
+                                            <div class="validation-error" x-show="errors.product_number">
+                                                <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                                                <span x-text="errors.product_number"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="component_type_id" class="form-label form-label-modern">
+                                                Component Type *
+                                            </label>
+                                            <select class="form-select form-control-modern" 
+                                                    id="component_type_id" 
+                                                    name="component_type_id" 
+                                                    x-model="formData.component_type_id"
+                                                    @change="loadComponentTypeProperties(); autoSave()"
+                                                    required>
+                                                <option value="">Select Component Type</option>
+                                                {% for component_type in component_types %}
+                                                    <option value="{{ component_type.id }}" 
+                                                            {% if component and component.component_type_id == component_type.id %}selected{% endif %}>
+                                                        {{ component_type.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="supplier_id" class="form-label form-label-modern">
+                                                Supplier *
+                                            </label>
+                                            <select class="form-select form-control-modern" 
+                                                    id="supplier_id" 
+                                                    name="supplier_id" 
+                                                    x-model="formData.supplier_id"
+                                                    @change="autoSave()"
+                                                    required>
+                                                <option value="">Select Supplier</option>
+                                                {% for supplier in suppliers %}
+                                                    <option value="{{ supplier.id }}" 
+                                                            {% if component and component.supplier_id == supplier.id %}selected{% endif %}>
+                                                        {{ supplier.supplier_code }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="category_id" class="form-label form-label-modern">
+                                                Category *
+                                            </label>
+                                            <select class="form-select form-control-modern" 
+                                                    id="category_id" 
+                                                    name="category_id" 
+                                                    x-model="formData.category_id"
+                                                    @change="autoSave()"
+                                                    required>
+                                                <option value="">Select Category</option>
+                                                {% for category in categories %}
+                                                    <option value="{{ category.id }}" 
+                                                            {% if component and component.category_id == category.id %}selected{% endif %}>
+                                                        {{ category.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="mb-3">
-                                    <label for="picture_{{ i }}" class="form-label">{% if i <= sorted_pictures|length %}Replace{% else %}Add{% endif %} Image</label>
-                                    <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*">
-                                    <small class="text-muted">Leave empty to {% if i <= sorted_pictures|length %}keep current image{% else %}skip{% endif %}</small>
+                                    <label for="description" class="form-label form-label-modern">Description</label>
+                                    <textarea class="form-control form-control-modern" 
+                                              id="description" 
+                                              name="description" 
+                                              rows="4" 
+                                              x-model="formData.description"
+                                              @input="autoSave()"
+                                              placeholder="Detailed description of the component...">{{ component.description if component else '' }}</textarea>
+                                    <div class="form-text">
+                                        <span x-text="formData.description ? formData.description.length : 0"></span> characters
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="picture_{{ i }}_order" class="form-label">Display Order</label>
-                                    <input type="number" class="form-control" id="picture_{{ i }}_order" name="picture_{{ i }}_order" 
-                                           value="{% if i <= sorted_pictures|length %}{{ sorted_pictures[i-1].picture_order }}{% else %}{{ i }}{% endif %}" min="1">
+                        </div>
+
+                        <!-- Step 2: Properties -->
+                        <div class="step-content" :class="{ 'active': currentStep === 2 }">
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="settings" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Component Properties
+                                </h5>
+                                
+                                <div x-show="!availableProperties.length" class="text-center py-4">
+                                    <i data-lucide="info" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                                    <p class="text-muted mt-3 mb-0">Select a component type to see available properties</p>
+                                </div>
+
+                                <div x-show="availableProperties.length > 0" class="properties-grid">
+                                    <template x-for="property in availableProperties" :key="property">
+                                        <div class="property-field">
+                                            <label :for="property" class="form-label form-label-modern" x-text="capitalizeFirst(property)"></label>
+                                            
+                                            <!-- Text Input -->
+                                            <template x-if="propertyTypes[property] === 'text'">
+                                                <input type="text" 
+                                                       class="form-control form-control-modern" 
+                                                       :id="property"
+                                                       :name="property"
+                                                       x-model="formData.properties[property]"
+                                                       @input="autoSave()"
+                                                       :placeholder="propertyPlaceholders[property] || 'Enter ' + property">
+                                            </template>
+
+                                            <!-- Select Input -->
+                                            <template x-if="propertyTypes[property] === 'select'">
+                                                <select class="form-select form-control-modern" 
+                                                        :id="property"
+                                                        :name="property"
+                                                        x-model="formData.properties[property]"
+                                                        @change="autoSave()">
+                                                    <option value="">Select <span x-text="property"></span></option>
+                                                    <template x-for="option in propertyOptions[property] || []" :key="option">
+                                                        <option :value="option" x-text="option"></option>
+                                                    </template>
+                                                </select>
+                                            </template>
+
+                                            <!-- Multi-select -->
+                                            <template x-if="propertyTypes[property] === 'multiselect'">
+                                                <div>
+                                                    <select multiple class="form-select form-control-modern" 
+                                                            :id="property"
+                                                            :name="property"
+                                                            x-model="formData.properties[property]"
+                                                            @change="autoSave()"
+                                                            style="min-height: 100px;">
+                                                        <template x-for="option in propertyOptions[property] || []" :key="option">
+                                                            <option :value="option" x-text="option"></option>
+                                                        </template>
+                                                    </select>
+                                                    <div class="form-text">Hold Ctrl/Cmd to select multiple options</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Images -->
+                        <div class="step-content" :class="{ 'active': currentStep === 3 }">
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="images" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Component Images
+                                </h5>
+
+                                <!-- Image Upload Area -->
+                                <div class="image-upload-area" 
+                                     @click="$refs.imageInput.click()"
+                                     @dragover.prevent="dragOver = true"
+                                     @dragleave.prevent="dragOver = false"
+                                     @drop.prevent="handleImageDrop($event)"
+                                     :class="{ 'dragover': dragOver }">
+                                    
+                                    <input type="file" 
+                                           x-ref="imageInput"
+                                           multiple 
+                                           accept="image/*" 
+                                           style="display: none;"
+                                           @change="handleImageSelect($event)">
+                                    
+                                    <div class="upload-placeholder">
+                                        <i data-lucide="upload-cloud" style="width: 48px; height: 48px;" class="mb-3"></i>
+                                        <h6>Drop images here or click to browse</h6>
+                                        <p class="text-muted mb-0">Support for JPG, PNG, GIF up to 10MB</p>
+                                    </div>
+                                </div>
+
+                                <!-- Image Previews -->
+                                <div x-show="images.length > 0" class="image-preview">
+                                    <template x-for="(image, index) in images" :key="image.id">
+                                        <div class="preview-item">
+                                            <img :src="image.url" :alt="image.name" class="preview-image">
+                                            <div class="preview-actions">
+                                                <button type="button" 
+                                                        class="preview-btn" 
+                                                        @click="removeImage(index)"
+                                                        title="Remove image">
+                                                    <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+                                                </button>
+                                            </div>
+                                            <div class="preview-info">
+                                                <input type="text" 
+                                                       class="form-control form-control-modern mb-2" 
+                                                       :value="image.name"
+                                                       @input="updateImageName(index, $event.target.value)"
+                                                       placeholder="Image name">
+                                                <input type="number" 
+                                                       class="form-control form-control-modern" 
+                                                       :value="image.order"
+                                                       @input="updateImageOrder(index, $event.target.value)"
+                                                       min="1" 
+                                                       placeholder="Order">
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Existing Images (for edit mode) -->
+                                {% if component and component.pictures %}
+                                    <div class="mt-4">
+                                        <h6 class="fw-bold mb-3">Existing Images</h6>
+                                        <div class="image-preview">
+                                            {% for picture in component.pictures|sort(attribute='picture_order') %}
+                                                <div class="preview-item">
+                                                    <img src="{{ picture.url }}" alt="{{ picture.picture_name }}" class="preview-image">
+                                                    <div class="preview-info">
+                                                        <input type="text" 
+                                                               class="form-control form-control-modern mb-2" 
+                                                               name="existing_picture_{{ loop.index }}_name"
+                                                               value="{{ picture.picture_name }}"
+                                                               placeholder="Image name">
+                                                        <input type="number" 
+                                                               class="form-control form-control-modern" 
+                                                               name="existing_picture_{{ loop.index }}_order"
+                                                               value="{{ picture.picture_order }}"
+                                                               min="1" 
+                                                               placeholder="Order">
+                                                        <input type="hidden" 
+                                                               name="existing_picture_{{ loop.index }}_url" 
+                                                               value="{{ picture.url }}">
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Keywords & Review -->
+                        <div class="step-content" :class="{ 'active': currentStep === 4 }">
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="tag" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Keywords
+                                </h5>
+
+                                <div class="keyword-input-container">
+                                    <label for="keyword-input" class="form-label form-label-modern">
+                                        Component Keywords
+                                    </label>
+                                    <input type="text" 
+                                           id="keyword-input"
+                                           class="form-control form-control-modern" 
+                                           x-model="keywordInput"
+                                           @input="searchKeywords()"
+                                           @keydown.enter.prevent="addKeyword()"
+                                           @keydown.comma.prevent="addKeyword()"
+                                           placeholder="Type keywords and press Enter or comma to add...">
+                                    
+                                    <!-- Keyword Suggestions -->
+                                    <div class="keyword-suggestions" :class="{ 'show': keywordSuggestions.length > 0 && keywordInput.length > 0 }">
+                                        <template x-for="suggestion in keywordSuggestions" :key="suggestion">
+                                            <div class="suggestion-item" @click="addKeywordFromSuggestion(suggestion)" x-text="suggestion"></div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Selected Keywords -->
+                                <div class="keyword-tags">
+                                    <template x-for="(keyword, index) in keywords" :key="keyword">
+                                        <span class="keyword-tag">
+                                            <span x-text="keyword"></span>
+                                            <i data-lucide="x" 
+                                               class="keyword-remove" 
+                                               style="width: 14px; height: 14px;"
+                                               @click="removeKeyword(index)"></i>
+                                        </span>
+                                    </template>
+                                    <span x-show="keywords.length === 0" class="text-muted">No keywords added yet</span>
+                                </div>
+
+                                <!-- Hidden input for form submission -->
+                                <input type="hidden" name="keywords" :value="keywords.join(',')">
+                            </div>
+
+                            <!-- Form Review -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="eye" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Review & Submit
+                                </h5>
+
+                                <div class="alert alert-modern alert-info">
+                                    <div class="d-flex align-items-center">
+                                        <i data-lucide="info" class="me-2" style="width: 20px; height: 20px;"></i>
+                                        <div>
+                                            <strong>Ready to submit!</strong>
+                                            <p class="mb-0 mt-1">Review your component details in the preview panel, then click "Save Component" to finish.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-2">Basic Information</h6>
+                                        <ul class="list-unstyled text-muted">
+                                            <li><strong>Product Number:</strong> <span x-text="formData.product_number || 'Not specified'"></span></li>
+                                            <li><strong>Type:</strong> <span x-text="getSelectedText('component_type_id') || 'Not selected'"></span></li>
+                                            <li><strong>Supplier:</strong> <span x-text="getSelectedText('supplier_id') || 'Not selected'"></span></li>
+                                            <li><strong>Category:</strong> <span x-text="getSelectedText('category_id') || 'Not selected'"></span></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-2">Additional Details</h6>
+                                        <ul class="list-unstyled text-muted">
+                                            <li><strong>Properties:</strong> <span x-text="Object.keys(formData.properties || {}).length"></span> defined</li>
+                                            <li><strong>Images:</strong> <span x-text="images.length"></span> uploaded</li>
+                                            <li><strong>Keywords:</strong> <span x-text="keywords.length"></span> added</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Wizard Navigation -->
+                    <div class="wizard-navigation">
+                        <button type="button" 
+                                class="btn btn-outline-secondary" 
+                                @click="previousStep()" 
+                                :disabled="currentStep === 1">
+                            <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Previous
+                        </button>
+
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted">
+                                Step <span x-text="currentStep"></span> of <span x-text="totalSteps"></span>
+                            </span>
+                            
+                            <button type="button" 
+                                    class="btn btn-primary-modern btn-modern" 
+                                    @click="nextStep()" 
+                                    x-show="currentStep < totalSteps">
+                                Next
+                                <i data-lucide="arrow-right" class="ms-2" style="width: 16px; height: 16px;"></i>
+                            </button>
+
+                            <button type="submit" 
+                                    class="btn btn-success-modern btn-modern" 
+                                    x-show="currentStep === totalSteps">
+                                <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
+                                {{ 'Update Component' if component else 'Save Component' }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            {% endfor %}
-            
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">Update Component</button>
+            </form>
+        </div>
+
+        <!-- Live Preview Sidebar -->
+        <div class="col-lg-4">
+            <div class="live-preview">
+                <h5 class="fw-bold mb-3">
+                    <i data-lucide="eye" class="me-2" style="width: 20px; height: 20px;"></i>
+                    Live Preview
+                </h5>
+
+                <div class="preview-card">
+                    <!-- Preview Image -->
+                    <div class="preview-image-area" x-show="!images.length">
+                        <div class="text-center">
+                            <i data-lucide="image" style="width: 48px; height: 48px;"></i>
+                            <p class="mt-2 mb-0">No image</p>
+                        </div>
+                    </div>
+                    <img :src="images[0]?.url" 
+                         x-show="images.length > 0"
+                         style="width: 100%; height: 150px; object-fit: cover;">
+
+                    <!-- Preview Content -->
+                    <div class="p-3">
+                        <h6 class="mb-2" x-text="formData.product_number || 'Product Number'"></h6>
+                        <p class="text-muted small mb-2" x-text="formData.description || 'Component description will appear here...'"></p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary" x-text="getSelectedText('component_type_id') || 'Type'"></span>
+                            <small class="text-muted" x-text="getSelectedText('supplier_id') || 'Supplier'"></small>
+                        </div>
+
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i data-lucide="folder" style="width: 12px; height: 12px;"></i>
+                                <span x-text="getSelectedText('category_id') || 'Category'"></span>
+                            </small>
+                        </div>
+
+                        <!-- Preview Keywords -->
+                        <div x-show="keywords.length > 0">
+                            <div class="d-flex flex-wrap gap-1">
+                                <template x-for="keyword in keywords.slice(0, 3)" :key="keyword">
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem;" x-text="keyword"></span>
+                                </template>
+                                <span x-show="keywords.length > 3" class="badge bg-light text-dark" style="font-size: 0.7rem;">
+                                    +<span x-text="keywords.length - 3"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-save Status -->
+                <div class="mt-3 p-2 bg-light rounded text-center">
+                    <small class="text-muted">
+                        <i data-lucide="save" style="width: 14px; height: 14px;"></i>
+                        <span x-text="lastSaved ? 'Last saved: ' + lastSaved : 'No changes yet'"></span>
+                    </small>
+                </div>
             </div>
-        </form>
+        </div>
+    </div>
+
+    <!-- Auto-save Indicator -->
+    <div class="auto-save-indicator" :class="{ 'show': showAutoSaveIndicator }">
+        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+        <span>Auto-saved</span>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Add some basic validation
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(event) {
-            const productNumber = document.getElementById('product_number').value;
-            if (!productNumber) {
-                alert('Product Number is required');
-                event.preventDefault();
+function componentForm() {
+    return {
+        currentStep: 1,
+        totalSteps: 4,
+        dragOver: false,
+        keywordInput: '',
+        keywords: {{ (component.keywords | map(attribute='name') | list) | tojson if component and component.keywords else '[]' }},
+        keywordSuggestions: [],
+        images: [],
+        lastSaved: null,
+        showAutoSaveIndicator: false,
+        errors: {},
+        
+        formData: {
+            product_number: '{{ component.product_number if component else "" }}',
+            description: '{{ component.description if component else "" }}',
+            component_type_id: '{{ component.component_type_id if component else "" }}',
+            supplier_id: '{{ component.supplier_id if component else "" }}',
+            category_id: '{{ component.category_id if component else "" }}',
+            properties: {{ component.properties | tojson if component and component.properties else '{}' }}
+        },
+
+        availableProperties: [],
+        propertyTypes: {
+            'material': 'select',
+            'color': 'select', 
+            'gender': 'multiselect',
+            'style': 'multiselect',
+            'brand': 'text',
+            'subbrand': 'multiselect',
+            'size': 'text',
+            'finish': 'text',
+            'weight': 'text',
+            'subcategory': 'text'
+        },
+
+        propertyOptions: {
+            'material': {{ materials | map(attribute='name') | list | tojson }},
+            'color': {{ colors | map(attribute='name') | list | tojson }},
+            'gender': ['ladies', 'men', 'unisex', 'all', 'kids'],
+            'style': ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage'],
+            'subbrand': ['MAR', 'MMC', 'UBL']
+        },
+
+        propertyPlaceholders: {
+            'brand': 'e.g., MAR, MMC, UBL',
+            'size': 'e.g., 12mm, 15mm',
+            'weight': 'e.g., 50g',
+            'finish': 'e.g., matte, glossy'
+        },
+
+        // Component type properties mapping
+        typePropertiesMap: {
+            'Fabrics': ['material', 'color', 'gender', 'brand', 'finish', 'weight'],
+            'Shapes': ['gender', 'style', 'brand', 'subbrand', 'subcategory'],
+            'Buttons': ['material', 'color', 'brand', 'size'],
+            'Zippers': ['material', 'color', 'brand', 'size'],
+            'Labels': ['brand', 'subbrand', 'material'],
+            'Hangtags': ['brand', 'subbrand', 'material'],
+            'Packaging': ['brand', 'material']
+        },
+
+        init() {
+            // Load component type properties if editing
+            if (this.formData.component_type_id) {
+                this.loadComponentTypeProperties();
             }
-        });
-    });
+            
+            // Initialize form validation
+            this.validateForm();
+        },
+
+        nextStep() {
+            if (this.validateCurrentStep() && this.currentStep < this.totalSteps) {
+                this.currentStep++;
+            }
+        },
+
+        previousStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+            }
+        },
+
+        validateCurrentStep() {
+            this.errors = {};
+            
+            if (this.currentStep === 1) {
+                if (!this.formData.product_number) {
+                    this.errors.product_number = 'Product number is required';
+                }
+                if (!this.formData.component_type_id) {
+                    this.errors.component_type_id = 'Component type is required';
+                }
+                if (!this.formData.supplier_id) {
+                    this.errors.supplier_id = 'Supplier is required';
+                }
+                if (!this.formData.category_id) {
+                    this.errors.category_id = 'Category is required';
+                }
+            }
+
+            return Object.keys(this.errors).length === 0;
+        },
+
+        validateForm() {
+            return this.validateCurrentStep();
+        },
+
+        loadComponentTypeProperties() {
+            const componentTypeSelect = document.getElementById('component_type_id');
+            const selectedText = componentTypeSelect.options[componentTypeSelect.selectedIndex]?.text;
+            
+            if (selectedText && this.typePropertiesMap[selectedText]) {
+                this.availableProperties = this.typePropertiesMap[selectedText];
+                
+                // Initialize properties object for new properties
+                this.availableProperties.forEach(prop => {
+                    if (!(prop in this.formData.properties)) {
+                        this.formData.properties[prop] = '';
+                    }
+                });
+            } else {
+                this.availableProperties = [];
+            }
+        },
+
+        handleImageSelect(event) {
+            this.processImages(Array.from(event.target.files));
+        },
+
+        handleImageDrop(event) {
+            this.dragOver = false;
+            const files = Array.from(event.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            this.processImages(files);
+        },
+
+        processImages(files) {
+            files.forEach((file, index) => {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.images.push({
+                        id: Date.now() + index,
+                        file: file,
+                        url: e.target.result,
+                        name: file.name.split('.')[0],
+                        order: this.images.length + 1
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        },
+
+        removeImage(index) {
+            this.images.splice(index, 1);
+            // Reorder remaining images
+            this.images.forEach((img, i) => {
+                img.order = i + 1;
+            });
+        },
+
+        updateImageName(index, name) {
+            if (this.images[index]) {
+                this.images[index].name = name;
+            }
+        },
+
+        updateImageOrder(index, order) {
+            if (this.images[index]) {
+                this.images[index].order = parseInt(order) || 1;
+            }
+        },
+
+        searchKeywords() {
+            if (this.keywordInput.length > 1) {
+                // Mock keyword suggestions - in real app, this would be an API call
+                const allKeywords = ['shiny', 'polyester', 'jacket', 'outerwear', 'waterproof', 'casual', 'formal', 'winter', 'summer', 'cotton', 'silk', 'wool', 'denim', 'leather'];
+                this.keywordSuggestions = allKeywords.filter(keyword => 
+                    keyword.toLowerCase().includes(this.keywordInput.toLowerCase()) &&
+                    !this.keywords.includes(keyword)
+                ).slice(0, 5);
+            } else {
+                this.keywordSuggestions = [];
+            }
+        },
+
+        addKeyword() {
+            const keyword = this.keywordInput.trim().toLowerCase();
+            if (keyword && !this.keywords.includes(keyword)) {
+                this.keywords.push(keyword);
+                this.keywordInput = '';
+                this.keywordSuggestions = [];
+                this.autoSave();
+            }
+        },
+
+        addKeywordFromSuggestion(keyword) {
+            if (!this.keywords.includes(keyword)) {
+                this.keywords.push(keyword);
+                this.keywordInput = '';
+                this.keywordSuggestions = [];
+                this.autoSave();
+            }
+        },
+
+        removeKeyword(index) {
+            this.keywords.splice(index, 1);
+            this.autoSave();
+        },
+
+        autoSave() {
+            // Implement auto-save functionality
+            clearTimeout(this.autoSaveTimeout);
+            this.autoSaveTimeout = setTimeout(() => {
+                // Here you would save to localStorage or make an API call
+                this.lastSaved = new Date().toLocaleTimeString();
+                this.showAutoSaveIndicator = true;
+                setTimeout(() => {
+                    this.showAutoSaveIndicator = false;
+                }, 2000);
+            }, 1000);
+        },
+
+        getSelectedText(selectId) {
+            const select = document.getElementById(selectId);
+            if (select && select.selectedIndex > 0) {
+                return select.options[select.selectedIndex].text;
+            }
+            return '';
+        },
+
+        capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        handleSubmit(event) {
+            if (!this.validateForm()) {
+                event.preventDefault();
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Create FormData for file uploads
+            const formData = new FormData(event.target);
+            
+            // Add images to form data
+            this.images.forEach((image, index) => {
+                formData.append(`picture_${index + 1}`, image.file);
+                formData.append(`picture_${index + 1}_order`, image.order);
+            });
+
+            // Submit form
+            // The form will be submitted naturally
+        }
+    }
+}
+
+// Initialize Alpine.js component
+document.addEventListener('alpine:init', () => {
+    // Component form is already defined above
+});
 </script>
 {% endblock %}

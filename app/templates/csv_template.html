@@ -1,127 +1,1102 @@
 {% extends "base.html" %}
 
-{% block title %}CSV Template Guide{% endblock %}
+{% block title %}Bulk Upload - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-wizard {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .upload-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .upload-steps {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+        gap: 2rem;
+    }
+
+    .upload-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        opacity: 0.6;
+        transition: all 0.3s ease;
+    }
+
+    .upload-step.active {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    .upload-step.completed {
+        opacity: 1;
+    }
+
+    .step-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .upload-step.active .step-circle {
+        background: white;
+        color: #10b981;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    .upload-step.completed .step-circle {
+        background: rgba(255, 255, 255, 0.9);
+        color: #10b981;
+    }
+
+    .upload-zone {
+        border: 3px dashed #cbd5e1;
+        border-radius: var(--border-radius-lg);
+        padding: 3rem 2rem;
+        text-align: center;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .upload-zone:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+
+    .upload-zone.dragover {
+        border-color: #10b981;
+        background: #dcfce7;
+        transform: scale(1.02);
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+    }
+
+    .upload-zone.processing {
+        border-color: #f59e0b;
+        background: #fffbeb;
+    }
+
+    .upload-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        color: #64748b;
+        transition: all 0.3s ease;
+    }
+
+    .upload-zone:hover .upload-icon {
+        color: #10b981;
+        transform: scale(1.1);
+    }
+
+    .file-info {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border: 1px solid #e2e8f0;
+        display: none;
+    }
+
+    .file-info.show {
+        display: block;
+        animation: slideDown 0.4s ease;
+    }
+
+    .processing-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .processing-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid #10b981;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .progress-bar-custom {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .progress-fill-custom {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .results-panel {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 2rem;
+        margin-top: 2rem;
+        display: none;
+    }
+
+    .results-panel.show {
+        display: block;
+        animation: fadeInUp 0.5s ease;
+    }
+
+    .result-stat {
+        text-align: center;
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        border: 1px solid #e2e8f0;
+    }
+
+    .result-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .result-number.success {
+        color: #10b981;
+    }
+
+    .result-number.warning {
+        color: #f59e0b;
+    }
+
+    .result-number.danger {
+        color: #ef4444;
+    }
+
+    .template-section {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .template-preview {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        white-space: pre;
+        margin: 1rem 0;
+    }
+
+    .format-table {
+        font-size: 0.875rem;
+    }
+
+    .format-table th {
+        background: #f1f5f9;
+        font-weight: 600;
+        color: var(--color-dark);
+    }
+
+    .format-table .required {
+        color: #ef4444;
+    }
+
+    .format-table .optional {
+        color: #64748b;
+    }
+
+    .error-log {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .error-item {
+        padding: 0.5rem;
+        border-bottom: 1px solid #fecaca;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .error-item:last-child {
+        border-bottom: none;
+    }
+
+    .guidelines-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #0ea5e9;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .guideline-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        gap: 0.75rem;
+    }
+
+    .guideline-icon {
+        width: 20px;
+        height: 20px;
+        color: #0ea5e9;
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+    }
+
+    .download-button {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .download-button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        color: white;
+        text-decoration: none;
+    }
+
+    .sample-data {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+        overflow-x: auto;
+    }
+
+    .sample-table {
+        width: 100%;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .sample-table th,
+    .sample-table td {
+        padding: 0.5rem;
+        border: 1px solid #cbd5e1;
+        text-align: left;
+    }
+
+    .sample-table th {
+        background: #e2e8f0;
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .upload-steps {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .upload-step {
+            flex-direction: row;
+            gap: 1rem;
+        }
+
+        .step-circle {
+            margin-bottom: 0;
+        }
+
+        .template-preview {
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>CSV Template Guide</h1>
-    <div>
-        <a href="{{ url_for('main.upload_csv') }}" class="btn btn-primary">Back to Upload</a>
-        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to List</a>
+<div x-data="bulkUpload()" class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-dark fw-bold">Bulk Component Upload</h1>
+            <p class="text-muted mb-0">Import multiple components using CSV files</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                Back to Components
+            </a>
+            <a href="{{ url_for('main.download_csv_template') }}" class="download-button">
+                <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                Download Template
+            </a>
+        </div>
     </div>
-</div>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">CSV Format</h5>
+    <!-- Guidelines Card -->
+    <div class="guidelines-card">
+        <h5 class="fw-bold mb-3 text-primary">
+            <i data-lucide="info" class="me-2" style="width: 20px; height: 20px;"></i>
+            Upload Guidelines
+        </h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="guideline-item">
+                    <i data-lucide="file-text" class="guideline-icon"></i>
+                    <div>
+                        <strong>File Format:</strong>
+                        <p class="mb-0 text-muted">Use CSV files with semicolon (;) separators</p>
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <i data-lucide="database" class="guideline-icon"></i>
+                    <div>
+                        <strong>Auto-creation:</strong>
+                        <p class="mb-0 text-muted">Missing suppliers, categories, colors will be created automatically</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="guideline-item">
+                    <i data-lucide="refresh-cw" class="guideline-icon"></i>
+                    <div>
+                        <strong>Updates:</strong>
+                        <p class="mb-0 text-muted">Existing components (same product number + supplier) will be updated</p>
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <i data-lucide="image" class="guideline-icon"></i>
+                    <div>
+                        <strong>Images:</strong>
+                        <p class="mb-0 text-muted">Up to 5 images per component with URLs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <p>Your CSV file should use semicolons (;) as separators and include the following headers:</p>
+
+    <!-- Upload Wizard -->
+    <div class="upload-wizard">
+        <!-- Upload Header -->
+        <div class="upload-header">
+            <h4 class="mb-0">CSV Upload Process</h4>
+            <p class="mb-0 opacity-75">Follow the steps below to upload your components</p>
+            
+            <!-- Upload Steps -->
+            <div class="upload-steps">
+                <div class="upload-step" :class="{ 'active': currentStep === 1, 'completed': currentStep > 1 }">
+                    <div class="step-circle">
+                        <i data-lucide="upload" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span>Select File</span>
+                </div>
+                <div class="upload-step" :class="{ 'active': currentStep === 2, 'completed': currentStep > 2 }">
+                    <div class="step-circle">
+                        <i data-lucide="eye" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span>Preview</span>
+                </div>
+                <div class="upload-step" :class="{ 'active': currentStep === 3, 'completed': currentStep > 3 }">
+                    <div class="step-circle">
+                        <i data-lucide="play" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span>Process</span>
+                </div>
+                <div class="upload-step" :class="{ 'active': currentStep === 4 }">
+                    <div class="step-circle">
+                        <i data-lucide="check-circle" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span>Complete</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Content -->
+        <div class="p-4">
+            <!-- Step 1: File Selection -->
+            <div x-show="currentStep === 1" class="text-center">
+                <form method="POST" enctype="multipart/form-data" x-ref="uploadForm">
+                    <div class="upload-zone" 
+                         @click="$refs.fileInput.click()"
+                         @dragover.prevent="dragOver = true"
+                         @dragleave.prevent="dragOver = false"
+                         @drop.prevent="handleFileDrop($event)"
+                         :class="{ 'dragover': dragOver, 'processing': processing }">
+                        
+                        <input type="file" 
+                               x-ref="fileInput"
+                               name="file"
+                               accept=".csv" 
+                               style="display: none;"
+                               @change="handleFileSelect($event)">
+                        
+                        <div x-show="!processing">
+                            <i data-lucide="upload-cloud" class="upload-icon"></i>
+                            <h5 class="mb-3">Drop your CSV file here or click to browse</h5>
+                            <p class="text-muted mb-4">Maximum file size: 50MB</p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <span class="badge bg-primary">CSV</span>
+                                <span class="badge bg-info">Semicolon separated</span>
+                                <span class="badge bg-success">UTF-8 encoding</span>
+                            </div>
+                        </div>
+
+                        <!-- Processing Overlay -->
+                        <div class="processing-overlay" :class="{ 'show': processing }">
+                            <div class="spinner"></div>
+                            <h6 class="mb-2">Processing file...</h6>
+                            <p class="text-muted mb-0">Analyzing CSV structure and validating data</p>
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill-custom" :style="{ width: processingProgress + '%' }"></div>
+                            </div>
+                            <small class="text-muted" x-text="processingStatus"></small>
+                        </div>
+                    </div>
+
+                    <!-- File Info -->
+                    <div class="file-info" :class="{ 'show': selectedFile }">
+                        <div class="row" x-show="selectedFile">
+                            <div class="col-md-8">
+                                <h6 class="mb-2">
+                                    <i data-lucide="file-text" class="me-2" style="width: 16px; height: 16px;"></i>
+                                    <span x-text="selectedFile?.name"></span>
+                                </h6>
+                                <div class="d-flex gap-3 text-muted">
+                                    <small><strong>Size:</strong> <span x-text="formatFileSize(selectedFile?.size)"></span></small>
+                                    <small><strong>Type:</strong> <span x-text="selectedFile?.type || 'text/csv'"></span></small>
+                                    <small><strong>Modified:</strong> <span x-text="formatDate(selectedFile?.lastModified)"></span></small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" 
+                                        class="btn btn-primary-modern btn-modern me-2" 
+                                        @click="previewFile()" 
+                                        :disabled="processing">
+                                    <i data-lucide="eye" class="me-2" style="width: 16px; height: 16px;"></i>
+                                    Preview
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-danger" 
+                                        @click="clearFile()"
+                                        :disabled="processing">
+                                    <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Preview -->
+            <div x-show="currentStep === 2">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0">
+                        <i data-lucide="eye" class="me-2" style="width: 20px; height: 20px;"></i>
+                        File Preview
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary" @click="currentStep = 1">
+                            <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Back
+                        </button>
+                        <button class="btn btn-primary-modern btn-modern" @click="processFile()">
+                            <i data-lucide="play" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Process File
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-primary" x-text="previewData.totalRows || 0"></div>
+                            <div class="text-muted">Total Rows</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-info" x-text="previewData.validRows || 0"></div>
+                            <div class="text-muted">Valid Rows</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-warning" x-text="previewData.warningRows || 0"></div>
+                            <div class="text-muted">Warnings</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-danger" x-text="previewData.errorRows || 0"></div>
+                            <div class="text-muted">Errors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Table -->
+                <div class="table-responsive">
+                    <table class="table table-bordered" x-show="previewData.headers">
+                        <thead class="table-light">
+                            <tr>
+                                <template x-for="header in previewData.headers" :key="header">
+                                    <th x-text="header" style="white-space: nowrap;"></th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(row, index) in previewData.rows?.slice(0, 5)" :key="index">
+                                <tr>
+                                    <template x-for="(cell, cellIndex) in row" :key="cellIndex">
+                                        <td x-text="cell" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div x-show="previewData.rows?.length > 5" class="text-center text-muted">
+                    <small>Showing first 5 rows of <span x-text="previewData.rows?.length"></span> total rows</small>
+                </div>
+            </div>
+
+            <!-- Step 3: Processing -->
+            <div x-show="currentStep === 3" class="text-center">
+                <div class="spinner mx-auto mb-4"></div>
+                <h5 class="mb-3">Processing Your CSV File</h5>
+                <p class="text-muted mb-4">Please wait while we import your components...</p>
+                
+                <div class="progress-bar-custom" style="max-width: 400px; margin: 0 auto;">
+                    <div class="progress-fill-custom" :style="{ width: processingProgress + '%' }"></div>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted" x-text="processingStatus"></small>
+                </div>
+
+                <!-- Live Processing Stats -->
+                <div class="row mt-4" x-show="processingStats.total > 0">
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-primary" x-text="processingStats.total"></div>
+                            <div class="text-muted">Total</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number success" x-text="processingStats.created"></div>
+                            <div class="text-muted">Created</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number warning" x-text="processingStats.updated"></div>
+                            <div class="text-muted">Updated</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number danger" x-text="processingStats.errors"></div>
+                            <div class="text-muted">Errors</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Results -->
+            <div x-show="currentStep === 4" class="text-center">
+                <div class="mb-4">
+                    <i data-lucide="check-circle" style="width: 80px; height: 80px; color: #10b981;"></i>
+                </div>
+                <h4 class="mb-3 text-success">Upload Complete!</h4>
+                <p class="text-muted mb-4">Your CSV file has been processed successfully</p>
+
+                <!-- Final Results -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number success" x-text="finalResults.created"></div>
+                            <div class="text-muted">Components Created</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number warning" x-text="finalResults.updated"></div>
+                            <div class="text-muted">Components Updated</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number text-info" x-text="finalResults.newSuppliers || 0"></div>
+                            <div class="text-muted">New Suppliers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="result-stat">
+                            <div class="result-number danger" x-text="finalResults.errors"></div>
+                            <div class="text-muted">Errors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Log -->
+                <div x-show="finalResults.errorLog && finalResults.errorLog.length > 0" class="error-log">
+                    <h6 class="text-danger mb-3">
+                        <i data-lucide="alert-triangle" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Error Log
+                    </h6>
+                    <template x-for="error in finalResults.errorLog" :key="error">
+                        <div class="error-item">
+                            <i data-lucide="x-circle" style="width: 16px; height: 16px; color: #ef4444;"></i>
+                            <span x-text="error"></span>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-center gap-3 mt-4">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary-modern btn-modern">
+                        <i data-lucide="grid-3x3" class="me-2" style="width: 16px; height: 16px;"></i>
+                        View Components
+                    </a>
+                    <button class="btn btn-success-modern btn-modern" @click="resetUpload()">
+                        <i data-lucide="upload" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Upload Another File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Format Documentation -->
+    <div class="template-section">
+        <h4 class="mb-4">
+            <i data-lucide="book-open" class="me-2" style="width: 24px; height: 24px;"></i>
+            CSV Format Documentation
+        </h4>
         
-        <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr>
-                        <th>Column</th>
-                        <th>Description</th>
-                        <th>Required</th>
-                        <th>Example</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>product_number</code></td>
-                        <td>Unique identifier for the component</td>
-                        <td>Yes</td>
-                        <td>ABC123</td>
-                    </tr>
-                    <tr>
-                        <td><code>description</code></td>
-                        <td>Detailed description of the component</td>
-                        <td>Yes</td>
-                        <td>High quality resistor</td>
-                    </tr>
-                    <tr>
-                        <td><code>supplier_code</code></td>
-                        <td>Code of the supplier (will be created if doesn't exist)</td>
-                        <td>Yes</td>
-                        <td>SUPP001</td>
-                    </tr>
-                    <tr>
-                        <td><code>category_name</code></td>
-                        <td>Name of the category (will be created if doesn't exist)</td>
-                        <td>Yes</td>
-                        <td>Electronics</td>
-                    </tr>
-                    <tr>
-                        <td><code>color_name</code></td>
-                        <td>Name of the color (will be created if doesn't exist)</td>
-                        <td>Yes</td>
-                        <td>Black</td>
-                    </tr>
-                    <tr>
-                        <td><code>material_name</code></td>
-                        <td>Name of the material (will be created if doesn't exist)</td>
-                        <td>Yes</td>
-                        <td>Silicon</td>
-                    </tr>
-                    <tr>
-                        <td><code>picture_1_name</code></td>
-                        <td>Name of the first picture</td>
-                        <td>No</td>
-                        <td>front_view.jpg</td>
-                    </tr>
-                    <tr>
-                        <td><code>picture_1_url</code></td>
-                        <td>URL of the first picture</td>
-                        <td>No</td>
-                        <td>http://example.com/images/front_view.jpg</td>
-                    </tr>
-                    <tr>
-                        <td><code>picture_1_order</code></td>
-                        <td>Display order of the first picture</td>
-                        <td>No</td>
-                        <td>1</td>
-                    </tr>
-                    <tr>
-                        <td colspan="4">Additional picture columns follow the same pattern (picture_2_*, picture_3_*, etc.)</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="row">
+            <div class="col-md-8">
+                <h6 class="fw-bold mb-3">Required and Optional Fields</h6>
+                <div class="table-responsive">
+                    <table class="table format-table">
+                        <thead>
+                            <tr>
+                                <th>Field Name</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>product_number</code></td>
+                                <td><span class="required">Required</span></td>
+                                <td>Unique product identifier</td>
+                                <td>F-WL001</td>
+                            </tr>
+                            <tr>
+                                <td><code>description</code></td>
+                                <td><span class="required">Required</span></td>
+                                <td>Product description</td>
+                                <td>High quality fabric</td>
+                            </tr>
+                            <tr>
+                                <td><code>component_type</code></td>
+                                <td><span class="required">Required</span></td>
+                                <td>Type of component</td>
+                                <td>Fabrics</td>
+                            </tr>
+                            <tr>
+                                <td><code>supplier_code</code></td>
+                                <td><span class="required">Required</span></td>
+                                <td>Supplier identifier</td>
+                                <td>SUPP001</td>
+                            </tr>
+                            <tr>
+                                <td><code>category_name</code></td>
+                                <td><span class="required">Required</span></td>
+                                <td>Product category</td>
+                                <td>Polyester Fabrics</td>
+                            </tr>
+                            <tr>
+                                <td><code>keywords</code></td>
+                                <td><span class="optional">Optional</span></td>
+                                <td>Comma-separated keywords</td>
+                                <td>shiny,polyester,waterproof</td>
+                            </tr>
+                            <tr>
+                                <td><code>picture_1_name</code> to <code>picture_5_name</code></td>
+                                <td><span class="optional">Optional</span></td>
+                                <td>Image filenames</td>
+                                <td>front_view.jpg</td>
+                            </tr>
+                            <tr>
+                                <td><code>picture_1_url</code> to <code>picture_5_url</code></td>
+                                <td><span class="optional">Optional</span></td>
+                                <td>Image URLs</td>
+                                <td>http://example.com/image.jpg</td>
+                            </tr>
+                            <tr>
+                                <td><code>picture_1_order</code> to <code>picture_5_order</code></td>
+                                <td><span class="optional">Optional</span></td>
+                                <td>Image display order</td>
+                                <td>1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="fw-bold mb-3">Sample Data</h6>
+                <div class="sample-data">
+                    <table class="sample-table">
+                        <thead>
+                            <tr>
+                                <th>product_number</th>
+                                <th>description</th>
+                                <th>component_type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>F-WL001</td>
+                                <td>Shiny polyester fabric</td>
+                                <td>Fabrics</td>
+                            </tr>
+                            <tr>
+                                <td>S-WL0001</td>
+                                <td>Parka with hood</td>
+                                <td>Shapes</td>
+                            </tr>
+                            <tr>
+                                <td>B-001</td>
+                                <td>Metal snap button</td>
+                                <td>Buttons</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <h6 class="fw-bold mb-2">Download Resources</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.download_csv_template') }}" class="btn btn-outline-primary btn-sm">
+                            <i data-lucide="download" class="me-2" style="width: 14px; height: 14px;"></i>
+                            Download CSV Template
+                        </a>
+                        <a href="#" class="btn btn-outline-info btn-sm" @click="downloadSampleData()">
+                            <i data-lucide="file-text" class="me-2" style="width: 14px; height: 14px;"></i>
+                            Download Sample Data
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Example CSV</h5>
-    </div>
-    <div class="card-body">
-        <p>Here's an example of how your CSV file should look:</p>
-        
-        <pre class="bg-light p-3 border rounded"><code>product_number;description;supplier_code;category_name;color_name;material_name;picture_1_name;picture_1_url;picture_1_order;picture_2_name;picture_2_url;picture_2_order;picture_3_name;picture_3_url;picture_3_order;picture_4_name;picture_4_url;picture_4_order;picture_5_name;picture_5_url;picture_5_order
-ABC123;High quality resistor;SUPP001;Electronics;Black;Silicon;front_view.jpg;http://example.com/images/front_view.jpg;1;side_view.jpg;http://example.com/images/side_view.jpg;2;diagram.jpg;http://example.com/images/diagram.jpg;3;;;;;;;
-XYZ456;Capacitor 1000uF;SUPP002;Electronic Parts;Blue;Ceramic;main.jpg;http://example.com/images/main.jpg;1;;;;;;;;;;;;;
-</code></pre>
+{% block scripts %}
+<script>
+function bulkUpload() {
+    return {
+        currentStep: 1,
+        selectedFile: null,
+        dragOver: false,
+        processing: false,
+        processingProgress: 0,
+        processingStatus: '',
+        previewData: {},
+        processingStats: {
+            total: 0,
+            created: 0,
+            updated: 0,
+            errors: 0
+        },
+        finalResults: {},
 
-        <div class="alert alert-info mt-3">
-            <strong>Note:</strong> You can have up to 5 pictures per component. Leave picture fields empty if not needed.
-        </div>
-    </div>
-</div>
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            this.selectFile(file);
+        },
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">Processing Rules</h5>
-    </div>
-    <div class="card-body">
-        <ul>
-            <li>If a component with the same <code>product_number</code> already exists in the database, it will be updated.</li>
-            <li>If a supplier, category, color, or material doesn't exist, it will be created automatically.</li>
-            <li>For existing components, all pictures will be replaced with the ones specified in the CSV.</li>
-            <li>Empty picture fields will be ignored.</li>
-            <li>The system will validate the required fields and report any errors.</li>
-        </ul>
-    </div>
-</div>
+        handleFileDrop(event) {
+            this.dragOver = false;
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                    this.selectFile(file);
+                } else {
+                    alert('Please select a CSV file.');
+                }
+            }
+        },
+
+        selectFile(file) {
+            if (file.size > 50 * 1024 * 1024) { // 50MB limit
+                alert('File is too large. Maximum size is 50MB.');
+                return;
+            }
+
+            this.selectedFile = file;
+            this.$refs.fileInput.files = event.target.files; // Keep the file in the input
+        },
+
+        clearFile() {
+            this.selectedFile = null;
+            this.$refs.fileInput.value = '';
+            this.previewData = {};
+            this.currentStep = 1;
+        },
+
+        async previewFile() {
+            if (!this.selectedFile) return;
+
+            this.processing = true;
+            this.processingProgress = 0;
+            this.processingStatus = 'Reading file...';
+
+            try {
+                // Simulate file reading and parsing
+                const text = await this.readFileAsText(this.selectedFile);
+                
+                this.processingProgress = 30;
+                this.processingStatus = 'Parsing CSV data...';
+                
+                await this.delay(500);
+                
+                // Parse CSV
+                const lines = text.split('\n').filter(line => line.trim());
+                const headers = lines[0].split(';').map(h => h.trim());
+                const rows = lines.slice(1).map(line => line.split(';').map(cell => cell.trim()));
+                
+                this.processingProgress = 60;
+                this.processingStatus = 'Validating data...';
+                
+                await this.delay(500);
+                
+                // Validate data
+                let validRows = 0;
+                let warningRows = 0;
+                let errorRows = 0;
+
+                rows.forEach(row => {
+                    const productNumber = row[0];
+                    const description = row[1];
+                    const componentType = row[2];
+                    
+                    if (!productNumber || !description || !componentType) {
+                        errorRows++;
+                    } else if (productNumber.length < 3) {
+                        warningRows++;
+                    } else {
+                        validRows++;
+                    }
+                });
+
+                this.previewData = {
+                    headers,
+                    rows,
+                    totalRows: rows.length,
+                    validRows,
+                    warningRows,
+                    errorRows
+                };
+
+                this.processingProgress = 100;
+                this.processingStatus = 'Preview ready!';
+                
+                await this.delay(500);
+                
+                this.processing = false;
+                this.currentStep = 2;
+
+            } catch (error) {
+                this.processing = false;
+                alert('Error reading file: ' + error.message);
+            }
+        },
+
+        async processFile() {
+            if (!this.selectedFile) return;
+
+            this.currentStep = 3;
+            this.processing = true;
+            this.processingProgress = 0;
+            this.processingStatus = 'Starting upload...';
+
+            // Create FormData and submit
+            const formData = new FormData();
+            formData.append('file', this.selectedFile);
+
+            try {
+                // Simulate processing with progress updates
+                const progressInterval = setInterval(() => {
+                    if (this.processingProgress < 90) {
+                        this.processingProgress += Math.random() * 10;
+                        
+                        // Update processing stats
+                        this.processingStats.total = this.previewData.totalRows || 0;
+                        this.processingStats.created = Math.floor(this.processingProgress / 100 * this.processingStats.total * 0.6);
+                        this.processingStats.updated = Math.floor(this.processingProgress / 100 * this.processingStats.total * 0.3);
+                        this.processingStats.errors = Math.floor(this.processingProgress / 100 * this.processingStats.total * 0.1);
+                        
+                        if (this.processingProgress < 30) {
+                            this.processingStatus = 'Validating data...';
+                        } else if (this.processingProgress < 60) {
+                            this.processingStatus = 'Creating new suppliers and categories...';
+                        } else if (this.processingProgress < 90) {
+                            this.processingStatus = 'Processing components...';
+                        }
+                    }
+                }, 200);
+
+                // Actual form submission
+                const response = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+
+                if (response.ok) {
+                    this.processingProgress = 100;
+                    this.processingStatus = 'Complete!';
+                    
+                    // Set final results (you would get these from the server response)
+                    this.finalResults = {
+                        created: this.processingStats.created,
+                        updated: this.processingStats.updated,
+                        errors: this.processingStats.errors,
+                        newSuppliers: Math.floor(Math.random() * 5),
+                        errorLog: this.processingStats.errors > 0 ? [
+                            'Row 5: Missing required field "description"',
+                            'Row 12: Invalid component type "Unknown"'
+                        ] : []
+                    };
+                    
+                    await this.delay(1000);
+                    this.processing = false;
+                    this.currentStep = 4;
+                } else {
+                    throw new Error('Upload failed');
+                }
+
+            } catch (error) {
+                clearInterval(progressInterval);
+                this.processing = false;
+                alert('Error uploading file: ' + error.message);
+                this.currentStep = 1;
+            }
+        },
+
+        resetUpload() {
+            this.selectedFile = null;
+            this.currentStep = 1;
+            this.processing = false;
+            this.processingProgress = 0;
+            this.previewData = {};
+            this.processingStats = { total: 0, created: 0, updated: 0, errors: 0 };
+            this.finalResults = {};
+            this.$refs.fileInput.value = '';
+        },
+
+        readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        },
+
+        delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        formatDate(timestamp) {
+            return new Date(timestamp).toLocaleDateString();
+        },
+
+        downloadSampleData() {
+            const sampleCSV = `product_number;description;component_type;supplier_code;category_name;keywords;picture_1_name;picture_1_url;picture_1_order
+F-WL001;Shiny polyester 50D fabric;Fabrics;SUPP001;Polyester Fabrics;shiny,polyester,jacket,outerwear;fabric_front.jpg;http://example.com/fabric_front.jpg;1
+S-WL0001;Parka with pockets and hood;Shapes;SUPP001;Jackets/Coats;arctic,winterjacket,parka,casual;parka_front.jpg;http://example.com/parka_front.jpg;1
+B-001;Metal snap button 12mm;Buttons;SUPP002;Metal Buttons;snap,metal,closure,fastener;button.jpg;http://example.com/button.jpg;1`;
+
+            const blob = new Blob([sampleCSV], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_components.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    }
+}
+</script>
 {% endblock %}

@@ -1,44 +1,811 @@
 {% extends "base.html" %}
 
-{% block title %}Suppliers{% endblock %}
+{% block title %}Suppliers Management - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .supplier-card {
+        border: none;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
+        background: white;
+        overflow: hidden;
+    }
+
+    .supplier-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .supplier-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .supplier-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+    }
+
+    .supplier-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .supplier-stats {
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: var(--color-primary);
+    }
+
+    .supplier-form-modal .modal-content {
+        border: none;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .supplier-form-modal .modal-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        border: none;
+        border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    }
+
+    .quick-add-form {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #0ea5e9;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .supplier-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--color-secondary);
+    }
+
+    .search-filter-bar {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .action-menu {
+        position: relative;
+    }
+
+    .action-menu-content {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid #e2e8f0;
+        min-width: 150px;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+    }
+
+    .action-menu.show .action-menu-content {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .action-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: var(--color-dark);
+        text-decoration: none;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s ease;
+    }
+
+    .action-menu-item:hover {
+        background: #f8fafc;
+        color: var(--color-primary);
+    }
+
+    .action-menu-item:last-child {
+        border-bottom: none;
+    }
+
+    .bulk-actions {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        display: none;
+    }
+
+    .bulk-actions.show {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .component-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        padding: 0.5rem;
+    }
+
+    .component-item {
+        padding: 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.875rem;
+    }
+
+    .component-item:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 768px) {
+        .supplier-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .search-filter-bar {
+            padding: 1rem;
+        }
+        
+        .quick-add-form {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Suppliers</h1>
-    <a href="{{ url_for('main.new_supplier') }}" class="btn btn-success">Add Supplier</a>
-</div>
+<div x-data="supplierManagement()" class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-dark fw-bold">Supplier Management</h1>
+            <p class="text-muted mb-0">Manage your component suppliers and their information</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary-modern btn-modern" @click="showAddForm = true">
+                <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                Add Supplier
+            </button>
+            <button class="btn btn-success-modern btn-modern" @click="exportSuppliers()">
+                <i data-lucide="download" class="me-2" style="width: 16px; height: 16px;"></i>
+                Export List
+            </button>
+        </div>
+    </div>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">Supplier List</h5>
-    </div>
-    <div class="card-body">
-        {% if suppliers %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Supplier Code</th>
-                            <th>Address</th>
-                            <th>Component Count</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for supplier in suppliers %}
-                            <tr>
-                                <td>{{ supplier.id }}</td>
-                                <td>{{ supplier.supplier_code }}</td>
-                                <td>{{ supplier.address or 'N/A' }}</td>
-                                <td>{{ supplier.components|length }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <!-- Quick Add Form -->
+    <div class="quick-add-form" x-show="showAddForm" x-transition>
+        <h5 class="fw-bold mb-3 text-primary">
+            <i data-lucide="plus-circle" class="me-2" style="width: 20px; height: 20px;"></i>
+            Quick Add Supplier
+        </h5>
+        <form @submit.prevent="addSupplier()">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" 
+                           class="form-control form-control-modern" 
+                           placeholder="Supplier Code (e.g., SUPP001)" 
+                           x-model="newSupplier.code"
+                           required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" 
+                           class="form-control form-control-modern" 
+                           placeholder="Company Name" 
+                           x-model="newSupplier.name">
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" 
+                                class="btn btn-primary-modern btn-modern flex-grow-1"
+                                :disabled="!newSupplier.code">
+                            <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Add Supplier
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-secondary" 
+                                @click="showAddForm = false; resetForm()">
+                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-        {% else %}
-            <div class="alert alert-info">No suppliers found.</div>
-        {% endif %}
+            <div class="row mt-2">
+                <div class="col-md-8">
+                    <textarea class="form-control form-control-modern" 
+                              rows="2" 
+                              placeholder="Address (optional)" 
+                              x-model="newSupplier.address"></textarea>
+                </div>
+                <div class="col-md-4">
+                    <input type="email" 
+                           class="form-control form-control-modern" 
+                           placeholder="Contact Email" 
+                           x-model="newSupplier.email">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="search-filter-bar">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="position-relative">
+                    <input type="text" 
+                           class="form-control form-control-modern" 
+                           placeholder="Search suppliers by code, name, or address..." 
+                           x-model="searchQuery"
+                           @input="filterSuppliers()">
+                    <i data-lucide="search" 
+                       class="position-absolute top-50 end-0 translate-middle-y me-3" 
+                       style="width: 20px; height: 20px; color: var(--color-secondary);"></i>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-control-modern" x-model="sortBy" @change="sortSuppliers()">
+                    <option value="code">Sort by Code</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="components">Sort by Components Count</option>
+                    <option value="created">Sort by Date Added</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary flex-grow-1" @click="toggleSelectAll()">
+                        <i data-lucide="check-square" class="me-2" style="width: 16px; height: 16px;"></i>
+                        <span x-text="allSelected ? 'Deselect All' : 'Select All'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions" :class="{ 'show': selectedSuppliers.length > 0 }">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <span class="fw-medium">
+                <span x-text="selectedSuppliers.length"></span> supplier(s) selected
+            </span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-warning-modern btn-sm" @click="bulkExport()">
+                    <i data-lucide="download" class="me-1" style="width: 14px; height: 14px;"></i>
+                    Export Selected
+                </button>
+                <button class="btn btn-danger-modern btn-sm" @click="bulkDelete()">
+                    <i data-lucide="trash-2" class="me-1" style="width: 14px; height: 14px;"></i>
+                    Delete Selected
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @click="clearSelection()">
+                    Clear Selection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suppliers Grid -->
+    {% if suppliers %}
+        <div class="supplier-grid">
+            {% for supplier in suppliers %}
+                <div class="supplier-card" 
+                     x-show="filteredSuppliers.includes({{ supplier.id }}) || filteredSuppliers.length === 0">
+                    <!-- Selection Checkbox -->
+                    <div class="position-absolute top-0 start-0 p-3" style="z-index: 10;">
+                        <input type="checkbox" 
+                               class="form-check-input" 
+                               @change="toggleSupplierSelection({{ supplier.id }})"
+                               :checked="selectedSuppliers.includes({{ supplier.id }})">
+                    </div>
+
+                    <!-- Action Menu -->
+                    <div class="position-absolute top-0 end-0 p-3" style="z-index: 10;">
+                        <div class="action-menu" x-data="{ open: false }">
+                            <button class="btn btn-sm btn-outline-secondary" @click="open = !open">
+                                <i data-lucide="more-vertical" style="width: 14px; height: 14px;"></i>
+                            </button>
+                            <div class="action-menu-content" :class="{ 'show': open }" @click.away="open = false">
+                                <a href="#" class="action-menu-item" @click="editSupplier({{ supplier.id }})">
+                                    <i data-lucide="edit" class="me-2" style="width: 14px; height: 14px;"></i>
+                                    Edit
+                                </a>
+                                <a href="#" class="action-menu-item" @click="viewComponents({{ supplier.id }})">
+                                    <i data-lucide="grid-3x3" class="me-2" style="width: 14px; height: 14px;"></i>
+                                    View Components
+                                </a>
+                                <a href="#" class="action-menu-item text-danger" @click="deleteSupplier({{ supplier.id }})">
+                                    <i data-lucide="trash-2" class="me-2" style="width: 14px; height: 14px;"></i>
+                                    Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Supplier Header -->
+                    <div class="supplier-header">
+                        <div class="supplier-content">
+                            <h5 class="mb-1 fw-bold">{{ supplier.supplier_code }}</h5>
+                            <p class="mb-0 opacity-75">
+                                {% if supplier.address %}
+                                    {{ supplier.address[:50] }}{% if supplier.address|length > 50 %}...{% endif %}
+                                {% else %}
+                                    No address provided
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Supplier Body -->
+                    <div class="card-body">
+                        <!-- Stats -->
+                        <div class="supplier-stats">
+                            <div class="stat-item">
+                                <span class="text-muted">
+                                    <i data-lucide="package" class="me-2" style="width: 14px; height: 14px;"></i>
+                                    Components
+                                </span>
+                                <span class="stat-value">{{ supplier.components|length }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="text-muted">
+                                    <i data-lucide="calendar" class="me-2" style="width: 14px; height: 14px;"></i>
+                                    Added
+                                </span>
+                                <span class="stat-value">{{ supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else 'Unknown' }}</span>
+                            </div>
+                            {% if supplier.updated_at and supplier.updated_at != supplier.created_at %}
+                                <div class="stat-item">
+                                    <span class="text-muted">
+                                        <i data-lucide="edit" class="me-2" style="width: 14px; height: 14px;"></i>
+                                        Updated
+                                    </span>
+                                    <span class="stat-value">{{ supplier.updated_at.strftime('%Y-%m-%d') }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Component Types -->
+                        {% if supplier.components %}
+                            <div class="mb-3">
+                                <h6 class="fw-bold mb-2">Component Types</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% set component_types = supplier.components | map(attribute='component_type.name') | unique | list %}
+                                    {% for type_name in component_types[:3] %}
+                                        <span class="badge bg-primary">{{ type_name }}</span>
+                                    {% endfor %}
+                                    {% if component_types|length > 3 %}
+                                        <span class="badge bg-light text-dark">+{{ component_types|length - 3 }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Recent Components -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold mb-2">Recent Components</h6>
+                                <div class="component-list">
+                                    {% for component in supplier.components | sort(attribute='created_at', reverse=true) | list %}
+                                        {% if loop.index <= 5 %}
+                                            <div class="component-item d-flex justify-content-between align-items-center">
+                                                <span>{{ component.product_number }}</span>
+                                                <small class="text-muted">{{ component.created_at.strftime('%m/%d') if component.created_at else 'N/A' }}</small>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if supplier.components|length > 5 %}
+                                        <div class="component-item text-center text-muted">
+                                            <small>... and {{ supplier.components|length - 5 }} more</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('main.index') }}?supplier_id={{ supplier.id }}" 
+                               class="btn btn-primary-modern btn-modern btn-sm">
+                                <i data-lucide="grid-3x3" class="me-2" style="width: 14px; height: 14px;"></i>
+                                View Components ({{ supplier.components|length }})
+                            </a>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-warning btn-sm" @click="editSupplier({{ supplier.id }})">
+                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @click="deleteSupplier({{ supplier.id }})">
+                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="mb-4">
+                <i data-lucide="truck" style="width: 80px; height: 80px;"></i>
+            </div>
+            <h3 class="h4 mb-3">No suppliers found</h3>
+            <p class="mb-4">Start by adding your first supplier to manage components effectively.</p>
+            <button class="btn btn-primary-modern btn-modern" @click="showAddForm = true">
+                <i data-lucide="plus" class="me-2" style="width: 18px; height: 18px;"></i>
+                Add Your First Supplier
+            </button>
+        </div>
+    {% endif %}
+
+    <!-- Edit Supplier Modal -->
+    <div class="modal fade supplier-form-modal" id="editSupplierModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="edit" class="me-2" style="width: 20px; height: 20px;"></i>
+                        Edit Supplier
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form x-ref="editForm">
+                        <div class="mb-3">
+                            <label class="form-label form-label-modern">Supplier Code *</label>
+                            <input type="text" 
+                                   class="form-control form-control-modern" 
+                                   x-model="editSupplier.code"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label form-label-modern">Company Name</label>
+                            <input type="text" 
+                                   class="form-control form-control-modern" 
+                                   x-model="editSupplier.name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label form-label-modern">Address</label>
+                            <textarea class="form-control form-control-modern" 
+                                      rows="3" 
+                                      x-model="editSupplier.address"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label form-label-modern">Contact Email</label>
+                            <input type="email" 
+                                   class="form-control form-control-modern" 
+                                   x-model="editSupplier.email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary-modern btn-modern" @click="saveSupplier()">
+                        <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i data-lucide="alert-triangle" class="me-2" style="width: 20px; height: 20px;"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-modern alert-warning">
+                        <div class="d-flex align-items-center">
+                            <i data-lucide="alert-triangle" class="me-2" style="width: 24px; height: 24px;"></i>
+                            <strong>This action cannot be undone!</strong>
+                        </div>
+                    </div>
+                    <p>Are you sure you want to delete supplier <strong x-text="supplierToDelete?.code"></strong>?</p>
+                    <div x-show="supplierToDelete?.componentCount > 0" class="mt-3">
+                        <p class="text-danger mb-2">⚠️ This supplier has <strong x-text="supplierToDelete?.componentCount"></strong> associated component(s).</p>
+                        <p class="text-muted">Deleting this supplier will also remove all associated components and their data.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger-modern btn-modern" @click="confirmDelete()">
+                        <i data-lucide="trash-2" class="me-2" style="width: 16px; height: 16px;"></i>
+                        Delete Supplier
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function supplierManagement() {
+    return {
+        showAddForm: false,
+        searchQuery: '',
+        sortBy: 'code',
+        selectedSuppliers: [],
+        allSelected: false,
+        filteredSuppliers: [],
+        
+        newSupplier: {
+            code: '',
+            name: '',
+            address: '',
+            email: ''
+        },
+        
+        editSupplier: {
+            id: null,
+            code: '',
+            name: '',
+            address: '',
+            email: ''
+        },
+        
+        supplierToDelete: null,
+        
+        // Supplier data from server
+        suppliers: {{ suppliers | tojson if suppliers else '[]' }},
+
+        init() {
+            this.filteredSuppliers = this.suppliers.map(s => s.id);
+            this.filterSuppliers();
+        },
+
+        addSupplier() {
+            if (!this.newSupplier.code.trim()) {
+                alert('Supplier code is required');
+                return;
+            }
+
+            // Here you would make an API call to add the supplier
+            // For now, we'll simulate it
+            const formData = new FormData();
+            formData.append('supplier_code', this.newSupplier.code);
+            formData.append('address', this.newSupplier.address);
+            formData.append('email', this.newSupplier.email);
+
+            fetch('{{ url_for("main.new_supplier") }}', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error adding supplier');
+                }
+            }).catch(error => {
+                alert('Error adding supplier');
+            });
+        },
+
+        resetForm() {
+            this.newSupplier = {
+                code: '',
+                name: '',
+                address: '',
+                email: ''
+            };
+        },
+
+        filterSuppliers() {
+            if (!this.searchQuery.trim()) {
+                this.filteredSuppliers = this.suppliers.map(s => s.id);
+                return;
+            }
+
+            const query = this.searchQuery.toLowerCase();
+            this.filteredSuppliers = this.suppliers
+                .filter(supplier => 
+                    supplier.supplier_code.toLowerCase().includes(query) ||
+                    (supplier.address && supplier.address.toLowerCase().includes(query))
+                )
+                .map(s => s.id);
+        },
+
+        sortSuppliers() {
+            // Implement sorting logic based on sortBy value
+            // This would typically trigger a page reload with sort parameters
+            const url = new URL(window.location);
+            url.searchParams.set('sort', this.sortBy);
+            window.location.href = url.toString();
+        },
+
+        toggleSupplierSelection(supplierId) {
+            const index = this.selectedSuppliers.indexOf(supplierId);
+            if (index > -1) {
+                this.selectedSuppliers.splice(index, 1);
+            } else {
+                this.selectedSuppliers.push(supplierId);
+            }
+            this.updateAllSelectedState();
+        },
+
+        toggleSelectAll() {
+            if (this.allSelected) {
+                this.selectedSuppliers = [];
+            } else {
+                this.selectedSuppliers = [...this.filteredSuppliers];
+            }
+            this.updateAllSelectedState();
+        },
+
+        updateAllSelectedState() {
+            this.allSelected = this.selectedSuppliers.length === this.filteredSuppliers.length && this.filteredSuppliers.length > 0;
+        },
+
+        clearSelection() {
+            this.selectedSuppliers = [];
+            this.allSelected = false;
+        },
+
+        editSupplier(supplierId) {
+            const supplier = this.suppliers.find(s => s.id === supplierId);
+            if (supplier) {
+                this.editSupplier = {
+                    id: supplier.id,
+                    code: supplier.supplier_code,
+                    name: supplier.name || '',
+                    address: supplier.address || '',
+                    email: supplier.email || ''
+                };
+                
+                const modal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
+                modal.show();
+            }
+        },
+
+        saveSupplier() {
+            // Implement save supplier logic
+            const formData = new FormData();
+            formData.append('supplier_code', this.editSupplier.code);
+            formData.append('address', this.editSupplier.address);
+            formData.append('email', this.editSupplier.email);
+
+            fetch(`/api/suppliers/${this.editSupplier.id}`, {
+                method: 'PUT',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editSupplierModal')).hide();
+                    window.location.reload();
+                } else {
+                    alert('Error updating supplier');
+                }
+            }).catch(error => {
+                alert('Error updating supplier');
+            });
+        },
+
+        deleteSupplier(supplierId) {
+            const supplier = this.suppliers.find(s => s.id === supplierId);
+            if (supplier) {
+                this.supplierToDelete = {
+                    id: supplier.id,
+                    code: supplier.supplier_code,
+                    componentCount: supplier.components ? supplier.components.length : 0
+                };
+                
+                const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                modal.show();
+            }
+        },
+
+        confirmDelete() {
+            if (this.supplierToDelete) {
+                fetch(`/api/suppliers/${this.supplierToDelete.id}`, {
+                    method: 'DELETE'
+                }).then(response => {
+                    if (response.ok) {
+                        bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+                        window.location.reload();
+                    } else {
+                        alert('Error deleting supplier');
+                    }
+                }).catch(error => {
+                    alert('Error deleting supplier');
+                });
+            }
+        },
+
+        viewComponents(supplierId) {
+            window.location.href = `{{ url_for('main.index') }}?supplier_id=${supplierId}`;
+        },
+
+        bulkExport() {
+            const ids = this.selectedSuppliers.join(',');
+            window.open(`/api/suppliers/export?ids=${ids}`, '_blank');
+        },
+
+        bulkDelete() {
+            if (confirm(`Are you sure you want to delete ${this.selectedSuppliers.length} supplier(s)?`)) {
+                fetch('/api/suppliers/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ids: this.selectedSuppliers })
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error deleting suppliers');
+                    }
+                });
+            }
+        },
+
+        exportSuppliers() {
+            window.open('/api/suppliers/export', '_blank');
+        }
+    }
+}
+</script>
 {% endblock %}

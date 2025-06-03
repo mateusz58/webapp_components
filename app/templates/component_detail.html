@@ -1,198 +1,902 @@
 {% extends "base.html" %}
 
-{% block title %}Component: {{ component.product_number }}{% endblock %}
+{% block title %}{{ component.product_number }} - Component Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .component-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .component-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50px, -50px);
+    }
+
+    .component-header .content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .status-workflow {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .workflow-step {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: var(--border-radius);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+
+    .workflow-step:hover {
+        background: #f8fafc;
+        transform: translateX(5px);
+    }
+
+    .workflow-step.pending {
+        background: #fef3c7;
+        border-color: #f59e0b;
+    }
+
+    .workflow-step.ok {
+        background: #dcfce7;
+        border-color: #10b981;
+    }
+
+    .workflow-step.not_ok {
+        background: #fee2e2;
+        border-color: #ef4444;
+    }
+
+    .workflow-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .workflow-step.pending .workflow-icon {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .workflow-step.ok .workflow-icon {
+        background: #10b981;
+        color: white;
+    }
+
+    .workflow-step.not_ok .workflow-icon {
+        background: #ef4444;
+        color: white;
+    }
+
+    .image-gallery {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .main-image {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .main-image:hover {
+        transform: scale(1.02);
+    }
+
+    .image-placeholder {
+        width: 100%;
+        height: 400px;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-secondary);
+        border: 2px dashed #cbd5e1;
+    }
+
+    .thumbnail-gallery {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .thumbnail {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+
+    .thumbnail:hover,
+    .thumbnail.active {
+        border-color: var(--color-primary);
+        transform: scale(1.05);
+    }
+
+    .thumbnail-placeholder {
+        width: 80px;
+        height: 80px;
+        background: #f1f5f9;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-secondary);
+        border: 2px dashed #cbd5e1;
+    }
+
+    .info-tabs {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .nav-tabs-modern {
+        background: #f8fafc;
+        border: none;
+        padding: 0.5rem;
+    }
+
+    .nav-tabs-modern .nav-link {
+        border: none;
+        border-radius: var(--border-radius);
+        color: var(--color-secondary);
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        margin-right: 0.25rem;
+        transition: all 0.2s ease;
+    }
+
+    .nav-tabs-modern .nav-link:hover {
+        background: white;
+        color: var(--color-primary);
+    }
+
+    .nav-tabs-modern .nav-link.active {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .tab-content-modern {
+        padding: 2rem;
+    }
+
+    .property-item {
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--color-primary);
+    }
+
+    .property-label {
+        font-weight: 600;
+        color: var(--color-dark);
+        margin-bottom: 0.5rem;
+        text-transform: capitalize;
+    }
+
+    .property-value {
+        color: var(--color-secondary);
+    }
+
+    .property-array {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .property-tag {
+        background: var(--color-primary);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+    }
+
+    .keyword-cloud {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .keyword-bubble {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: transform 0.2s ease;
+    }
+
+    .keyword-bubble:hover {
+        transform: scale(1.05);
+    }
+
+    .action-buttons {
+        position: sticky;
+        top: 100px;
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .lightbox {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .lightbox.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .lightbox-content {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: var(--border-radius);
+    }
+
+    .lightbox-close {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .lightbox-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .metadata-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        border: 1px solid #e2e8f0;
+    }
+
+    .metadata-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .metadata-label {
+        font-size: 0.875rem;
+        color: var(--color-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .status-update-form {
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+        display: none;
+    }
+
+    .status-update-form.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Component Details</h1>
-    <div>
-        <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-warning">Edit</a>
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</button>
-        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to List</a>
-    </div>
-</div>
-
-<!-- Component Info Card -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Basic Information</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <table class="table">
-                    <tr>
-                        <th style="width: 30%">Product Number:</th>
-                        <td><strong>{{ component.product_number }}</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Component Type:</th>
-                        <td><span class="badge bg-primary fs-6">{{ component.component_type.name }}</span></td>
-                    </tr>
-                    <tr>
-                        <th>Supplier:</th>
-                        <td>{{ component.supplier.supplier_code }}</td>
-                    </tr>
-                    <tr>
-                        <th>Category:</th>
-                        <td>{{ component.category.name }}</td>
-                    </tr>
-                    <tr>
-                        <th>Created:</th>
-                        <td>{{ component.created_at.strftime('%Y-%m-%d %H:%M') if component.created_at else '-' }}</td>
-                    </tr>
-                    <tr>
-                        <th>Updated:</th>
-                        <td>{{ component.updated_at.strftime('%Y-%m-%d %H:%M') if component.updated_at else '-' }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="col-md-6">
-                <h6>Description:</h6>
-                <p>{{ component.description if component.description else '<em>No description provided</em>' | safe }}</p>
-                
-                <h6>Keywords:</h6>
-                <div class="mb-3">
-                    {% if component.keywords %}
-                        {% for keyword in component.keywords %}
-                            <span class="badge bg-secondary me-1 mb-1">{{ keyword.name }}</span>
-                        {% endfor %}
-                    {% else %}
-                        <span class="text-muted">No keywords</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Type-Specific Properties Card -->
-{% if component.properties %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">{{ component.component_type.name }} Properties</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            {% for key, prop in component.properties.items() %}
-                <div class="col-md-6 mb-3">
-                    <div class="border rounded p-3 h-100">
-                        <h6 class="text-primary mb-2">{{ key|title }}</h6>
-                        <div class="mb-2">
-                            {% if prop.value is iterable and prop.value is not string %}
-                                {% for value in prop.value %}
-                                    <span class="badge bg-info me-1">{{ value }}</span>
-                                {% endfor %}
+<div x-data="componentDetail()" class="fade-in">
+    <!-- Component Header -->
+    <div class="component-header">
+        <div class="content">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="d-flex align-items-center mb-2">
+                        <h1 class="h2 mb-0 me-3">{{ component.product_number }}</h1>
+                        <span class="status-badge status-{{ component.get_overall_status() }}">
+                            {% if component.get_overall_status() == 'approved' %}
+                                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            {% elif component.get_overall_status() == 'rejected' %}
+                                <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i>
                             {% else %}
-                                <strong>{{ prop.value }}</strong>
+                                <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
                             {% endif %}
+                            {{ component.get_status_display() }}
+                        </span>
+                    </div>
+                    <p class="mb-3 opacity-90">
+                        {{ component.description if component.description else 'No description provided' }}
+                    </p>
+                    <div class="d-flex gap-3">
+                        <div class="d-flex align-items-center">
+                            <i data-lucide="tag" class="me-2" style="width: 18px; height: 18px;"></i>
+                            <span>{{ component.component_type.name }}</span>
                         </div>
-                        <small class="text-muted">
-                            Type: {{ prop.type|default('text') }}
-                            {% if prop.updated_at %}
-                                | Updated: {{ prop.updated_at[:19] }}
-                            {% endif %}
-                        </small>
+                        <div class="d-flex align-items-center">
+                            <i data-lucide="truck" class="me-2" style="width: 18px; height: 18px;"></i>
+                            <span>{{ component.supplier.supplier_code }}</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i data-lucide="folder" class="me-2" style="width: 18px; height: 18px;"></i>
+                            <span>{{ component.category.name }}</span>
+                        </div>
                     </div>
                 </div>
-            {% endfor %}
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('main.edit_component', id=component.id) }}" 
+                       class="btn btn-warning-modern btn-modern">
+                        <i data-lucide="edit" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Edit
+                    </a>
+                    <button type="button" 
+                            class="btn btn-danger-modern btn-modern" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteModal">
+                        <i data-lucide="trash-2" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
-{% else %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">{{ component.component_type.name }} Properties</h5>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i>
-            No type-specific properties defined for this component.
-        </div>
-    </div>
-</div>
-{% endif %}
 
-<!-- Pictures Card -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Pictures</h5>
-    </div>
-    <div class="card-body">
-        {% if component.pictures %}
-            <div class="row">
-                {% for picture in component.pictures|sort(attribute='picture_order') %}
-                    <div class="col-md-4 col-lg-3 mb-3">
-                        <div class="card">
-                            <img src="{{ picture.url }}" class="card-img-top" alt="{{ picture.picture_name }}" style="height: 200px; object-fit: cover;">
-                            <div class="card-body">
-                                <h6 class="card-title">{{ picture.picture_name }}</h6>
-                                <p class="card-text">
-                                    <small class="text-muted">Order: {{ picture.picture_order }}</small>
-                                </p>
-                                <a href="{{ picture.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View Full Size</a>
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Status Workflow -->
+            <div class="status-workflow">
+                <h3 class="h5 mb-3 fw-bold">
+                    <i data-lucide="workflow" class="me-2" style="width: 20px; height: 20px;"></i>
+                    Approval Workflow
+                </h3>
+                
+                <!-- Proto Status -->
+                <div class="workflow-step {{ component.proto_status }}" 
+                     @click="toggleStatusForm('proto')"
+                     :class="{ 'border-primary': activeStatusForm === 'proto' }">
+                    <div class="workflow-icon">
+                        {% if component.proto_status == 'ok' %}
+                            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
+                        {% elif component.proto_status == 'not_ok' %}
+                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                        {% else %}
+                            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">Proto Review</h6>
+                                <small class="text-muted">Initial prototype assessment</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{{ 'success' if component.proto_status == 'ok' else ('danger' if component.proto_status == 'not_ok' else 'warning') }}">
+                                    {{ component.proto_status|title }}
+                                </span>
+                                {% if component.proto_date %}
+                                    <div class="small text-muted">{{ component.proto_date.strftime('%Y-%m-%d') }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if component.proto_comment %}
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small>{{ component.proto_comment }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Status Update Form -->
+                <div class="status-update-form" :class="{ 'show': activeStatusForm === 'proto' }">
+                    <form method="POST" action="{{ url_for('main.update_proto_status', id=component.id) }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select name="status" class="form-select form-control-modern" required>
+                                    <option value="pending" {% if component.proto_status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="ok" {% if component.proto_status == 'ok' %}selected{% endif %}>Approved</option>
+                                    <option value="not_ok" {% if component.proto_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" name="comment" class="form-control form-control-modern" 
+                                       placeholder="Add a comment..." value="{{ component.proto_comment or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- SMS Status -->
+                <div class="workflow-step {{ component.sms_status }}"
+                     @click="toggleStatusForm('sms')"
+                     :class="{ 'border-primary': activeStatusForm === 'sms' }">
+                    <div class="workflow-icon">
+                        {% if component.sms_status == 'ok' %}
+                            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
+                        {% elif component.sms_status == 'not_ok' %}
+                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                        {% else %}
+                            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">SMS Review</h6>
+                                <small class="text-muted">Safety and material standards</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{{ 'success' if component.sms_status == 'ok' else ('danger' if component.sms_status == 'not_ok' else 'warning') }}">
+                                    {{ component.sms_status|title }}
+                                </span>
+                                {% if component.sms_date %}
+                                    <div class="small text-muted">{{ component.sms_date.strftime('%Y-%m-%d') }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if component.sms_comment %}
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small>{{ component.sms_comment }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- SMS Status Update Form -->
+                <div class="status-update-form" :class="{ 'show': activeStatusForm === 'sms' }">
+                    <form method="POST" action="{{ url_for('main.update_sms_status', id=component.id) }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select name="status" class="form-select form-control-modern" required>
+                                    <option value="pending" {% if component.sms_status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="ok" {% if component.sms_status == 'ok' %}selected{% endif %}>Approved</option>
+                                    <option value="not_ok" {% if component.sms_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" name="comment" class="form-control form-control-modern" 
+                                       placeholder="Add a comment..." value="{{ component.sms_comment or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PPS Status -->
+                <div class="workflow-step {{ component.pps_status }}"
+                     @click="toggleStatusForm('pps')"
+                     :class="{ 'border-primary': activeStatusForm === 'pps' }">
+                    <div class="workflow-icon">
+                        {% if component.pps_status == 'ok' %}
+                            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
+                        {% elif component.pps_status == 'not_ok' %}
+                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                        {% else %}
+                            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">PPS Review</h6>
+                                <small class="text-muted">Production and packaging standards</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{{ 'success' if component.pps_status == 'ok' else ('danger' if component.pps_status == 'not_ok' else 'warning') }}">
+                                    {{ component.pps_status|title }}
+                                </span>
+                                {% if component.pps_date %}
+                                    <div class="small text-muted">{{ component.pps_date.strftime('%Y-%m-%d') }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if component.pps_comment %}
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small>{{ component.pps_comment }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- PPS Status Update Form -->
+                <div class="status-update-form" :class="{ 'show': activeStatusForm === 'pps' }">
+                    <form method="POST" action="{{ url_for('main.update_pps_status', id=component.id) }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select name="status" class="form-select form-control-modern" required>
+                                    <option value="pending" {% if component.pps_status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="ok" {% if component.pps_status == 'ok' %}selected{% endif %}>Approved</option>
+                                    <option value="not_ok" {% if component.pps_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" name="comment" class="form-control form-control-modern" 
+                                       placeholder="Add a comment..." value="{{ component.pps_comment or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Image Gallery -->
+            <div class="image-gallery">
+                <h3 class="h5 mb-3 fw-bold">
+                    <i data-lucide="images" class="me-2" style="width: 20px; height: 20px;"></i>
+                    Images
+                </h3>
+                
+                {% if component.pictures %}
+                    {% set pictures = component.pictures|sort(attribute='picture_order') %}
+                    <!-- Main Image -->
+                    <div class="mb-3">
+                        <img src="{{ pictures[0].url }}" 
+                             alt="{{ pictures[0].picture_name }}"
+                             class="main-image" 
+                             @click="openLightbox('{{ pictures[0].url }}')"
+                             x-ref="mainImage"
+                             onerror="this.parentElement.innerHTML='<div class=\'image-placeholder\'><i data-lucide=\'image\' style=\'width: 80px; height: 80px;\'></i><p class=\'mt-3 text-muted\'>Image not available</p></div>'">
+                    </div>
+
+                    <!-- Thumbnail Gallery -->
+                    {% if pictures|length > 1 %}
+                        <div class="thumbnail-gallery">
+                            {% for picture in pictures %}
+                                <img src="{{ picture.url }}" 
+                                     alt="{{ picture.picture_name }}"
+                                     class="thumbnail" 
+                                     @click="changeMainImage('{{ picture.url }}')"
+                                     :class="{ 'active': currentImage === '{{ picture.url }}' }"
+                                     onerror="this.parentElement.innerHTML='<div class=\'thumbnail-placeholder\'><i data-lucide=\'image\' style=\'width: 20px; height: 20px;\'></i></div>'">
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="image-placeholder">
+                        <div class="text-center">
+                            <i data-lucide="image" style="width: 80px; height: 80px;"></i>
+                            <p class="mt-3 text-muted mb-0">No images available for this component</p>
+                            <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-primary-modern btn-modern mt-3">
+                                <i data-lucide="upload" class="me-2" style="width: 16px; height: 16px;"></i>
+                                Add Images
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Information Tabs -->
+            <div class="info-tabs">
+                <ul class="nav nav-tabs nav-tabs-modern" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic-info" type="button">
+                            <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Basic Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#properties" type="button">
+                            <i data-lucide="settings" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Properties
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#keywords" type="button">
+                            <i data-lucide="tag" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Keywords
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#metadata" type="button">
+                            <i data-lucide="database" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Metadata
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content tab-content-modern">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-pane fade show active" id="basic-info">
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-value">{{ component.product_number }}</div>
+                                <div class="metadata-label">Product Number</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-value">{{ component.component_type.name }}</div>
+                                <div class="metadata-label">Component Type</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-value">{{ component.supplier.supplier_code }}</div>
+                                <div class="metadata-label">Supplier</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-value">{{ component.category.name }}</div>
+                                <div class="metadata-label">Category</div>
+                            </div>
+                        </div>
+
+                        {% if component.description %}
+                            <div class="mb-3">
+                                <h6 class="fw-bold mb-2">Description</h6>
+                                <p class="text-muted">{{ component.description }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Properties Tab -->
+                    <div class="tab-pane fade" id="properties">
+                        {% if component.properties %}
+                            {% for key, prop in component.properties.items() %}
+                                <div class="property-item">
+                                    <div class="property-label">{{ key|title }}</div>
+                                    <div class="property-value">
+                                        {% if prop.value is iterable and prop.value is not string %}
+                                            <div class="property-array">
+                                                {% for value in prop.value %}
+                                                    <span class="property-tag">{{ value }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <strong>{{ prop.value }}</strong>
+                                        {% endif %}
+                                    </div>
+                                    {% if prop.updated_at %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i data-lucide="clock" class="me-1" style="width: 12px; height: 12px;"></i>
+                                                Updated: {{ prop.updated_at[:19] }}
+                                            </small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i data-lucide="settings" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                                <p class="text-muted mt-3 mb-0">No properties defined for this component</p>
+                                <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-primary-modern btn-modern mt-3">
+                                    Add Properties
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Keywords Tab -->
+                    <div class="tab-pane fade" id="keywords">
+                        {% if component.keywords %}
+                            <div class="keyword-cloud">
+                                {% for keyword in component.keywords %}
+                                    <span class="keyword-bubble">{{ keyword.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                                <p class="text-muted mt-3 mb-0">No keywords assigned to this component</p>
+                                <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-primary-modern btn-modern mt-3">
+                                    Add Keywords
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Metadata Tab -->
+                    <div class="tab-pane fade" id="metadata">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Creation Information</h6>
+                                <div class="mb-3">
+                                    <strong>Created:</strong>
+                                    <div class="text-muted">{{ component.created_at.strftime('%Y-%m-%d %H:%M:%S') if component.created_at else 'N/A' }}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Last Updated:</strong>
+                                    <div class="text-muted">{{ component.updated_at.strftime('%Y-%m-%d %H:%M:%S') if component.updated_at else 'N/A' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Statistics</h6>
+                                <div class="mb-3">
+                                    <strong>Total Properties:</strong>
+                                    <div class="text-muted">{{ component.properties|length if component.properties else 0 }}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Keywords:</strong>
+                                    <div class="text-muted">{{ component.keywords|length }}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Images:</strong>
+                                    <div class="text-muted">{{ component.pictures|length }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
+                </div>
             </div>
-        {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-images"></i>
-                No pictures available for this component.
-            </div>
-        {% endif %}
-    </div>
-</div>
+        </div>
 
-<!-- Component JSON Data (for debugging/advanced users) -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#jsonData">
-                <i class="fas fa-code"></i> Raw Data (JSON)
-            </button>
-        </h5>
-    </div>
-    <div class="collapse" id="jsonData">
-        <div class="card-body">
-            <h6>Properties JSON:</h6>
-            <pre class="bg-light p-3 rounded"><code>{{ component.properties | tojson(indent=2) if component.properties else '{}' }}</code></pre>
-            
-            <h6 class="mt-3">Keywords:</h6>
-            <pre class="bg-light p-3 rounded"><code>{{ component.keywords | map(attribute='name') | list | tojson(indent=2) }}</code></pre>
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="action-buttons">
+                <h5 class="fw-bold mb-3">Quick Actions</h5>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.edit_component', id=component.id) }}" 
+                       class="btn btn-primary-modern btn-modern">
+                        <i data-lucide="edit" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Edit Component
+                    </a>
+                    
+                    <button class="btn btn-success-modern btn-modern" @click="duplicateComponent()">
+                        <i data-lucide="copy" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Duplicate
+                    </button>
+                    
+                    <button class="btn btn-warning-modern btn-modern" @click="exportComponent()">
+                        <i data-lucide="download" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Export Data
+                    </button>
+                    
+                    <hr>
+                    
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                        <i data-lucide="arrow-left" class="me-2" style="width: 18px; height: 18px;"></i>
+                        Back to List
+                    </a>
+                </div>
+
+                <!-- Component Variants -->
+                {% if component.variants %}
+                    <div class="mt-4">
+                        <h6 class="fw-bold mb-3">Color Variants</h6>
+                        {% for variant in component.variants %}
+                            <div class="d-flex align-items-center mb-2 p-2 bg-light rounded">
+                                <div class="me-2" style="width: 20px; height: 20px; background-color: {{ variant.color.hex_code or '#ccc' }}; border-radius: 50%;"></div>
+                                <span class="flex-grow-1">{{ variant.variant_name or variant.color.name }}</span>
+                                <small class="text-muted">{{ variant.created_at.strftime('%m/%d') if variant.created_at }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Warning!</strong> This action cannot be undone.
+    <!-- Image Lightbox -->
+    <div class="lightbox" :class="{ 'active': lightboxOpen }" @click="closeLightbox()">
+        <img :src="lightboxImage" alt="Component Image" class="lightbox-content">
+        <button class="lightbox-close" @click="closeLightbox()">
+            <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+        </button>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <p>Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?</p>
-                <p>This will also delete:</p>
-                <ul>
-                    <li>{{ component.pictures|length }} picture(s)</li>
-                    <li>All property data</li>
-                    <li>Keyword associations</li>
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Delete Component
-                    </button>
-                </form>
+                <div class="modal-body">
+                    <div class="alert alert-modern alert-warning">
+                        <div class="d-flex align-items-center">
+                            <i data-lucide="alert-triangle" class="me-2" style="width: 24px; height: 24px;"></i>
+                            <strong>This action cannot be undone!</strong>
+                        </div>
+                    </div>
+                    <p>Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?</p>
+                    <div class="mt-3">
+                        <p class="text-muted mb-2">This will also delete:</p>
+                        <ul class="text-muted">
+                            <li>{{ component.pictures|length }} picture(s)</li>
+                            <li>All property data</li>
+                            <li>Keyword associations</li>
+                            {% if component.variants %}
+                                <li>{{ component.variants|length }} color variant(s)</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-danger-modern btn-modern">
+                            <i data-lucide="trash-2" class="me-2" style="width: 16px; height: 16px;"></i>
+                            Delete Component
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -201,13 +905,89 @@
 
 {% block scripts %}
 <script>
-// Image loading error handling
+function componentDetail() {
+    return {
+        activeStatusForm: null,
+        lightboxOpen: false,
+        lightboxImage: '',
+        currentImage: '{{ component.pictures[0].url if component.pictures else "" }}',
+
+        init() {
+            // Initialize current image
+            this.currentImage = this.$refs.mainImage?.src || '';
+        },
+
+        toggleStatusForm(formType) {
+            this.activeStatusForm = this.activeStatusForm === formType ? null : formType;
+        },
+
+        openLightbox(imageUrl) {
+            this.lightboxImage = imageUrl;
+            this.lightboxOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeLightbox() {
+            this.lightboxOpen = false;
+            document.body.style.overflow = 'auto';
+        },
+
+        changeMainImage(imageUrl) {
+            this.currentImage = imageUrl;
+            if (this.$refs.mainImage) {
+                this.$refs.mainImage.src = imageUrl;
+            }
+        },
+
+        duplicateComponent() {
+            if (confirm('Create a duplicate of this component?')) {
+                // Implement duplication logic
+                fetch(`/api/components/{{ component.id }}/duplicate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value
+                    }
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          window.location.href = `/component/${data.new_id}`;
+                      } else {
+                          alert('Error creating duplicate: ' + data.error);
+                      }
+                  });
+            }
+        },
+
+        exportComponent() {
+            // Create export URL
+            const exportUrl = `/api/components/{{ component.id }}/export`;
+            
+            // Create temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.download = `component_{{ component.product_number }}.json`;
+            link.click();
+        }
+    }
+}
+
+// Close lightbox on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const lightbox = document.querySelector('.lightbox.active');
+        if (lightbox) {
+            lightbox.click();
+        }
+    }
+});
+
+// Image error handling
 document.addEventListener('DOMContentLoaded', function() {
-    const images = document.querySelectorAll('img[src]');
+    const images = document.querySelectorAll('img[data-fallback]');
     images.forEach(img => {
         img.addEventListener('error', function() {
-            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIE5vdCBGb3VuZDwvdGV4dD48L3N2Zz4=';
-            this.alt = 'Image not found';
+            this.src = this.dataset.fallback || '/static/img/placeholder.jpg';
         });
     });
 });

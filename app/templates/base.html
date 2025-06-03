@@ -1,57 +1,420 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Component Management System{% endblock %}</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Modern CSS Framework -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Modern Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.css" rel="stylesheet">
+    
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --color-primary: #3B82F6;
+            --color-primary-dark: #2563EB;
+            --color-secondary: #64748B;
+            --color-success: #10B981;
+            --color-warning: #F59E0B;
+            --color-danger: #EF4444;
+            --color-info: #06B6D4;
+            --color-light: #F8FAFC;
+            --color-dark: #1E293B;
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .main-content {
+            background: var(--color-light);
+            min-height: calc(100vh - 80px);
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+            margin-top: 80px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Modern Navigation */
+        .navbar-modern {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: var(--shadow-sm);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--color-primary) !important;
+            text-decoration: none;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: var(--color-secondary) !important;
+            transition: all 0.2s ease;
+            border-radius: var(--border-radius);
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: var(--color-primary) !important;
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            color: var(--color-primary) !important;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Modern Cards */
+        .card-modern {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .card-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header-modern {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+            padding: 1.5rem;
+        }
+
+        .card-header-modern h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        /* Modern Buttons */
+        .btn-modern {
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            padding: 0.625rem 1.25rem;
+            transition: all 0.2s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn-modern:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary-modern {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: white;
+        }
+
+        .btn-primary-modern:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-success-modern {
+            background: linear-gradient(135deg, var(--color-success), #059669);
+            color: white;
+        }
+
+        .btn-warning-modern {
+            background: linear-gradient(135deg, var(--color-warning), #D97706);
+            color: white;
+        }
+
+        .btn-danger-modern {
+            background: linear-gradient(135deg, var(--color-danger), #DC2626);
+            color: white;
+        }
+
+        /* Modern Forms */
+        .form-control-modern {
+            border: 2px solid #E2E8F0;
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control-modern:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+
+        .form-label-modern {
+            font-weight: 500;
+            color: var(--color-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Modern Alerts */
+        .alert-modern {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-modern::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: currentColor;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-approved {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .status-pending {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-rejected {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Loading Animation */
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-top: 70px;
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+            }
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">Component System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+<body class="h-full">
+    <!-- Modern Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-modern">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                <i data-lucide="layers" class="me-2" style="width: 28px; height: 28px;"></i>
+                ComponentHub
+            </a>
+            
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i data-lucide="menu" style="width: 24px; height: 24px;"></i>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.index') }}">
+                            <i data-lucide="grid-3x3" class="me-1" style="width: 18px; height: 18px;"></i>
+                            Components
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.suppliers') }}">
+                            <i data-lucide="truck" class="me-1" style="width: 18px; height: 18px;"></i>
+                            Suppliers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.new_component') }}">
+                            <i data-lucide="plus-circle" class="me-1" style="width: 18px; height: 18px;"></i>
+                            New Component
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.upload_csv') }}">
+                            <i data-lucide="upload" class="me-1" style="width: 18px; height: 18px;"></i>
+                            Bulk Upload
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- User Menu -->
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">Components</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.suppliers') }}">Suppliers</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.new_component') }}">New Component</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.upload_csv') }}">Bulk Upload</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                            <i data-lucide="user-circle" class="me-1" style="width: 18px; height: 18px;"></i>
+                            Admin
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i data-lucide="settings" class="me-2" style="width: 16px; height: 16px;"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="#"><i data-lucide="help-circle" class="me-2" style="width: 16px; height: 16px;"></i>Help</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i data-lucide="log-out" class="me-2" style="width: 16px; height: 16px;"></i>Logout</a></li>
+                        </ul>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid px-4 py-4">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div id="flashMessages" class="fade-in">
+                        {% for category, message in messages %}
+                            <div class="alert alert-modern alert-{{ 'danger' if category == 'error' else category }} alert-dismissible" 
+                                 x-data="{ show: true }" 
+                                 x-show="show" 
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0 transform translate-y-2"
+                                 x-transition:enter-end="opacity-100 transform translate-y-0">
+                                <div class="d-flex align-items-center">
+                                    {% if category == 'success' %}
+                                        <i data-lucide="check-circle" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    {% elif category == 'warning' %}
+                                        <i data-lucide="alert-triangle" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    {% elif category == 'danger' or category == 'error' %}
+                                        <i data-lucide="x-circle" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    {% else %}
+                                        <i data-lucide="info" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    {% endif %}
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close" @click="show = false"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modern JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.js"></script>
+    
+    <!-- Initialize Lucide Icons -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            
+            // Auto-hide flash messages after 5 seconds
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert-modern');
+                alerts.forEach(alert => {
+                    if (alert.__x) {
+                        alert.__x.$data.show = false;
+                    }
+                });
+            }, 5000);
+        });
+        
+        // Global Alpine.js utilities
+        window.Alpine = window.Alpine || {};
+        window.Alpine.data = window.Alpine.data || function() {};
+        
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('a[href^="#"]')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
