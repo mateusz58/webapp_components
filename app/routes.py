@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify
 from werkzeug.utils import secure_filename
 from app import db
-from app.models import Supplier, Category, Color, Material, Component, Picture
+from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword
 from app.utils import process_csv_file
 from sqlalchemy import or_, text
 import uuid
@@ -20,10 +20,9 @@ def index():
     try:
         # Get filter parameters
         search = request.args.get('search', '')
+        component_type_id = request.args.get('component_type_id', type=int)
         category_id = request.args.get('category_id', type=int)
         supplier_id = request.args.get('supplier_id', type=int)
-        color_id = request.args.get('color_id', type=int)
-        material_id = request.args.get('material_id', type=int)
         
         # Base query
         query = Component.query
@@ -35,34 +34,29 @@ def index():
                 Component.description.ilike(f'%{search}%')
             ))
         
+        if component_type_id:
+            query = query.filter(Component.component_type_id == component_type_id)
+        
         if category_id:
             query = query.filter(Component.category_id == category_id)
         
         if supplier_id:
             query = query.filter(Component.supplier_id == supplier_id)
         
-        if color_id:
-            query = query.filter(Component.color_id == color_id)
-        
-        if material_id:
-            query = query.filter(Component.material_id == material_id)
-        
         # Get paginated results
         page = request.args.get('page', 1, type=int)
         components = query.paginate(page=page, per_page=10, error_out=False)
         
         # Get filter options for dropdowns
+        component_types = ComponentType.query.all()
         categories = Category.query.all()
         suppliers = Supplier.query.all()
-        colors = Color.query.all()
-        materials = Material.query.all()
         
         return render_template('index.html', 
                               components=components,
+                              component_types=component_types,
                               categories=categories,
                               suppliers=suppliers,
-                              colors=colors,
-                              materials=materials,
                               search=search)
     except Exception as e:
         # In case of database errors, show a simple connection page
@@ -116,38 +110,50 @@ def new_component():
         # Get form data
         product_number = request.form.get('product_number')
         description = request.form.get('description')
+        component_type_id = request.form.get('component_type_id')
         supplier_id = request.form.get('supplier_id')
         category_id = request.form.get('category_id')
-        color_id = request.form.get('color_id')
-        material_id = request.form.get('material_id')
         
-        # Check if product_number already exists
-        existing = Component.query.filter_by(product_number=product_number).first()
+        # Check if product_number already exists for this supplier
+        existing = Component.query.filter_by(
+            product_number=product_number, 
+            supplier_id=supplier_id
+        ).first()
         if existing:
-            flash('Product number already exists.', 'danger')
-            # Get filter options for dropdowns
-            categories = Category.query.all()
-            suppliers = Supplier.query.all()
-            colors = Color.query.all()
-            materials = Material.query.all()
-            return render_template('component_form.html', 
-                                  categories=categories,
-                                  suppliers=suppliers,
-                                  colors=colors,
-                                  materials=materials)
+            flash('Product number already exists for this supplier.', 'danger')
+            return redirect(request.url)
         
         # Create new component
         component = Component(
             product_number=product_number,
             description=description,
+            component_type_id=component_type_id,
             supplier_id=supplier_id,
-            category_id=category_id,
-            color_id=color_id,
-            material_id=material_id
+            category_id=category_id
         )
         
         db.session.add(component)
-        db.session.commit()
+        db.session.flush()  # Get the ID
+        
+        # Process keywords
+        keywords = request.form.get('keywords', '').strip()
+        if keywords:
+            keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
+            for keyword_name in keyword_list:
+                # Get or create keyword
+                keyword = Keyword.query.filter_by(name=keyword_name).first()
+                if not keyword:
+                    keyword = Keyword(name=keyword_name)
+                    db.session.add(keyword)
+                
+                # Add to component
+                if keyword not in component.keywords:
+                    component.keywords.append(keyword)
+        
+        # Process flexible properties based on component type
+        component_type = ComponentType.query.get(component_type_id)
+        if component_type:
+            _process_component_properties(component, component_type.name, request.form)
         
         # Process picture uploads
         for i in range(1, 6):  # Up to 5 pictures
@@ -177,16 +183,49 @@ def new_component():
         return redirect(url_for('main.component_detail', id=component.id))
     
     # GET request - show form
+    component_types = ComponentType.query.all()
     categories = Category.query.all()
     suppliers = Supplier.query.all()
     colors = Color.query.all()
     materials = Material.query.all()
     
     return render_template('component_form.html', 
+                          component_types=component_types,
                           categories=categories,
                           suppliers=suppliers,
                           colors=colors,
                           materials=materials)
+
+def _process_component_properties(component, component_type_name, form_data):
+    """Process component properties based on component type"""
+    
+    # Define which properties each component type can have
+    type_properties = {
+        'Fabrics': ['material', 'color', 'gender', 'brand'],
+        'Shapes': ['gender', 'style', 'brand', 'subbrand'],
+        'Buttons': ['material', 'color', 'brand'],
+        'Zippers': ['material', 'color', 'brand'],
+        'Labels': ['brand', 'subbrand'],
+        'Hangtags': ['brand', 'subbrand'],
+        'Packaging': ['brand']
+    }
+    
+    allowed_properties = type_properties.get(component_type_name, [])
+    
+    for prop in allowed_properties:
+        prop_value = form_data.get(prop)
+        if prop_value:
+            # Handle array properties (gender, style, subbrand)
+            if prop in ['gender', 'style', 'subbrand']:
+                # Could be multiple selections from form
+                if isinstance(prop_value, list):
+                    component.set_property(prop, prop_value, 'array')
+                else:
+                    # Single value, convert to array
+                    component.set_property(prop, [prop_value], 'array')
+            else:
+                # Single value properties
+                component.set_property(prop, prop_value, 'text')
 
 @main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
 def edit_component(id):
@@ -197,10 +236,28 @@ def edit_component(id):
         # Get form data
         component.product_number = request.form.get('product_number')
         component.description = request.form.get('description')
+        component.component_type_id = request.form.get('component_type_id')
         component.supplier_id = request.form.get('supplier_id')
         component.category_id = request.form.get('category_id')
-        component.color_id = request.form.get('color_id')
-        component.material_id = request.form.get('material_id')
+        
+        # Update keywords
+        component.keywords.clear()
+        keywords = request.form.get('keywords', '').strip()
+        if keywords:
+            keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
+            for keyword_name in keyword_list:
+                keyword = Keyword.query.filter_by(name=keyword_name).first()
+                if not keyword:
+                    keyword = Keyword(name=keyword_name)
+                    db.session.add(keyword)
+                component.keywords.append(keyword)
+        
+        # Update flexible properties
+        component_type = ComponentType.query.get(component.component_type_id)
+        if component_type:
+            # Clear existing properties and set new ones
+            component.properties = {}
+            _process_component_properties(component, component_type.name, request.form)
         
         # Process pictures - first remove existing pictures
         Picture.query.filter_by(component_id=component.id).delete()
@@ -214,15 +271,12 @@ def edit_component(id):
             
             # Case 1: New file uploaded
             if picture_file and picture_file.filename:
-                # Generate unique filename
                 filename = secure_filename(picture_file.filename)
                 unique_filename = f"{uuid.uuid4().hex}_{filename}"
                 
-                # Save file
                 picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
                 picture_file.save(picture_path)
                 
-                # Create picture record
                 picture = Picture(
                     component_id=component.id,
                     picture_name=filename,
@@ -246,17 +300,23 @@ def edit_component(id):
         return redirect(url_for('main.component_detail', id=component.id))
     
     # GET request - show form with existing data
+    component_types = ComponentType.query.all()
     categories = Category.query.all()
     suppliers = Supplier.query.all()
     colors = Color.query.all()
     materials = Material.query.all()
     
+    # Prepare keywords for form
+    keywords_str = ', '.join([k.name for k in component.keywords])
+    
     return render_template('component_edit_form.html', 
                           component=component,
+                          component_types=component_types,
                           categories=categories,
                           suppliers=suppliers,
                           colors=colors,
-                          materials=materials)
+                          materials=materials,
+                          keywords_str=keywords_str)
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
@@ -319,17 +379,13 @@ def upload_csv():
 @main.route('/download/csv-template')
 def download_csv_template():
     """Download a CSV template for bulk upload."""
-    # This would typically generate a CSV file with headers
-    # For simplicity, we'll just render a page with the template structure
     return render_template('csv_template.html')
-
 
 @main.route('/suppliers')
 def suppliers():
     """List all suppliers."""
     suppliers = Supplier.query.all()
     return render_template('suppliers.html', suppliers=suppliers)
-
 
 @main.route('/supplier/new', methods=['GET', 'POST'])
 def new_supplier():
@@ -369,6 +425,13 @@ def new_supplier():
     
     return render_template('supplier_form.html')
 
+# API endpoints for AJAX requests
+@main.route('/api/component-types')
+def api_component_types():
+    """API endpoint to get all component types."""
+    component_types = ComponentType.query.all()
+    return jsonify([{'id': ct.id, 'name': ct.name} for ct in component_types])
+
 @main.route('/api/categories')
 def api_categories():
     """API endpoint to get all categories."""
@@ -392,3 +455,26 @@ def api_suppliers():
     """API endpoint to get all suppliers."""
     suppliers = Supplier.query.all()
     return jsonify([{'id': s.id, 'code': s.supplier_code, 'address': s.address} for s in suppliers])
+
+@main.route('/api/component-type-properties/<int:component_type_id>')
+def api_component_type_properties(component_type_id):
+    """API endpoint to get available properties for a component type."""
+    component_type = ComponentType.query.get_or_404(component_type_id)
+    
+    # Define which properties each component type can have
+    type_properties = {
+        'Fabrics': ['material', 'color', 'gender', 'brand'],
+        'Shapes': ['gender', 'style', 'brand', 'subbrand'],
+        'Buttons': ['material', 'color', 'brand'],
+        'Zippers': ['material', 'color', 'brand'],
+        'Labels': ['brand', 'subbrand'],
+        'Hangtags': ['brand', 'subbrand'],
+        'Packaging': ['brand']
+    }
+    
+    properties = type_properties.get(component_type.name, [])
+    
+    return jsonify({
+        'component_type': component_type.name,
+        'properties': properties
+    })

@@ -13,14 +13,27 @@
     <div class="card-body">
         <form method="GET" action="{{ url_for('main.index') }}">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="mb-3">
                         <label for="search" class="form-label">Search</label>
                         <input type="text" class="form-control" id="search" name="search" value="{{ search }}">
                         <small class="text-muted">Search by product number or description</small>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="component_type_id" class="form-label">Component Type</label>
+                        <select class="form-select" id="component_type_id" name="component_type_id">
+                            <option value="">All Types</option>
+                            {% for component_type in component_types %}
+                                <option value="{{ component_type.id }}" {% if request.args.get('component_type_id')|int == component_type.id %}selected{% endif %}>
+                                    {{ component_type.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="mb-3">
                         <label for="category_id" class="form-label">Category</label>
                         <select class="form-select" id="category_id" name="category_id">
@@ -33,7 +46,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <div class="mb-3">
                         <label for="supplier_id" class="form-label">Supplier</label>
                         <select class="form-select" id="supplier_id" name="supplier_id">
@@ -41,32 +54,6 @@
                             {% for supplier in suppliers %}
                                 <option value="{{ supplier.id }}" {% if request.args.get('supplier_id')|int == supplier.id %}selected{% endif %}>
                                     {{ supplier.supplier_code }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label for="color_id" class="form-label">Color</label>
-                        <select class="form-select" id="color_id" name="color_id">
-                            <option value="">All Colors</option>
-                            {% for color in colors %}
-                                <option value="{{ color.id }}" {% if request.args.get('color_id')|int == color.id %}selected{% endif %}>
-                                    {{ color.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label for="material_id" class="form-label">Material</label>
-                        <select class="form-select" id="material_id" name="material_id">
-                            <option value="">All Materials</option>
-                            {% for material in materials %}
-                                <option value="{{ material.id }}" {% if request.args.get('material_id')|int == material.id %}selected{% endif %}>
-                                    {{ material.name }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -97,11 +84,12 @@
                     <thead>
                         <tr>
                             <th>Product #</th>
+                            <th>Type</th>
                             <th>Description</th>
                             <th>Supplier</th>
                             <th>Category</th>
-                            <th>Color</th>
-                            <th>Material</th>
+                            <th>Keywords</th>
+                            <th>Properties</th>
                             <th>Pictures</th>
                             <th>Actions</th>
                         </tr>
@@ -109,28 +97,103 @@
                     <tbody>
                         {% for component in components.items %}
                             <tr>
-                                <td>{{ component.product_number }}</td>
-                                <td>{{ component.description|truncate(50) }}</td>
+                                <td>
+                                    <strong>{{ component.product_number }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ component.component_type.name }}</span>
+                                </td>
+                                <td>
+                                    {{ component.description|truncate(40) if component.description else '-' }}
+                                </td>
                                 <td>{{ component.supplier.supplier_code }}</td>
                                 <td>{{ component.category.name }}</td>
-                                <td>{{ component.color.name }}</td>
-                                <td>{{ component.material.name }}</td>
-                                <td>{{ component.pictures|length }}</td>
                                 <td>
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-sm btn-info">View</a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ component.id }}">Delete</button>
+                                    {% if component.keywords %}
+                                        {% for keyword in component.keywords[:3] %}
+                                            <span class="badge bg-secondary me-1">{{ keyword.name }}</span>
+                                        {% endfor %}
+                                        {% if component.keywords|length > 3 %}
+                                            <span class="badge bg-light text-dark">+{{ component.keywords|length - 3 }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if component.properties %}
+                                        {% set property_count = component.properties|length %}
+                                        {% if property_count > 0 %}
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    {{ property_count }} properties
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    {% for key, prop in component.properties.items() %}
+                                                        <li class="dropdown-item">
+                                                            <strong>{{ key|title }}:</strong>
+                                                            {% if prop.value is iterable and prop.value is not string %}
+                                                                {{ prop.value|join(', ') }}
+                                                            {% else %}
+                                                                {{ prop.value }}
+                                                            {% endif %}
+                                                        </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if component.pictures %}
+                                        {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ primary_picture.url }}" 
+                                                 alt="{{ primary_picture.picture_name }}"
+                                                 class="img-thumbnail me-2" 
+                                                 style="width: 50px; height: 50px; object-fit: cover;"
+                                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAyMEMyNi4zODA3IDIwIDI3LjUgMTguODgwNyAyNy41IDE3LjVDMjcuNSAxNi4xMTkzIDI2LjM4MDcgMTUgMjUgMTVDMjMuNjE5MyAxNSAyMi41IDE2LjExOTMgMjIuNSAxNy41QzIyLjUgMTguODgwNyAyMy42MTkzIDIwIDI1IDIwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMzUgMzVIMTVWMzNMMjAgMjhMMjMgMzFMMjggMjZMMzUgMzNWMzVaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='; this.onerror=null;">
+                                            {% if component.pictures|length > 1 %}
+                                                <small class="text-muted">+{{ component.pictures|length - 1 }}</small>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center">
+                                            <div class="d-inline-block bg-light border rounded" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-image text-muted"></i>
+                                            </div>
+                                            <div><small class="text-muted">No images</small></div>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('main.component_detail', id=component.id) }}" class="btn btn-sm btn-info" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.edit_component', id=component.id) }}" class="btn btn-sm btn-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger" title="Delete" data-bs-toggle="modal" data-bs-target="#deleteModal{{ component.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                     
                                     <!-- Delete Modal -->
-                                    <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ component.id }}" aria-hidden="true">
+                                    <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title" id="deleteModalLabel{{ component.id }}">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    <h5 class="modal-title">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
                                                     Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?
+                                                    <br><small class="text-muted">This action cannot be undone.</small>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -149,8 +212,15 @@
             </div>
             
             <!-- Pagination -->
-            <nav aria-label="Page navigation">
+            {% if components.pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
                 <ul class="pagination justify-content-center">
+                    {% if components.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.index', page=components.prev_num, search=search, component_type_id=request.args.get('component_type_id'), category_id=request.args.get('category_id'), supplier_id=request.args.get('supplier_id')) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
                     {% for page_num in components.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
                         {% if page_num %}
                             {% if page_num == components.page %}
@@ -159,7 +229,7 @@
                                 </li>
                             {% else %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('main.index', page=page_num, search=search, category_id=request.args.get('category_id'), supplier_id=request.args.get('supplier_id'), color_id=request.args.get('color_id'), material_id=request.args.get('material_id')) }}">{{ page_num }}</a>
+                                    <a class="page-link" href="{{ url_for('main.index', page=page_num, search=search, component_type_id=request.args.get('component_type_id'), category_id=request.args.get('category_id'), supplier_id=request.args.get('supplier_id')) }}">{{ page_num }}</a>
                                 </li>
                             {% endif %}
                         {% else %}
@@ -168,11 +238,45 @@
                             </li>
                         {% endif %}
                     {% endfor %}
+                    
+                    {% if components.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.index', page=components.next_num, search=search, component_type_id=request.args.get('component_type_id'), category_id=request.args.get('category_id'), supplier_id=request.args.get('supplier_id')) }}">Next</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </nav>
+            {% endif %}
         {% else %}
-            <div class="alert alert-info">No components found.</div>
+            <div class="alert alert-info">
+                <h4>No components found</h4>
+                <p>No components match your search criteria.</p>
+                <a href="{{ url_for('main.new_component') }}" class="btn btn-primary">Add Your First Component</a>
+            </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-submit filter form when component type changes
+document.getElementById('component_type_id').addEventListener('change', function() {
+    this.form.submit();
+});
+
+// Image loading error handling for thumbnails
+document.addEventListener('DOMContentLoaded', function() {
+    const thumbnails = document.querySelectorAll('.img-thumbnail');
+    thumbnails.forEach(img => {
+        img.addEventListener('error', function() {
+            if (!this.dataset.errorHandled) {
+                this.dataset.errorHandled = 'true';
+                this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAyMEMyNi4zODA3IDIwIDI3LjUgMTguODgwNyAyNy41IDE3LjVDMjcuNSAxNi4xMTkzIDI2LjM4MDcgMTUgMjUgMTVDMjMuNjE5MyAxNSAyMi41IDE2LjExOTMgMjIuNSAxNy41QzIyLjUgMTguODgwNyAyMy42MTkzIDIwIDI1IDIwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMzUgMzVIMTVWMzNMMjAgMjhMMjMgMzFMMjggMjZMMzUgMzNWMzVaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=';
+                this.alt = 'Image not available';
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

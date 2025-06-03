@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import Supplier, Category, Color, Material, Component, Picture
+from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword
 
 app = create_app()
 
@@ -12,7 +12,9 @@ def make_shell_context():
         'Color': Color, 
         'Material': Material, 
         'Component': Component, 
-        'Picture': Picture
+        'Picture': Picture,
+        'ComponentType': ComponentType,
+        'Keyword': Keyword
     }
 
 if __name__ == '__main__':
