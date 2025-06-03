@@ -160,155 +160,151 @@ def process_flexible_properties(row, component, component_type_name):
                     # Single value property
                     component.set_property(prop, value, 'text')
 
-def process_pictures(row, component):
-    """Process picture data from a CSV row for the new schema."""
-    try:
-        # Remove existing pictures (for update case)
-        Picture.query.filter_by(component_id=component.id).delete()
-        
-        # Process up to 5 pictures
-        for i in range(1, 6):
-            pic_name_key = f'picture_{i}_name'
-            pic_url_key = f'picture_{i}_url'
-            pic_order_key = f'picture_{i}_order'
-            
-            # Check if we have this picture data
-            if (pic_name_key in row and row[pic_name_key] and 
-                pic_url_key in row and row[pic_url_key]):
-                
-                # Get order, default to i if not provided
-                order = i
-                if pic_order_key in row and row[pic_order_key]:
-                    try:
-                        order = int(row[pic_order_key])
-                    except ValueError:
-                        order = i
-                
-                picture = Picture(
-                    component_id=component.id,
-                    picture_name=row[pic_name_key],
-                    url=row[pic_url_key],
-                    picture_order=order
-                )
-                db.session.add(picture)
-                
-    except Exception as e:
-        db.session.rollback()
+
+def process_pictures(row, component):  
+    """Process picture data from a CSV row - auto-assign picture order."""  
+    try:  
+        # Remove existing pictures (for update case)  
+        Picture.query.filter_by(component_id=component.id).delete()  
+
+        # Process up to 5 pictures with auto-assigned order  
+        picture_order = 1  
+        for i in range(1, 6):  
+            pic_name_key = f'picture_{i}_name'  
+            pic_url_key = f'picture_{i}_url'  
+
+            # Check if we have this picture data  
+            if (pic_name_key in row and row[pic_name_key] and  
+                pic_url_key in row and row[pic_url_key]):  
+
+                picture = Picture(  
+                    component_id=component.id,  
+                    picture_name=row[pic_name_key],  
+                    url=row[pic_url_key],  
+                    picture_order=picture_order  # Auto-assign order  
+                )  
+                db.session.add(picture)  
+                picture_order += 1  # Increment for next picture  
+
+    except Exception as e:  
+        db.session.rollback()  
         raise e
 
-def create_sample_csv_data():
-    """Create sample CSV data for testing with the new schema."""
-    sample_data = [
-        {
-            'product_number': 'F-WL001',
-            'description': 'Shiny polyester 50D fabric',
-            'supplier_code': 'SUPP001',
-            'component_type': 'Fabrics',
-            'category_name': 'polyester fabrics',
-            'keywords': 'shiny,polyester,jacket,outerwear,waterproof',
-            'material': 'polyester',
-            'color': 'silver',
-            'gender': 'ladies,unisex',
-            'brand': 'MAR',
-            'picture_1_name': 'fabric_front.jpg',
-            'picture_1_url': 'http://example.com/images/fabric_front.jpg',
-            'picture_1_order': '1'
-        },
-        {
-            'product_number': 'S-WL0001',
-            'description': 'Parka with pockets and hood',
-            'supplier_code': 'SUPP001',
-            'component_type': 'Shapes',
-            'category_name': 'jackets/coats',
-            'keywords': 'arctic,winterjacket,parka,casual,cold weather',
-            'gender': 'ladies',
-            'style': 'casual,winter',
-            'brand': 'MAR',
-            'subbrand': 'MAR,MMC,UBL',
-            'subcategory': 'ladies parka',
-            'picture_1_name': 'parka_front.jpg',
-            'picture_1_url': 'http://example.com/images/parka_front.jpg',
-            'picture_1_order': '1',
-            'picture_2_name': 'parka_back.jpg',
-            'picture_2_url': 'http://example.com/images/parka_back.jpg',
-            'picture_2_order': '2'
-        },
-        {
-            'product_number': 'B-001',
-            'description': 'Metal snap button',
-            'supplier_code': 'SUPP002',
-            'component_type': 'Buttons',
-            'category_name': 'metal buttons',
-            'keywords': 'snap,metal,closure,fastener',
-            'material': 'metal',
-            'color': 'silver',
-            'brand': 'UBL',
-            'size': '12mm'
-        }
-    ]
-    
+
+
+def create_sample_csv_data():  
+    """Create sample CSV data for testing - without picture_order fields."""  
+    sample_data = [  
+        {  
+            'product_number': 'F-WL001',  
+            'description': 'Shiny polyester 50D fabric',  
+            'supplier_code': 'SUPP001',  
+            'component_type': 'Fabrics',  
+            'category_name': 'polyester fabrics',  
+            'keywords': 'shiny,polyester,jacket,outerwear,waterproof',  
+            'material': 'polyester',  
+            'color': 'silver',  
+            'gender': 'ladies,unisex',  
+            'brand': 'MAR',  
+            'picture_1_name': 'fabric_front.jpg',  
+            'picture_1_url': 'http://example.com/images/fabric_front.jpg',  
+            'picture_2_name': 'fabric_detail.jpg',  
+            'picture_2_url': 'http://example.com/images/fabric_detail.jpg'  
+        },  
+        {  
+            'product_number': 'S-WL0001',  
+            'description': 'Parka with pockets and hood',  
+            'supplier_code': 'SUPP001',  
+            'component_type': 'Shapes',  
+            'category_name': 'jackets/coats',  
+            'keywords': 'arctic,winterjacket,parka,casual,cold weather',  
+            'gender': 'ladies',  
+            'style': 'casual,winter',  
+            'brand': 'MAR',  
+            'subbrand': 'MAR,MMC,UBL',  
+            'subcategory': 'ladies parka',  
+            'picture_1_name': 'parka_front.jpg',  
+            'picture_1_url': 'http://example.com/images/parka_front.jpg',  
+            'picture_2_name': 'parka_back.jpg',  
+            'picture_2_url': 'http://example.com/images/parka_back.jpg'  
+        },  
+        {  
+            'product_number': 'B-001',  
+            'description': 'Metal snap button',  
+            'supplier_code': 'SUPP002',  
+            'component_type': 'Buttons',  
+            'category_name': 'metal buttons',  
+            'keywords': 'snap,metal,closure,fastener',  
+            'material': 'metal',  
+            'color': 'silver',  
+            'brand': 'UBL',  
+            'size': '12mm',  
+            'picture_1_name': 'button_front.jpg',  
+            'picture_1_url': 'http://example.com/images/button_front.jpg'  
+        }  
+    ]  
+
     return sample_data
 
-def export_components_to_csv(file_path):
-    """Export components to CSV file in the new schema format."""
-    try:
-        components = Component.query.all()
-        
-        # Define CSV headers
-        headers = [
-            'product_number', 'description', 'supplier_code', 'component_type', 
-            'category_name', 'keywords', 'material', 'color', 'gender', 'style', 
-            'brand', 'subbrand', 'subcategory', 'finish', 'weight', 'size',
-            'picture_1_name', 'picture_1_url', 'picture_1_order',
-            'picture_2_name', 'picture_2_url', 'picture_2_order',
-            'picture_3_name', 'picture_3_url', 'picture_3_order',
-            'picture_4_name', 'picture_4_url', 'picture_4_order',
-            'picture_5_name', 'picture_5_url', 'picture_5_order'
-        ]
-        
-        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter=';')
-            writer.writeheader()
-            
-            for component in components:
-                row = {
-                    'product_number': component.product_number,
-                    'description': component.description or '',
-                    'supplier_code': component.supplier.supplier_code,
-                    'component_type': component.component_type.name,
-                    'category_name': component.category.name,
-                    'keywords': ','.join([k.name for k in component.keywords])
-                }
-                
-                # Add flexible properties
-                for prop in ['material', 'color', 'gender', 'style', 'brand', 'subbrand', 
-                           'subcategory', 'finish', 'weight', 'size']:
-                    value = component.get_property(prop)
-                    if value:
-                        if isinstance(value, list):
-                            row[prop] = ','.join(value)
-                        else:
-                            row[prop] = str(value)
-                    else:
-                        row[prop] = ''
-                
-                # Add pictures
-                pictures = sorted(component.pictures, key=lambda p: p.picture_order)
-                for i, picture in enumerate(pictures[:5], 1):  # Max 5 pictures
-                    row[f'picture_{i}_name'] = picture.picture_name
-                    row[f'picture_{i}_url'] = picture.url
-                    row[f'picture_{i}_order'] = picture.picture_order
-                
-                # Fill remaining picture fields with empty strings
-                for i in range(len(pictures) + 1, 6):
-                    row[f'picture_{i}_name'] = ''
-                    row[f'picture_{i}_url'] = ''
-                    row[f'picture_{i}_order'] = ''
-                
-                writer.writerow(row)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error exporting to CSV: {str(e)}")
+
+def export_components_to_csv(file_path):  
+    """Export components to CSV file - without picture_order fields."""  
+    try:  
+        components = Component.query.all()  
+
+        # Define CSV headers (removed picture_order fields)  
+        headers = [  
+            'product_number', 'description', 'supplier_code', 'component_type',  
+            'category_name', 'keywords', 'material', 'color', 'gender', 'style',  
+            'brand', 'subbrand', 'subcategory', 'finish', 'weight', 'size',  
+            'picture_1_name', 'picture_1_url',  
+            'picture_2_name', 'picture_2_url',  
+            'picture_3_name', 'picture_3_url',  
+            'picture_4_name', 'picture_4_url',  
+            'picture_5_name', 'picture_5_url'  
+        ]  
+
+        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:  
+            writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter=';')  
+            writer.writeheader()  
+
+            for component in components:  
+                row = {  
+                    'product_number': component.product_number,  
+                    'description': component.description or '',  
+                    'supplier_code': component.supplier.supplier_code,  
+                    'component_type': component.component_type.name,  
+                    'category_name': component.category.name,  
+                    'keywords': ','.join([k.name for k in component.keywords])  
+                }  
+
+                # Add flexible properties  
+                for prop in ['material', 'color', 'gender', 'style', 'brand', 'subbrand',  
+                           'subcategory', 'finish', 'weight', 'size']:  
+                    value = component.get_property(prop)  
+                    if value:  
+                        if isinstance(value, list):  
+                            row[prop] = ','.join(value)  
+                        else:  
+                            row[prop] = str(value)  
+                    else:  
+                        row[prop] = ''  
+
+                # Add pictures (without order field)  
+                pictures = sorted(component.pictures, key=lambda p: p.picture_order)  
+                for i, picture in enumerate(pictures[:5], 1):  # Max 5 pictures  
+                    row[f'picture_{i}_name'] = picture.picture_name  
+                    row[f'picture_{i}_url'] = picture.url  
+
+                # Fill remaining picture fields with empty strings  
+                for i in range(len(pictures) + 1, 6):  
+                    row[f'picture_{i}_name'] = ''  
+                    row[f'picture_{i}_url'] = ''  
+
+                writer.writerow(row)  
+
+        return True  
+
+    except Exception as e:  
+        print(f"Error exporting to CSV: {str(e)}")  
         return False

@@ -463,59 +463,51 @@ def upload_csv():
     # GET request - show upload form
     return render_template('upload.html')
 
-
-
-@main.route('/download/csv-template')  
-def download_csv_template():  
-    """Generate and download CSV template without picture_order fields."""  
-    try:  
-        # Create CSV template (removed picture_order fields)  
-        template_data = [  
-            [  
-                'product_number', 'description', 'component_type', 'supplier_code',  
-                'category_name', 'keywords', 'material', 'color', 'gender', 'style',  
-                'brand', 'subbrand', 'size', 'finish', 'weight',  
-                'picture_1_name', 'picture_1_url',  
-                'picture_2_name', 'picture_2_url',  
-                'picture_3_name', 'picture_3_url',  
-                'picture_4_name', 'picture_4_url',  
-                'picture_5_name', 'picture_5_url'  
-            ],  
-            [  
-                'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',  
-                'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',  
-                'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'waterproof', '120gsm',  
-                'fabric_front.jpg', 'http://example.com/fabric_front.jpg',  
-                'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',  
-                '', '', '', '', '', ''  
-            ]  
-        ]  
-
-        # Create CSV in memory  
-        output = io.StringIO()  
-        writer = csv.writer(output, delimiter=';')  
-        for row in template_data:  
-            writer.writerow(row)  
-
-        # Create file-like object  
-        csv_data = output.getvalue()  
-        output.close()  
-
-        # Return as downloadable file  
-        return current_app.response_class(  
-            csv_data,  
-            mimetype='text/csv',  
-            headers={  
-                'Content-Disposition': 'attachment; filename=component_template.csv'  
-            }  
-        )  
-
-    except Exception as e:  
-        current_app.logger.error(f"Error generating CSV template: {str(e)}")  
-        flash('Error generating template', 'danger')  
+@main.route('/download/csv-template')
+def download_csv_template():
+    """Generate and download CSV template."""
+    try:
+        # Create CSV template
+        template_data = [
+            [
+                'product_number', 'description', 'component_type', 'supplier_code', 
+                'category_name', 'keywords', 'material', 'color', 'gender', 'style', 
+                'brand', 'subbrand', 'size', 'picture_1_name', 'picture_1_url', 'picture_1_order',
+                'picture_2_name', 'picture_2_url', 'picture_2_order', 'picture_3_name', 
+                'picture_3_url', 'picture_3_order', 'picture_4_name', 'picture_4_url', 
+                'picture_4_order', 'picture_5_name', 'picture_5_url', 'picture_5_order'
+            ],
+            [
+                'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001', 
+                'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver', 
+                'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'fabric_front.jpg', 
+                'http://example.com/fabric_front.jpg', '1', '', '', '', '', '', '', '', '', '', '', '', ''
+            ]
+        ]
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';')
+        for row in template_data:
+            writer.writerow(row)
+        
+        # Create file-like object
+        csv_data = output.getvalue()
+        output.close()
+        
+        # Return as downloadable file
+        return current_app.response_class(
+            csv_data,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=component_template.csv'
+            }
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating CSV template: {str(e)}")
+        flash('Error generating template', 'danger')
         return redirect(url_for('main.upload_csv'))
-
-
 
 # API Routes for AJAX functionality
 @main.route('/api/components/search')
@@ -701,44 +693,39 @@ def _process_component_properties(component, component_type_name, form_data):
             else:
                 component.set_property(prop, prop_value, 'text')
 
-
-# Update the image processing helper function  
-# Update the image processing helper function  
-def _process_image_uploads(component, request):  
-    """Process image uploads for a component with auto-assigned order."""  
-    uploaded_count = 0  
-    picture_order = 1  
-
-    for i in range(1, 6):  # Up to 5 pictures  
-        picture_file = request.files.get(f'picture_{i}')  
-
-        if picture_file and picture_file.filename:  
-            try:  
-                # Generate unique filename  
-                filename = secure_filename(picture_file.filename)  
-                unique_filename = f"{uuid.uuid4().hex}_{filename}"  
-
-                # Save file  
-                picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)  
-                picture_file.save(picture_path)  
-
-                # Create picture record with auto-assigned order  
-                picture = Picture(  
-                    component_id=component.id,  
-                    picture_name=filename,  
-                    url=f"/static/uploads/{unique_filename}",  
-                    picture_order=picture_order  
-                )  
-                db.session.add(picture)  
-                uploaded_count += 1  
-                picture_order += 1  
-
-            except Exception as e:  
-                current_app.logger.error(f"Error uploading image {i}: {str(e)}")  
-                continue  
-
+def _process_image_uploads(component, request):
+    """Process image uploads for a component."""
+    uploaded_count = 0
+    for i in range(1, 6):  # Up to 5 pictures
+        picture_file = request.files.get(f'picture_{i}')
+        picture_order = request.form.get(f'picture_{i}_order', i)
+        
+        if picture_file and picture_file.filename:
+            try:
+                # Generate unique filename
+                filename = secure_filename(picture_file.filename)
+                unique_filename = f"{uuid.uuid4().hex}_{filename}"
+                
+                # Save file
+                picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                picture_file.save(picture_path)
+                
+                # Create picture record
+                picture = Picture(
+                    component_id=component.id,
+                    picture_name=filename,
+                    url=f"/static/uploads/{unique_filename}",
+                    picture_order=int(picture_order)
+                )
+                db.session.add(picture)
+                uploaded_count += 1
+                
+            except Exception as e:
+                current_app.logger.error(f"Error uploading image {i}: {str(e)}")
+                # Continue with other images
+                continue
+    
     return uploaded_count
-
 
 def _update_component_images(component, request):
     """Update component images, handling both new uploads and existing images."""
@@ -768,6 +755,79 @@ def _update_component_images(component, request):
 # Add these routes to your app/routes.py file (after the existing routes)
 
 # Replace the suppliers route in app/routes.py with this fixed version:
+
+# Replace the suppliers route in app/routes.py with this fixed version:
+
+@main.route('/suppliers')
+def suppliers():
+    """Display all suppliers with management interface."""
+    try:
+        suppliers_query = Supplier.query.order_by(Supplier.supplier_code).all()
+        
+        # Convert suppliers to JSON-serializable format
+        suppliers_data = []
+        for supplier in suppliers_query:
+            supplier_dict = {
+                'id': supplier.id,
+                'supplier_code': supplier.supplier_code,
+                'address': supplier.address,
+                'created_at': supplier.created_at.isoformat() if supplier.created_at else None,
+                'updated_at': supplier.updated_at.isoformat() if supplier.updated_at else None,
+                'components': [
+                    {
+                        'id': comp.id,
+                        'product_number': comp.product_number,
+                        'description': comp.description,
+                        'created_at': comp.created_at.isoformat() if comp.created_at else None
+                    } for comp in supplier.components
+                ]
+            }
+            suppliers_data.append(supplier_dict)
+        
+        return render_template('suppliers.html', 
+                             suppliers=suppliers_query,  # For server-side rendering
+                             suppliers_data=suppliers_data)  # For JavaScript
+        
+    except Exception as e:
+        current_app.logger.error(f"Error loading suppliers: {str(e)}")
+        flash(f'Error loading suppliers: {str(e)}', 'danger')
+        return redirect(url_for('main.index'))1~# Replace the suppliers route in app/routes.py with this fixed version:
+
+@main.route('/suppliers')
+def suppliers():
+    """Display all suppliers with management interface."""
+    try:
+        suppliers_query = Supplier.query.order_by(Supplier.supplier_code).all()
+        
+        # Convert suppliers to JSON-serializable format
+        suppliers_data = []
+        for supplier in suppliers_query:
+            supplier_dict = {
+                'id': supplier.id,
+                'supplier_code': supplier.supplier_code,
+                'address': supplier.address,
+                'created_at': supplier.created_at.isoformat() if supplier.created_at else None,
+                'updated_at': supplier.updated_at.isoformat() if supplier.updated_at else None,
+                'components': [
+                    {
+                        'id': comp.id,
+                        'product_number': comp.product_number,
+                        'description': comp.description,
+                        'created_at': comp.created_at.isoformat() if comp.created_at else None
+                    } for comp in supplier.components
+                ]
+            }
+            suppliers_data.append(supplier_dict)
+        
+        return render_template('suppliers.html', 
+                             suppliers=suppliers_query,  # For server-side rendering
+                             suppliers_data=suppliers_data)  # For JavaScript
+        
+    except Exception as e:
+        current_app.logger.error(f"Error loading suppliers: {str(e)}")
+        flash(f'Error loading suppliers: {str(e)}', 'danger')
+        return redirect(url_for('main.index'))1~
+
 # Replace the suppliers route in app/routes.py with this fixed version:
 
 @main.route('/suppliers')
