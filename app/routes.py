@@ -2,6 +2,7 @@ import os
 import json
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, send_file
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
 from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, ComponentVariant
 from app.utils import process_csv_file
@@ -10,17 +11,71 @@ from datetime import datetime, timedelta
 import uuid
 import io
 import csv
+from PIL import Image
 
 main = Blueprint('main', __name__)
 
+# Configuration for improved file handling
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+THUMBNAIL_SIZE = (300, 300)
+
 def allowed_file(filename):
     """Check if the uploaded file has an allowed extension."""
-    ALLOWED_EXTENSIONS = {'csv'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def optimize_image(image_file, max_size=(1920, 1920), quality=85):
+    """Optimize image for web display"""
+    try:
+        image = Image.open(image_file)
+
+        # Convert RGBA to RGB if necessary
+        if image.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+            image = background
+
+        # Resize if larger than max_size
+        image.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # Save optimized image
+        output = io.BytesIO()
+        image.save(output, format='JPEG', quality=quality, optimize=True)
+        output.seek(0)
+
+        return output
+    except Exception as e:
+        current_app.logger.error(f"Image optimization error: {str(e)}")
+        return image_file
+
+def save_uploaded_file(file, folder='uploads'):
+    """Save uploaded file (simplified version without PIL optimization)"""
+    if file and allowed_file(file.filename):
+        try:
+            # Generate unique filename
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+
+            # Create upload directory if it doesn't exist
+            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
+            os.makedirs(upload_path, exist_ok=True)
+
+            # Save file directly
+            file_path = os.path.join(upload_path, unique_filename)
+            file.save(file_path)
+
+            # Return relative URL for web access
+            return f"/static/uploads/{unique_filename}"
+
+        except Exception as e:
+            current_app.logger.error(f"File upload error: {str(e)}")
+            flash(f'Error uploading file: {str(e)}', 'error')
+            return None
+    return None
 
 @main.route('/')
 def index():
-    """Modern dashboard with enhanced filtering and search."""
+    """Dashboard with enhanced filtering and search - MATCHES YOUR index.html"""
     try:
         # Get filter parameters
         search = request.args.get('search', '').strip()
@@ -36,7 +91,8 @@ def index():
             db.joinedload(Component.supplier),
             db.joinedload(Component.category),
             db.joinedload(Component.keywords),
-            db.subqueryload(Component.pictures)
+            db.subqueryload(Component.pictures),
+            db.subqueryload(Component.variants).joinedload(ComponentVariant.color)
         )
         
         # Apply search filter
@@ -96,7 +152,8 @@ def index():
         categories = Category.query.order_by(Category.name).all()
         suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
         
-        return render_template('index.html', 
+        # USES YOUR EXACT TEMPLATE: index.html
+        return render_template('index.html',
                               components=components,
                               component_types=component_types,
                               categories=categories,
@@ -109,7 +166,7 @@ def index():
 
 @main.route('/component/<int:id>')
 def component_detail(id):
-    """Enhanced component detail view."""
+    """Component detail view - MATCHES YOUR component_detail.html"""
     try:
         component = Component.query.options(
             db.joinedload(Component.component_type),
@@ -117,9 +174,11 @@ def component_detail(id):
             db.joinedload(Component.category),
             db.joinedload(Component.keywords),
             db.joinedload(Component.pictures),
-            db.joinedload(Component.variants).joinedload(ComponentVariant.color)
+            db.joinedload(Component.variants).joinedload(ComponentVariant.color),
+            db.joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures)
         ).get_or_404(id)
         
+        # USES YOUR EXACT TEMPLATE: component_detail.html
         return render_template('component_detail.html', component=component)
         
     except Exception as e:
@@ -129,7 +188,7 @@ def component_detail(id):
 
 @main.route('/component/new', methods=['GET', 'POST'])
 def new_component():
-    """Enhanced component creation with wizard interface."""
+    """Create new component - MATCHES YOUR component_form.html"""
     if request.method == 'POST':
         try:
             # Get form data
@@ -196,14 +255,15 @@ def new_component():
             flash(f'Error creating component: {str(e)}', 'danger')
             return redirect(request.url)
     
-    # GET request - show form
+    # GET request - USES YOUR EXACT TEMPLATE: component_form.html
     component_types = ComponentType.query.order_by(ComponentType.name).all()
     categories = Category.query.order_by(Category.name).all()
     suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
     
-    return render_template('component_form.html', 
+    return render_template('component_form.html',
+                          component=None,
                           component_types=component_types,
                           categories=categories,
                           suppliers=suppliers,
@@ -212,7 +272,7 @@ def new_component():
 
 @main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
 def edit_component(id):
-    """Enhanced component editing."""
+    """Edit component - MATCHES YOUR component_edit_form.html"""
     component = Component.query.options(
         db.joinedload(Component.keywords),
         db.joinedload(Component.pictures)
@@ -226,7 +286,8 @@ def edit_component(id):
             component.component_type_id = int(request.form.get('component_type_id'))
             component.supplier_id = int(request.form.get('supplier_id'))
             component.category_id = int(request.form.get('category_id'))
-            
+            component.updated_at = datetime.utcnow()
+
             # Update keywords
             component.keywords.clear()
             keywords = request.form.get('keywords', '').strip()
@@ -245,7 +306,7 @@ def edit_component(id):
                 component.properties = {}  # Clear existing properties
                 _process_component_properties(component, component_type.name, request.form)
             
-            # Update images
+            # Update images with improved handling
             _update_component_images(component, request)
             
             db.session.commit()
@@ -258,14 +319,14 @@ def edit_component(id):
             flash(f'Error updating component: {str(e)}', 'danger')
             return redirect(request.url)
     
-    # GET request - show form with existing data
+    # GET request - show form with existing data using new template
     component_types = ComponentType.query.order_by(ComponentType.name).all()
     categories = Category.query.order_by(Category.name).all()
     suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
     
-    return render_template('component_form.html', 
+    return render_template('component_edit_form.html',
                           component=component,
                           component_types=component_types,
                           categories=categories,
@@ -275,10 +336,29 @@ def edit_component(id):
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
-    """Delete a component with cascade."""
+    """Delete a component with cascade - improved error handling."""
     try:
         component = Component.query.get_or_404(id)
         
+        # Delete associated files
+        for picture in component.pictures:
+            try:
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
+
+        # Delete variant files
+        for variant in component.variants:
+            for picture in variant.variant_pictures:
+                try:
+                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as e:
+                    current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
+
         # Delete associated pictures and variants (handled by cascade)
         db.session.delete(component)
         db.session.commit()
@@ -292,7 +372,7 @@ def delete_component(id):
         flash(f'Error deleting component: {str(e)}', 'danger')
         return redirect(url_for('main.component_detail', id=id))
 
-# Status Management Routes
+# Status Management Routes - Enhanced for new frontend
 @main.route('/component/<int:id>/status/proto', methods=['POST'])
 def update_proto_status(id):
     """Update proto status for a component."""
@@ -301,15 +381,19 @@ def update_proto_status(id):
         status = request.form.get('status')
         comment = request.form.get('comment', '').strip()
         
-        component.update_proto_status(status, comment if comment else None)
+        if status not in ['pending', 'ok', 'not_ok']:
+            flash('Invalid status value', 'danger')
+            return redirect(url_for('main.component_detail', id=id))
+
+        component.proto_status = status
+        component.proto_comment = comment if comment else None
+        component.proto_date = datetime.utcnow()
+        component.updated_at = datetime.utcnow()
+
         db.session.commit()
-        
         flash(f'Proto status updated to {status}', 'success')
         return redirect(url_for('main.component_detail', id=id))
-        
-    except ValueError as e:
-        flash(str(e), 'danger')
-        return redirect(url_for('main.component_detail', id=id))
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating proto status: {str(e)}")
@@ -324,15 +408,19 @@ def update_sms_status(id):
         status = request.form.get('status')
         comment = request.form.get('comment', '').strip()
         
-        component.update_sms_status(status, comment if comment else None)
+        if status not in ['pending', 'ok', 'not_ok']:
+            flash('Invalid status value', 'danger')
+            return redirect(url_for('main.component_detail', id=id))
+
+        component.sms_status = status
+        component.sms_comment = comment if comment else None
+        component.sms_date = datetime.utcnow()
+        component.updated_at = datetime.utcnow()
+
         db.session.commit()
-        
         flash(f'SMS status updated to {status}', 'success')
         return redirect(url_for('main.component_detail', id=id))
-        
-    except ValueError as e:
-        flash(str(e), 'danger')
-        return redirect(url_for('main.component_detail', id=id))
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating SMS status: {str(e)}")
@@ -347,15 +435,19 @@ def update_pps_status(id):
         status = request.form.get('status')
         comment = request.form.get('comment', '').strip()
         
-        component.update_pps_status(status, comment if comment else None)
+        if status not in ['pending', 'ok', 'not_ok']:
+            flash('Invalid status value', 'danger')
+            return redirect(url_for('main.component_detail', id=id))
+
+        component.pps_status = status
+        component.pps_comment = comment if comment else None
+        component.pps_date = datetime.utcnow()
+        component.updated_at = datetime.utcnow()
+
         db.session.commit()
-        
         flash(f'PPS status updated to {status}', 'success')
         return redirect(url_for('main.component_detail', id=id))
-        
-    except ValueError as e:
-        flash(str(e), 'danger')
-        return redirect(url_for('main.component_detail', id=id))
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating PPS status: {str(e)}")
@@ -365,43 +457,139 @@ def update_pps_status(id):
 # Variant Management Routes
 @main.route('/component/<int:id>/variant/new', methods=['GET', 'POST'])
 def new_variant(id):
-    """Create a new variant for a component."""
+    """Create a new variant for a component - MATCHES YOUR variant_form.html"""
     component = Component.query.get_or_404(id)
-    
+
     if request.method == 'POST':
         try:
             color_id = request.form.get('color_id')
             variant_name = request.form.get('variant_name', '').strip()
             description = request.form.get('description', '').strip()
-            
+
             if not color_id:
                 flash('Please select a color for the variant.', 'danger')
                 return redirect(request.url)
-            
-            variant = component.create_variant(
+
+            # Check if variant with this color already exists
+            existing_variant = ComponentVariant.query.filter_by(
+                component_id=component.id,
+                color_id=color_id
+            ).first()
+            if existing_variant:
+                color = Color.query.get(color_id)
+                flash(f'Variant with color {color.name} already exists', 'danger')
+                return redirect(request.url)
+
+            # Create new variant
+            variant = ComponentVariant(
+                component_id=component.id,
                 color_id=int(color_id),
                 variant_name=variant_name if variant_name else None,
-                description=description if description else None
+                description=description if description else None,
+                is_active=True
             )
-            
+
             db.session.add(variant)
+            db.session.flush()
+
+            # Process variant images
+            _process_variant_images(variant, request)
+
             db.session.commit()
-            
+
             flash('Variant created successfully!', 'success')
             return redirect(url_for('main.component_detail', id=id))
-            
-        except ValueError as e:
-            flash(str(e), 'danger')
-            return redirect(request.url)
+
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error creating variant: {str(e)}")
             flash(f'Error creating variant: {str(e)}', 'danger')
             return redirect(request.url)
-    
-    # GET request
-    colors = Color.query.order_by(Color.name).all()
-    return render_template('variant_form.html', component=component, colors=colors)
+
+    # GET request - Get available colors (exclude already used ones)
+    used_color_ids = [v.color_id for v in component.variants]
+    available_colors = Color.query.filter(
+        ~Color.id.in_(used_color_ids)
+    ).order_by(Color.name).all()
+
+    # USES YOUR EXACT TEMPLATE: variant_form.html
+    return render_template('variant_form.html',
+                          component=component,
+                          variant=None,
+                          colors=available_colors)
+
+@main.route('/component/<int:component_id>/variant/<int:variant_id>/edit', methods=['GET', 'POST'])
+def edit_variant(component_id, variant_id):
+    """Edit an existing variant - MATCHES YOUR variant_form.html"""
+    component = Component.query.get_or_404(component_id)
+    variant = ComponentVariant.query.filter_by(
+        id=variant_id,
+        component_id=component_id
+    ).first_or_404()
+
+    if request.method == 'POST':
+        try:
+            variant_name = request.form.get('variant_name', '').strip()
+            description = request.form.get('description', '').strip()
+            is_active = 'is_active' in request.form
+
+            # Update variant details
+            variant.variant_name = variant_name if variant_name else None
+            variant.description = description if description else None
+            variant.is_active = is_active
+            variant.updated_at = datetime.utcnow()
+
+            # Update variant images
+            _update_variant_images(variant, request)
+
+            db.session.commit()
+
+            flash('Variant updated successfully!', 'success')
+            return redirect(url_for('main.component_detail', id=component_id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating variant: {str(e)}")
+            flash(f'Error updating variant: {str(e)}', 'danger')
+            return redirect(request.url)
+
+    # GET request - USES YOUR EXACT TEMPLATE: variant_form.html
+    return render_template('variant_form.html',
+                           component=component,
+                           variant=variant,
+                           colors=[])  # No color selection when editing
+
+@main.route('/component/<int:component_id>/variant/<int:variant_id>/delete', methods=['POST'])
+def delete_variant(component_id, variant_id):
+    """Delete a variant."""
+    try:
+        component = Component.query.get_or_404(component_id)
+        variant = ComponentVariant.query.filter_by(
+            id=variant_id,
+            component_id=component_id
+        ).first_or_404()
+
+        # Delete variant image files
+        for picture in variant.variant_pictures:
+            try:
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
+
+        # Delete variant (pictures will be cascade deleted)
+        db.session.delete(variant)
+        db.session.commit()
+
+        flash('Color variant deleted successfully!', 'success')
+        return redirect(url_for('main.component_detail', id=component_id))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting variant: {str(e)}")
+        flash(f'Error deleting variant: {str(e)}', 'danger')
+        return redirect(url_for('main.component_detail', id=component_id))
 
 @main.route('/upload', methods=['GET', 'POST'])
 def upload_csv():
@@ -419,7 +607,7 @@ def upload_csv():
                 return jsonify({'success': False, 'error': 'No file selected'}), 400
             
             # Check if the file has an allowed extension
-            if file and allowed_file(file.filename):
+            if file and file.filename.lower().endswith('.csv'):
                 filename = secure_filename(file.filename)
                 temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], f"temp_{uuid.uuid4().hex}_{filename}")
                 file.save(temp_path)
@@ -462,8 +650,6 @@ def upload_csv():
     
     # GET request - show upload form
     return render_template('upload.html')
-
-
 
 @main.route('/download/csv-template')  
 def download_csv_template():  
@@ -515,9 +701,7 @@ def download_csv_template():
         flash('Error generating template', 'danger')  
         return redirect(url_for('main.upload_csv'))
 
-
-
-# API Routes for AJAX functionality
+# API Routes for AJAX functionality - Enhanced for new frontend
 @main.route('/api/components/search')
 def api_search_components():
     """API endpoint for component search with autocomplete."""
@@ -551,16 +735,21 @@ def api_search_components():
 
 @main.route('/api/components/<int:component_id>/duplicate', methods=['POST'])
 def api_duplicate_component(component_id):
-    """API endpoint to duplicate a component."""
+    """API endpoint to duplicate a component - enhanced for new frontend."""
     try:
         original = Component.query.get_or_404(component_id)
         
         # Create new component with modified product number
-        new_product_number = f"{original.product_number}_COPY_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        base_number = original.product_number
+        new_product_number = f"{base_number}_COPY"
+        counter = 1
+        while Component.query.filter_by(product_number=new_product_number).first():
+            new_product_number = f"{base_number}_COPY_{counter}"
+            counter += 1
         
         new_component = Component(
             product_number=new_product_number,
-            description=f"Copy of {original.description}",
+            description=f"Copy of {original.description}" if original.description else None,
             component_type_id=original.component_type_id,
             supplier_id=original.supplier_id,
             category_id=original.category_id,
@@ -589,14 +778,15 @@ def api_duplicate_component(component_id):
 
 @main.route('/api/components/<int:component_id>/export')
 def api_export_component(component_id):
-    """API endpoint to export component data."""
+    """API endpoint to export component data - enhanced for new frontend."""
     try:
         component = Component.query.options(
             db.joinedload(Component.component_type),
             db.joinedload(Component.supplier),
             db.joinedload(Component.category),
             db.joinedload(Component.keywords),
-            db.joinedload(Component.pictures)
+            db.joinedload(Component.pictures),
+            db.joinedload(Component.variants)
         ).get_or_404(component_id)
         
         export_data = {
@@ -612,6 +802,17 @@ def api_export_component(component_id):
                 'url': p.url,
                 'order': p.picture_order
             } for p in component.pictures],
+            'variants': [{
+                'variant_name': v.variant_name,
+                'color_name': v.color.name if v.color else None,
+                'description': v.description,
+                'is_active': v.is_active,
+                'pictures': [{
+                    'name': vp.picture_name,
+                    'url': vp.url,
+                    'order': vp.picture_order
+                } for vp in v.variant_pictures]
+            } for v in component.variants],
             'status': {
                 'proto': {
                     'status': component.proto_status,
@@ -649,7 +850,7 @@ def api_export_component(component_id):
 
 @main.route('/api/components/bulk-delete', methods=['POST'])
 def api_bulk_delete_components():
-    """API endpoint for bulk deletion of components."""
+    """API endpoint for bulk deletion of components - enhanced for new frontend."""
     try:
         data = request.get_json()
         component_ids = data.get('ids', [])
@@ -657,8 +858,32 @@ def api_bulk_delete_components():
         if not component_ids:
             return jsonify({'success': False, 'error': 'No components selected'}), 400
         
-        # Delete components
-        deleted_count = Component.query.filter(Component.id.in_(component_ids)).delete()
+        deleted_count = 0
+        for component_id in component_ids:
+            component = Component.query.get(component_id)
+            if component:
+                # Delete associated files
+                for picture in component.pictures:
+                    try:
+                        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                    except Exception:
+                        pass  # Continue even if file deletion fails
+
+                # Delete variant files
+                for variant in component.variants:
+                    for picture in variant.variant_pictures:
+                        try:
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                        except Exception:
+                            pass
+
+                db.session.delete(component)
+                deleted_count += 1
+
         db.session.commit()
         
         return jsonify({
@@ -671,112 +896,55 @@ def api_bulk_delete_components():
         current_app.logger.error(f"Error in bulk delete: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Helper functions
-def _process_component_properties(component, component_type_name, form_data):
-    """Process component properties based on component type."""
-    type_properties = {
-        'Fabrics': ['material', 'color', 'gender', 'brand', 'finish', 'weight'],
-        'Shapes': ['gender', 'style', 'brand', 'subbrand', 'subcategory'],
-        'Buttons': ['material', 'color', 'brand', 'size'],
-        'Zippers': ['material', 'color', 'brand', 'size'],
-        'Labels': ['brand', 'subbrand', 'material'],
-        'Hangtags': ['brand', 'subbrand', 'material'],
-        'Packaging': ['brand', 'material']
-    }
-    
-    allowed_properties = type_properties.get(component_type_name, [])
-    
-    for prop in allowed_properties:
-        prop_value = form_data.get(prop)
-        if prop_value:
-            # Handle array properties
-            if prop in ['gender', 'style', 'subbrand']:
-                if isinstance(prop_value, list):
-                    component.set_property(prop, prop_value, 'array')
-                else:
-                    # Convert string to array if needed
-                    values = [v.strip() for v in prop_value.split(',') if v.strip()]
-                    if values:
-                        component.set_property(prop, values, 'array')
-            else:
-                component.set_property(prop, prop_value, 'text')
+@main.route('/api/components/export')
+def api_export_components():
+    """API endpoint to export multiple components data."""
+    try:
+        component_ids = request.args.get('ids', '').split(',')
 
+        if component_ids and component_ids[0]:
+            components = Component.query.filter(Component.id.in_(component_ids)).all()
+        else:
+            components = Component.query.all()
 
-# Update the image processing helper function  
-# Update the image processing helper function  
-def _process_image_uploads(component, request):  
-    """Process image uploads for a component with auto-assigned order."""  
-    uploaded_count = 0  
-    picture_order = 1  
+        export_data = []
+        for component in components:
+            export_data.append({
+                'id': component.id,
+                'product_number': component.product_number,
+                'description': component.description,
+                'component_type': component.component_type.name,
+                'supplier': component.supplier.supplier_code,
+                'category': component.category.name,
+                'properties': component.properties,
+                'keywords': [k.name for k in component.keywords],
+                'variants_count': len(component.variants),
+                'images_count': len(component.pictures),
+                'overall_status': component.get_overall_status() if hasattr(component, 'get_overall_status') else 'pending',
+                'created_at': component.created_at.isoformat() if component.created_at else None
+            })
 
-    for i in range(1, 6):  # Up to 5 pictures  
-        picture_file = request.files.get(f'picture_{i}')  
+        return jsonify({
+            'success': True,
+            'data': export_data,
+            'total_count': len(export_data)
+        })
 
-        if picture_file and picture_file.filename:  
-            try:  
-                # Generate unique filename  
-                filename = secure_filename(picture_file.filename)  
-                unique_filename = f"{uuid.uuid4().hex}_{filename}"  
+    except Exception as e:
+        current_app.logger.error(f"Export error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Error exporting data'
+        }), 500
 
-                # Save file  
-                picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)  
-                picture_file.save(picture_path)  
-
-                # Create picture record with auto-assigned order  
-                picture = Picture(  
-                    component_id=component.id,  
-                    picture_name=filename,  
-                    url=f"/static/uploads/{unique_filename}",  
-                    picture_order=picture_order  
-                )  
-                db.session.add(picture)  
-                uploaded_count += 1  
-                picture_order += 1  
-
-            except Exception as e:  
-                current_app.logger.error(f"Error uploading image {i}: {str(e)}")  
-                continue  
-
-    return uploaded_count
-
-
-def _update_component_images(component, request):
-    """Update component images, handling both new uploads and existing images."""
-    # Remove existing pictures
-    Picture.query.filter_by(component_id=component.id).delete()
-    
-    # Process new uploaded images
-    _process_image_uploads(component, request)
-    
-    # Process existing images that should be kept
-    for i in range(1, 6):
-        existing_url = request.form.get(f'existing_picture_{i}_url')
-        existing_name = request.form.get(f'existing_picture_{i}_name')
-        existing_order = request.form.get(f'existing_picture_{i}_order')
-        
-        if existing_url and existing_name and existing_order:
-            picture = Picture(
-                component_id=component.id,
-                picture_name=existing_name,
-                url=existing_url,
-                picture_order=int(existing_order)
-            )
-            db.session.add(picture)
-
-# Additional utility routes and existing routes (suppliers, etc.) would go here...
-# For brevity, I'm including the essential enhanced routes that support the modern frontend
-# Add these routes to your app/routes.py file (after the existing routes)
-
-# Replace the suppliers route in app/routes.py with this fixed version:
-# Replace the suppliers route in app/routes.py with this fixed version:
-
+# Enhanced Supplier Routes - adapted for new frontend
 @main.route('/suppliers')
 def suppliers():
-    """Display all suppliers with management interface."""
+    """Suppliers management - MATCHES YOUR suppliers.html"""
     try:
         suppliers_query = Supplier.query.order_by(Supplier.supplier_code).all()
-        
-        # Convert suppliers to JSON-serializable format
+
+        # Convert suppliers to JSON-serializable format for JavaScript
         suppliers_data = []
         for supplier in suppliers_query:
             supplier_dict = {
@@ -795,11 +963,11 @@ def suppliers():
                 ]
             }
             suppliers_data.append(supplier_dict)
-        
-        return render_template('suppliers.html', 
+
+        return render_template('suppliers.html',
                              suppliers=suppliers_query,  # For server-side rendering
                              suppliers_data=suppliers_data)  # For JavaScript
-        
+
     except Exception as e:
         current_app.logger.error(f"Error loading suppliers: {str(e)}")
         flash(f'Error loading suppliers: {str(e)}', 'danger')
@@ -807,57 +975,57 @@ def suppliers():
 
 @main.route('/supplier/new', methods=['GET', 'POST'])
 def new_supplier():
-    """Create a new supplier."""
+    """Create a new supplier - MATCHES YOUR supplier_form.html"""
     if request.method == 'POST':
         try:
             supplier_code = request.form.get('supplier_code', '').strip()
             address = request.form.get('address', '').strip()
-            
+
             if not supplier_code:
                 flash('Supplier code is required.', 'danger')
                 return redirect(request.url)
-            
+
             # Check if supplier code already exists
             existing = Supplier.query.filter_by(supplier_code=supplier_code).first()
             if existing:
                 flash('Supplier code already exists.', 'danger')
                 return redirect(request.url)
-            
+
             # Create new supplier
             supplier = Supplier(
                 supplier_code=supplier_code,
                 address=address if address else None
             )
-            
+
             db.session.add(supplier)
             db.session.commit()
-            
+
             flash('Supplier created successfully!', 'success')
             return redirect(url_for('main.suppliers'))
-            
+
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error creating supplier: {str(e)}")
             flash(f'Error creating supplier: {str(e)}', 'danger')
             return redirect(request.url)
-    
-    # GET request - show form
+
+    # GET request - USES YOUR EXACT TEMPLATE: supplier_form.html
     return render_template('supplier_form.html')
 
 @main.route('/supplier/edit/<int:id>', methods=['GET', 'POST'])
 def edit_supplier(id):
-    """Edit an existing supplier."""
+    """Edit an existing supplier - MATCHES YOUR supplier_form.html"""
     supplier = Supplier.query.get_or_404(id)
-    
+
     if request.method == 'POST':
         try:
             supplier_code = request.form.get('supplier_code', '').strip()
             address = request.form.get('address', '').strip()
-            
+
             if not supplier_code:
                 flash('Supplier code is required.', 'danger')
                 return redirect(request.url)
-            
+
             # Check if supplier code already exists (excluding current supplier)
             existing = Supplier.query.filter(
                 Supplier.supplier_code == supplier_code,
@@ -866,23 +1034,24 @@ def edit_supplier(id):
             if existing:
                 flash('Supplier code already exists.', 'danger')
                 return redirect(request.url)
-            
+
             # Update supplier
             supplier.supplier_code = supplier_code
             supplier.address = address if address else None
-            
+            supplier.updated_at = datetime.utcnow()
+
             db.session.commit()
-            
+
             flash('Supplier updated successfully!', 'success')
             return redirect(url_for('main.suppliers'))
-            
+
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating supplier: {str(e)}")
             flash(f'Error updating supplier: {str(e)}', 'danger')
             return redirect(request.url)
-    
-    # GET request - show form with existing data
+
+    # GET request - USES YOUR EXACT TEMPLATE: supplier_form.html
     return render_template('supplier_form.html', supplier=supplier)
 
 @main.route('/supplier/delete/<int:id>', methods=['POST'])
@@ -890,154 +1059,222 @@ def delete_supplier(id):
     """Delete a supplier."""
     try:
         supplier = Supplier.query.get_or_404(id)
-        
+
         # Check if supplier has any components
         if supplier.components:
             flash(f'Cannot delete supplier {supplier.supplier_code}. It has {len(supplier.components)} associated components.', 'danger')
             return redirect(url_for('main.suppliers'))
-        
+
         db.session.delete(supplier)
         db.session.commit()
-        
+
         flash('Supplier deleted successfully!', 'success')
         return redirect(url_for('main.suppliers'))
-        
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting supplier {id}: {str(e)}")
         flash(f'Error deleting supplier: {str(e)}', 'danger')
         return redirect(url_for('main.suppliers'))
 
-# API routes for supplier management (for AJAX functionality)
-@main.route('/api/suppliers/<int:supplier_id>', methods=['PUT'])
-def api_update_supplier(supplier_id):
-    """API endpoint to update a supplier."""
-    try:
-        supplier = Supplier.query.get_or_404(supplier_id)
-        
-        data = request.get_json() or request.form
-        supplier_code = data.get('supplier_code', '').strip()
-        address = data.get('address', '').strip()
-        
-        if not supplier_code:
-            return jsonify({'success': False, 'error': 'Supplier code is required'}), 400
-        
-        # Check for duplicate supplier code
-        existing = Supplier.query.filter(
-            Supplier.supplier_code == supplier_code,
-            Supplier.id != supplier_id
-        ).first()
-        if existing:
-            return jsonify({'success': False, 'error': 'Supplier code already exists'}), 400
-        
-        supplier.supplier_code = supplier_code
-        supplier.address = address if address else None
-        
-        db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating supplier via API: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# Helper functions - Enhanced for new frontend
+def _process_component_properties(component, component_type_name, form_data):
+    """Process component properties based on component type - enhanced for new frontend."""
+    type_properties = {
+        'Fabrics': ['material', 'color', 'gender', 'brand', 'finish', 'weight'],
+        'Shapes': ['gender', 'style', 'brand', 'subbrand', 'subcategory'],
+        'Buttons': ['material', 'color', 'brand', 'size'],
+        'Zippers': ['material', 'color', 'brand', 'size'],
+        'Labels': ['brand', 'subbrand', 'material'],
+        'Hangtags': ['brand', 'subbrand', 'material'],
+        'Packaging': ['brand', 'material']
+    }
+    
+    allowed_properties = type_properties.get(component_type_name, [])
+    
+    # Initialize properties dict if it doesn't exist
+    if not hasattr(component, 'properties') or component.properties is None:
+        component.properties = {}
 
-@main.route('/api/suppliers/<int:supplier_id>', methods=['DELETE'])
-def api_delete_supplier(supplier_id):
-    """API endpoint to delete a supplier."""
-    try:
-        supplier = Supplier.query.get_or_404(supplier_id)
-        
-        # Check if supplier has any components
-        if supplier.components:
-            return jsonify({
-                'success': False, 
-                'error': f'Cannot delete supplier. It has {len(supplier.components)} associated components.'
-            }), 400
-        
-        db.session.delete(supplier)
-        db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting supplier via API: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    for prop in allowed_properties:
+        prop_value = form_data.get(prop)
+        if prop_value:
+            # Handle array properties
+            if prop in ['gender', 'style', 'subbrand']:
+                if isinstance(prop_value, list):
+                    component.properties[prop] = {
+                        'value': prop_value,
+                        'updated_at': datetime.utcnow().isoformat()
+                    }
+                else:
+                    # Convert string to array if needed
+                    values = [v.strip() for v in prop_value.split(',') if v.strip()]
+                    if values:
+                        component.properties[prop] = {
+                            'value': values,
+                            'updated_at': datetime.utcnow().isoformat()
+                        }
+            else:
+                component.properties[prop] = {
+                    'value': prop_value,
+                    'updated_at': datetime.utcnow().isoformat()
+                }
 
-@main.route('/api/suppliers/bulk-delete', methods=['POST'])
-def api_bulk_delete_suppliers():
-    """API endpoint for bulk deletion of suppliers."""
-    try:
-        data = request.get_json()
-        supplier_ids = data.get('ids', [])
-        
-        if not supplier_ids:
-            return jsonify({'success': False, 'error': 'No suppliers selected'}), 400
-        
-        # Check if any suppliers have components
-        suppliers_with_components = Supplier.query.filter(
-            Supplier.id.in_(supplier_ids)
-        ).filter(Supplier.components.any()).all()
-        
-        if suppliers_with_components:
-            supplier_codes = [s.supplier_code for s in suppliers_with_components]
-            return jsonify({
-                'success': False, 
-                'error': f'Cannot delete suppliers with components: {", ".join(supplier_codes)}'
-            }), 400
-        
-        # Delete suppliers
-        deleted_count = Supplier.query.filter(Supplier.id.in_(supplier_ids)).delete()
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'deleted_count': deleted_count
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error in bulk delete suppliers: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-@main.route('/api/suppliers/export')
-def api_export_suppliers():
-    """API endpoint to export suppliers data."""
-    try:
-        suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-        
-        # Create CSV data
-        import io
-        import csv
-        
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Write header
-        writer.writerow(['Supplier Code', 'Address', 'Components Count', 'Created At'])
-        
-        # Write data
-        for supplier in suppliers:
-            writer.writerow([
-                supplier.supplier_code,
-                supplier.address or '',
-                len(supplier.components),
-                supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else ''
-            ])
-        
-        csv_data = output.getvalue()
-        output.close()
-        
-        # Return as downloadable file
-        return current_app.response_class(
-            csv_data,
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': 'attachment; filename=suppliers.csv'
-            }
-        )
-        
-    except Exception as e:
-        current_app.logger.error(f"Error exporting suppliers: {str(e)}")
-        return jsonify({'error': 'Export failed'}), 500
+# Update the image processing helper function  
+# Update the image processing helper function  
+def _process_image_uploads(component, request):  
+    """Process image uploads for a component with auto-assigned order - enhanced for new frontend."""
+    uploaded_count = 0  
+    picture_order = 1  
+
+    for i in range(1, 11):  # Up to 10 pictures for better capacity
+        picture_file = request.files.get(f'picture_{i}')  
+
+        if picture_file and picture_file.filename:  
+            try:  
+                # Use the improved save_uploaded_file function
+                file_url = save_uploaded_file(picture_file)
+                if file_url:
+                    picture = Picture(
+                        component_id=component.id,
+                        picture_name=picture_file.filename,
+                        url=file_url,
+                        picture_order=picture_order
+                    )
+                    db.session.add(picture)
+                    uploaded_count += 1
+                    picture_order += 1
+
+            except Exception as e:  
+                current_app.logger.error(f"Error uploading image {i}: {str(e)}")  
+                continue  
+
+    return uploaded_count
+
+def _update_component_images(component, request):
+    """Update component images, handling both new uploads and existing images - enhanced for new frontend."""
+    # Handle existing picture updates
+    for picture in component.pictures:
+        picture_index = None
+        for i, existing_picture in enumerate(component.pictures, 1):
+            if existing_picture.id == picture.id:
+                picture_index = i
+                break
+
+        if picture_index:
+            name_key = f'existing_picture_{picture_index}_name'
+            order_key = f'existing_picture_{picture_index}_order'
+
+            if name_key in request.form:
+                picture.picture_name = request.form[name_key]
+            if order_key in request.form:
+                picture.picture_order = int(request.form[order_key] or picture.picture_order)
+    
+    # Process new uploaded images
+    max_order = max([p.picture_order for p in component.pictures] + [0])
+    for i in range(1, 11):  # Up to 10 new images
+        picture_file = request.files.get(f'picture_{i}')
+        if picture_file and picture_file.filename:
+            try:
+                file_url = save_uploaded_file(picture_file)
+                if file_url:
+                    max_order += 1
+                    picture = Picture(
+                        component_id=component.id,
+                        picture_name=picture_file.filename,
+                        url=file_url,
+                        picture_order=max_order
+                    )
+                    db.session.add(picture)
+            except Exception as e:
+                current_app.logger.error(f"Error uploading new image {i}: {str(e)}")
+
+# Helper functions for variant image processing
+def _process_variant_images(variant, request):
+    """Process image uploads for a variant with auto-assigned order - enhanced for new frontend."""
+    uploaded_count = 0
+    picture_order = 1
+
+    for i in range(1, 11):  # Up to 10 pictures per variant
+        picture_file = request.files.get(f'variant_picture_{i}')
+
+        if picture_file and picture_file.filename:
+            try:
+                # Use the improved save_uploaded_file function
+                file_url = save_uploaded_file(picture_file, 'variant_uploads')
+                if file_url:
+                    picture = Picture(
+                        variant_id=variant.id,
+                        picture_name=picture_file.filename,
+                        url=file_url,
+                        picture_order=picture_order
+                    )
+                    db.session.add(picture)
+                    uploaded_count += 1
+                    picture_order += 1
+
+            except Exception as e:
+                current_app.logger.error(f"Error uploading variant image {i}: {str(e)}")
+                continue
+
+    return uploaded_count
+
+def _update_variant_images(variant, request):
+    """Update variant images, handling both new uploads and existing images - enhanced for new frontend."""
+    # Handle existing picture updates
+    for picture in variant.variant_pictures:
+        picture_index = None
+        for i, existing_picture in enumerate(variant.variant_pictures, 1):
+            if existing_picture.id == picture.id:
+                picture_index = i
+                break
+
+        if picture_index:
+            name_key = f'existing_variant_picture_{picture_index}_name'
+            order_key = f'existing_variant_picture_{picture_index}_order'
+
+            if name_key in request.form:
+                picture.picture_name = request.form[name_key]
+            if order_key in request.form:
+                picture.picture_order = int(request.form[order_key] or picture.picture_order)
+
+    # Process new uploaded images
+    max_order = max([p.picture_order for p in variant.variant_pictures] + [0])
+    for i in range(1, 11):  # Up to 10 new images
+        picture_file = request.files.get(f'variant_picture_{i}')
+        if picture_file and picture_file.filename:
+            try:
+                file_url = save_uploaded_file(picture_file, 'variant_uploads')
+                if file_url:
+                    max_order += 1
+                    picture = Picture(
+                        variant_id=variant.id,
+                        picture_name=picture_file.filename,
+                        url=file_url,
+                        picture_order=max_order
+                    )
+                    db.session.add(picture)
+            except Exception as e:
+                current_app.logger.error(f"Error uploading new variant image {i}: {str(e)}")
+
+# Error handlers for better UX
+@main.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors"""
+    return render_template('errors/404.html'), 404
+
+@main.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    db.session.rollback()
+    return render_template('errors/500.html'), 500
+
+@main.errorhandler(RequestEntityTooLarge)
+def file_too_large_error(error):
+    """Handle file upload size errors"""
+    flash('File is too large. Maximum size is 16MB.', 'error')
+    return redirect(request.url or url_for('main.index'))
+
+# Add any remaining routes from your original file that weren't covered above
+# (supplier management, additional API endpoints, etc.)

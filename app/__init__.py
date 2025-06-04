@@ -8,6 +8,22 @@ from config import Config
 db = SQLAlchemy()
 migrate = Migrate()
 
+
+def pluralize(count, singular='', plural='s'):
+    """
+    Flask/Jinja2 pluralize filter similar to Django's pluralize
+    Usage: {{ count|pluralize }} or {{ count|pluralize:'y,ies' }}
+    """
+    if count == 1:
+        return singular
+    return plural
+
+
+def register_template_filters(app):
+    """Register custom template filters"""
+    app.jinja_env.filters['pluralize'] = pluralize
+
+
 def create_app(config_class=Config):
     # Initialize the app
     app = Flask(__name__)
@@ -24,6 +40,9 @@ def create_app(config_class=Config):
         render_as_batch=True,
         version_table_schema='component_app'
     )
+
+    # Register custom template filters
+    register_template_filters(app)
 
     # Create upload directory if it doesn't exist
     uploads_dir = app.config.get('UPLOAD_FOLDER')

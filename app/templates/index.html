@@ -12,6 +12,11 @@
         margin-bottom: 1rem;
         position: relative;
         overflow: hidden;
+        transition: transform 0.2s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
     }
 
     .stats-card::before {
@@ -19,11 +24,11 @@
         position: absolute;
         top: 0;
         right: 0;
-        width: 100px;
-        height: 100px;
+        width: 80px;
+        height: 80px;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50%;
-        transform: translate(30px, -30px);
+        transform: translate(25px, -25px);
     }
 
     .component-card {
@@ -33,6 +38,9 @@
         cursor: pointer;
         position: relative;
         overflow: hidden;
+        background: white;
+        box-shadow: var(--shadow-md);
+        height: 100%;
     }
 
     .component-card:hover {
@@ -40,28 +48,85 @@
         box-shadow: var(--shadow-lg);
     }
 
-    .component-card .card-body {
-        padding: 1.5rem;
+    .component-image-container {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
     }
 
     .component-image {
         width: 100%;
-        height: 200px;
+        height: 100%;
         object-fit: cover;
-        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        transition: transform 0.3s ease;
+    }
+
+    .component-card:hover .component-image {
+        transform: scale(1.05);
     }
 
     .component-image-placeholder {
         width: 100%;
-        height: 200px;
+        height: 100%;
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: var(--border-radius) var(--border-radius) 0 0;
         color: var(--color-secondary);
     }
 
+    /* IMPROVED Variant Display */
+    .variant-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        padding: 1rem;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .component-card:hover .variant-overlay {
+        transform: translateY(0);
+    }
+
+    .variant-colors-compact {
+        display: flex;
+        gap: 0.25rem;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .color-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .color-dot:hover {
+        transform: scale(1.3);
+        z-index: 10;
+    }
+
+    .variant-count-badge {
+        background: rgba(59, 130, 246, 0.9);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        backdrop-filter: blur(5px);
+    }
+
+    /* IMPROVED Filter Panel */
     .filter-panel {
         background: white;
         border-radius: var(--border-radius-lg);
@@ -76,9 +141,15 @@
 
     .search-box .form-control {
         padding-left: 3rem;
-        border-radius: 50px;
+        border-radius: 25px;
         border: 2px solid #e2e8f0;
-        height: 50px;
+        height: 48px;
+        transition: all 0.2s ease;
+    }
+
+    .search-box .form-control:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
     .search-box .search-icon {
@@ -97,14 +168,15 @@
     }
 
     .filter-chip {
-        background: #f1f5f9;
+        background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 50px;
+        border-radius: 25px;
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
         color: var(--color-secondary);
         cursor: pointer;
         transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
     .filter-chip:hover,
@@ -112,14 +184,17 @@
         background: var(--color-primary);
         color: white;
         border-color: var(--color-primary);
+        transform: translateY(-1px);
     }
 
+    /* Bulk Actions - More Compact */
     .bulk-actions {
-        background: white;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
         border-radius: var(--border-radius);
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-md);
         display: none;
     }
 
@@ -128,45 +203,20 @@
         animation: slideDown 0.3s ease;
     }
 
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .component-meta {
-        font-size: 0.875rem;
-        color: var(--color-secondary);
-    }
-
-    .keyword-tag {
-        background: #f1f5f9;
-        color: var(--color-secondary);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        margin-right: 0.25rem;
-        margin-bottom: 0.25rem;
-        display: inline-block;
-    }
-
+    /* View Toggle */
     .view-toggle {
         background: white;
-        border-radius: var(--border-radius);
+        border-radius: 25px;
         padding: 0.25rem;
         box-shadow: var(--shadow-sm);
+        border: 1px solid #e2e8f0;
     }
 
     .view-toggle button {
         border: none;
         background: transparent;
         padding: 0.5rem;
-        border-radius: 4px;
+        border-radius: 20px;
         color: var(--color-secondary);
         transition: all 0.2s ease;
     }
@@ -176,22 +226,74 @@
         color: white;
     }
 
+    /* List View Improvements */
     .list-view .component-card {
         margin-bottom: 1rem;
+        height: auto;
     }
 
     .list-view .component-card .card-body {
         display: flex;
         align-items: center;
         gap: 1rem;
+        padding: 1rem;
     }
 
-    .list-view .component-image,
-    .list-view .component-image-placeholder {
+    .list-view .component-image-container {
         width: 80px;
-        height: 80px;
+        height: 60px;
         border-radius: var(--border-radius);
         flex-shrink: 0;
+    }
+
+    .list-view .variant-overlay {
+        display: none;
+    }
+
+    /* IMPROVED Component Card Content */
+    .component-info {
+        padding: 1rem;
+        flex-grow: 1;
+    }
+
+    .component-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--color-dark);
+    }
+
+    .component-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--color-secondary);
+    }
+
+    .component-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .keyword-tags-compact {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+    }
+
+    .keyword-tag-small {
+        background: #f1f5f9;
+        color: var(--color-secondary);
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+    }
+
+    /* IMPROVED Pagination */
+    .pagination-modern {
+        margin-top: 2rem;
     }
 
     .pagination-modern .page-link {
@@ -200,16 +302,98 @@
         margin: 0 0.125rem;
         padding: 0.5rem 0.75rem;
         color: var(--color-secondary);
+        transition: all 0.2s ease;
     }
 
     .pagination-modern .page-link:hover {
         background: var(--color-primary);
         color: white;
+        transform: translateY(-1px);
     }
 
     .pagination-modern .page-item.active .page-link {
         background: var(--color-primary);
         color: white;
+    }
+
+    /* IMPROVED Modal Styles */
+    .modal-dialog-compact {
+        max-width: 400px;
+    }
+
+    .modal-content-modern {
+        border: none;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .modal-header-modern {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem 1.5rem 1rem;
+    }
+
+    .modal-body-modern {
+        padding: 1rem 1.5rem;
+    }
+
+    .modal-footer-modern {
+        border-top: 1px solid #f1f5f9;
+        padding: 1rem 1.5rem 1.5rem;
+    }
+
+    /* Responsive Improvements */
+    @media (max-width: 768px) {
+        .component-image-container {
+            height: 160px;
+        }
+
+        .stats-card {
+            padding: 1rem;
+        }
+
+        .filter-panel {
+            padding: 1rem;
+        }
+
+        .quick-filters {
+            gap: 0.25rem;
+        }
+
+        .filter-chip {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .component-meta {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+
+    /* Loading States */
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--color-secondary);
+    }
+
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
     }
 </style>
 {% endblock %}
@@ -223,11 +407,11 @@
             <p class="text-muted mb-0">Manage and organize your component library</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern d-flex align-items-center">
+            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern">
                 <i data-lucide="plus" class="me-2" style="width: 18px; height: 18px;"></i>
                 New Component
             </a>
-            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-success-modern btn-modern d-flex align-items-center">
+            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-success-modern btn-modern">
                 <i data-lucide="upload" class="me-2" style="width: 18px; height: 18px;"></i>
                 Bulk Upload
             </a>
@@ -282,51 +466,51 @@
         </div>
     </div>
 
-    <!-- Advanced Filter Panel -->
+    <!-- IMPROVED Filter Panel -->
     <div class="filter-panel">
         <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm">
             <!-- Search Bar -->
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <div class="search-box">
-                        <input type="text" 
-                               class="form-control form-control-modern" 
-                               name="search" 
-                               value="{{ search }}" 
+                        <input type="text"
+                               class="form-control"
+                               name="search"
+                               value="{{ search }}"
                                placeholder="Search components by name, description, or product number..."
                                x-model="searchQuery"
                                @input.debounce.300ms="performSearch()">
                         <i data-lucide="search" class="search-icon" style="width: 20px; height: 20px;"></i>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-control-modern" 
-                                name="component_type_id" 
+                        <select class="form-select form-control-modern"
+                                name="component_type_id"
                                 x-model="filters.componentType"
                                 @change="performSearch()">
-                            <option value="">All Component Types</option>
+                            <option value="">All Types</option>
                             {% for component_type in component_types %}
-                                <option value="{{ component_type.id }}" 
+                                <option value="{{ component_type.id }}"
                                         {% if request.args.get('component_type_id')|int == component_type.id %}selected{% endif %}>
                                     {{ component_type.name }}
                                 </option>
                             {% endfor %}
                         </select>
-                        
+
                         <!-- View Toggle -->
                         <div class="view-toggle d-flex">
-                            <button type="button" 
-                                    @click="viewMode = 'grid'" 
+                            <button type="button"
+                                    @click="viewMode = 'grid'"
                                     :class="{ 'active': viewMode === 'grid' }"
                                     title="Grid View">
-                                <i data-lucide="grid-3x3" style="width: 18px; height: 18px;"></i>
+                                <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
                             </button>
-                            <button type="button" 
-                                    @click="viewMode = 'list'" 
+                            <button type="button"
+                                    @click="viewMode = 'list'"
                                     :class="{ 'active': viewMode === 'list' }"
                                     title="List View">
-                                <i data-lucide="list" style="width: 18px; height: 18px;"></i>
+                                <i data-lucide="list" style="width: 16px; height: 16px;"></i>
                             </button>
                         </div>
                     </div>
@@ -334,15 +518,15 @@
             </div>
 
             <!-- Advanced Filters -->
-            <div class="row">
+            <div class="row mb-3">
                 <div class="col-md-4">
-                    <select class="form-select form-control-modern" 
+                    <select class="form-select form-control-modern"
                             name="category_id"
                             x-model="filters.category"
                             @change="performSearch()">
                         <option value="">All Categories</option>
                         {% for category in categories %}
-                            <option value="{{ category.id }}" 
+                            <option value="{{ category.id }}"
                                     {% if request.args.get('category_id')|int == category.id %}selected{% endif %}>
                                 {{ category.name }}
                             </option>
@@ -350,13 +534,13 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <select class="form-select form-control-modern" 
+                    <select class="form-select form-control-modern"
                             name="supplier_id"
                             x-model="filters.supplier"
                             @change="performSearch()">
                         <option value="">All Suppliers</option>
                         {% for supplier in suppliers %}
-                            <option value="{{ supplier.id }}" 
+                            <option value="{{ supplier.id }}"
                                     {% if request.args.get('supplier_id')|int == supplier.id %}selected{% endif %}>
                                 {{ supplier.supplier_code }}
                             </option>
@@ -367,7 +551,7 @@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary-modern btn-modern flex-grow-1">
                             <i data-lucide="filter" class="me-2" style="width: 16px; height: 16px;"></i>
-                            Apply Filters
+                            Apply
                         </button>
                         <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
                             <i data-lucide="x" style="width: 16px; height: 16px;"></i>
@@ -375,42 +559,43 @@
                     </div>
                 </div>
             </div>
-        </form>
 
-        <!-- Quick Filters -->
-        <div class="quick-filters">
-            <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
-                All Components
+            <!-- Quick Filters -->
+            <div class="quick-filters">
+                <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
+                    All Components
+                </div>
+                <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
+                    ✓ Approved
+                </div>
+                <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
+                    ⏳ Pending Review
+                </div>
+                <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
+                    🆕 Recently Added
+                </div>
             </div>
-            <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
-                Approved
-            </div>
-            <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
-                Pending Review
-            </div>
-            <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
-                Recently Added
-            </div>
-        </div>
+        </form>
     </div>
 
-    <!-- Bulk Actions -->
+    <!-- IMPROVED Bulk Actions -->
     <div class="bulk-actions" :class="{ 'show': selectedComponents.length > 0 }">
         <div class="d-flex justify-content-between align-items-center">
             <span class="fw-medium">
+                <i data-lucide="check-square" class="me-2" style="width: 16px; height: 16px;"></i>
                 <span x-text="selectedComponents.length"></span> component(s) selected
             </span>
             <div class="d-flex gap-2">
-                <button class="btn btn-warning-modern btn-sm" @click="bulkAction('export')">
+                <button class="btn btn-sm btn-light" @click="bulkAction('export')">
                     <i data-lucide="download" class="me-1" style="width: 14px; height: 14px;"></i>
                     Export
                 </button>
-                <button class="btn btn-danger-modern btn-sm" @click="bulkAction('delete')">
+                <button class="btn btn-sm btn-outline-light" @click="bulkAction('delete')">
                     <i data-lucide="trash-2" class="me-1" style="width: 14px; height: 14px;"></i>
                     Delete
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" @click="clearSelection()">
-                    Clear Selection
+                <button class="btn btn-sm btn-outline-light" @click="clearSelection()">
+                    Clear
                 </button>
             </div>
         </div>
@@ -421,135 +606,179 @@
         <div :class="viewMode === 'grid' ? 'row' : 'list-view'">
             {% for component in components.items %}
                 <div :class="viewMode === 'grid' ? 'col-lg-4 col-md-6 mb-4' : ''">
-                    <div class="card component-card card-modern h-100" 
+                    <div class="card component-card"
                          @click="navigateToComponent({{ component.id }})"
-                         x-data="{ selected: false }">
-                        
+                         x-data="componentCard{{ component.id }}()">
+
                         <!-- Selection Checkbox -->
-                        <div class="position-absolute top-0 start-0 p-3" style="z-index: 10;">
-                            <input type="checkbox" 
-                                   class="form-check-input" 
+                        <div class="position-absolute top-0 start-0 p-2" style="z-index: 10;">
+                            <input type="checkbox"
+                                   class="form-check-input"
                                    @click.stop="toggleSelection({{ component.id }})"
                                    :checked="selectedComponents.includes({{ component.id }})">
                         </div>
 
+                        <!-- Status Badge -->
+                        <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                            <span class="badge bg-{{ 'success' if component.get_overall_status() == 'approved' else ('danger' if component.get_overall_status() == 'rejected' else 'warning') }}">
+                                {% if component.get_overall_status() == 'approved' %}
+                                    ✓
+                                {% elif component.get_overall_status() == 'rejected' %}
+                                    ✗
+                                {% else %}
+                                    ⏳
+                                {% endif %}
+                            </span>
+                        </div>
+
                         <!-- Component Image -->
-                        {% if component.pictures %}
-                            {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
-                            <img src="{{ primary_picture.url }}" 
-                                 alt="{{ primary_picture.picture_name }}"
-                                 class="component-image"
-                                 onerror="this.parentElement.innerHTML='<div class=\'component-image-placeholder\'><i data-lucide=\'image\' style=\'width: 48px; height: 48px;\'></i></div>'">
-                        {% else %}
-                            <div class="component-image-placeholder">
-                                <i data-lucide="image" style="width: 48px; height: 48px;"></i>
-                            </div>
-                        {% endif %}
+                        <div class="component-image-container">
+                            {% if component.pictures or (component.variants and component.variants|selectattr('variant_pictures')|list) %}
+                                {% set main_pictures = component.pictures|sort(attribute='picture_order')|list %}
+                                {% set has_variants = component.variants|length > 0 %}
 
-                        <!-- Component Info -->
-                        <div class="card-body" :class="viewMode === 'list' ? 'd-flex align-items-center' : ''">
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0 fw-bold">{{ component.product_number }}</h5>
-                                    <span class="status-badge status-{{ component.get_overall_status() }}">
-                                        {% if component.get_overall_status() == 'approved' %}
-                                            <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                                        {% elif component.get_overall_status() == 'rejected' %}
-                                            <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i>
-                                        {% else %}
-                                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
-                                        {% endif %}
-                                        {{ component.get_status_display() }}
-                                    </span>
+                                {% if main_pictures %}
+                                    <img src="{{ main_pictures[0].url }}"
+                                         alt="{{ main_pictures[0].picture_name }}"
+                                         class="component-image"
+                                         x-ref="mainImage"
+                                         onerror="this.parentElement.innerHTML='<div class=\'component-image-placeholder\'><i data-lucide=\'image\' style=\'width: 48px; height: 48px;\'></i></div>'">
+                                {% elif has_variants %}
+                                    {% set first_variant = component.variants|selectattr('variant_pictures')|first %}
+                                    {% if first_variant %}
+                                        <img src="{{ first_variant.variant_pictures|sort(attribute='picture_order')|first.url }}"
+                                             alt="{{ first_variant.variant_pictures|sort(attribute='picture_order')|first.picture_name }}"
+                                             class="component-image"
+                                             x-ref="mainImage"
+                                             onerror="this.parentElement.innerHTML='<div class=\'component-image-placeholder\'><i data-lucide=\'image\' style=\'width: 48px; height: 48px;\'></i></div>'">
+                                    {% else %}
+                                        <div class="component-image-placeholder">
+                                            <i data-lucide="image" style="width: 48px; height: 48px;"></i>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <div class="component-image-placeholder">
+                                    <i data-lucide="image" style="width: 48px; height: 48px;"></i>
                                 </div>
+                            {% endif %}
 
-                                <p class="card-text text-muted mb-2">
-                                    {{ component.description|truncate(80) if component.description else 'No description available' }}
-                                </p>
-
-                                <div class="component-meta mb-2">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <i data-lucide="tag" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span class="badge bg-primary me-2">{{ component.component_type.name }}</span>
-                                        <i data-lucide="truck" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span>{{ component.supplier.supplier_code }}</span>
+                            <!-- IMPROVED Variant Colors Overlay -->
+                            {% if component.variants %}
+                                <div class="variant-overlay">
+                                    <div class="d-flex align-items-center justify-content-between text-white">
+                                        <span class="fw-medium small">Available Colors</span>
+                                        <span class="variant-count-badge">{{ component.variants|length }}</span>
                                     </div>
-                                    <div class="d-flex align-items-center">
-                                        <i data-lucide="folder" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span>{{ component.category.name }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Keywords -->
-                                {% if component.keywords %}
-                                    <div class="mb-2">
-                                        {% for keyword in component.keywords[:3] %}
-                                            <span class="keyword-tag">{{ keyword.name }}</span>
+                                    <div class="variant-colors-compact">
+                                        {% for variant in component.variants[:5] %}
+                                            {% set variant_first_image = variant.variant_pictures|sort(attribute='picture_order')|first %}
+                                            <div class="color-dot"
+                                                 style="background: {{ variant.color.hex_code or '#ccc' }}"
+                                                 {% if variant_first_image %}
+                                                 @mouseenter="changeMainImage('{{ variant_first_image.url }}')"
+                                                 {% endif %}
+                                                 @mouseleave="resetMainImage()"
+                                                 title="{{ variant.get_display_name() }}">
+                                            </div>
                                         {% endfor %}
-                                        {% if component.keywords|length > 3 %}
-                                            <span class="keyword-tag">+{{ component.keywords|length - 3 }} more</span>
+                                        {% if component.variants|length > 5 %}
+                                            <span class="text-white small">+{{ component.variants|length - 5 }}</span>
                                         {% endif %}
                                     </div>
-                                {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
 
-                                <!-- Properties Count -->
-                                {% if component.properties %}
-                                    <div class="text-muted">
-                                        <i data-lucide="settings" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        {{ component.properties|length }} properties
-                                    </div>
-                                {% endif %}
+                        <!-- IMPROVED Component Info -->
+                        <div class="component-info">
+                            <h6 class="component-title">{{ component.product_number }}</h6>
+
+                            <div class="component-meta">
+                                <span class="component-meta-item">
+                                    <i data-lucide="tag" style="width: 12px; height: 12px;"></i>
+                                    {{ component.component_type.name }}
+                                </span>
+                                <span class="component-meta-item">
+                                    <i data-lucide="truck" style="width: 12px; height: 12px;"></i>
+                                    {{ component.supplier.supplier_code }}
+                                </span>
+                                <span class="component-meta-item">
+                                    <i data-lucide="folder" style="width: 12px; height: 12px;"></i>
+                                    {{ component.category.name }}
+                                </span>
                             </div>
+
+                            <p class="text-muted small mb-2">
+                                {{ component.description|truncate(60) if component.description else 'No description available' }}
+                            </p>
+
+                            <!-- Compact Keywords -->
+                            {% if component.keywords %}
+                                <div class="keyword-tags-compact">
+                                    {% for keyword in component.keywords[:3] %}
+                                        <span class="keyword-tag-small">{{ keyword.name }}</span>
+                                    {% endfor %}
+                                    {% if component.keywords|length > 3 %}
+                                        <span class="keyword-tag-small">+{{ component.keywords|length - 3 }} more</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
 
                             <!-- Action Buttons -->
-                            <div :class="viewMode === 'list' ? 'ms-3' : 'mt-3'">
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}" 
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('main.component_detail', id=component.id) }}"
                                        class="btn btn-outline-primary btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                                       @click.stop
+                                       title="View Details">
+                                        <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
                                     </a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}" 
+                                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
                                        class="btn btn-outline-warning btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                       @click.stop
+                                       title="Edit Component">
+                                        <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
                                     </a>
-                                    <button type="button" 
-                                            class="btn btn-outline-danger btn-sm" 
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
                                             @click.stop="deleteComponent({{ component.id }})"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteModal{{ component.id }}">
-                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteModal{{ component.id }}"
+                                            title="Delete Component">
+                                        <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
                                     </button>
                                 </div>
+
+                                <small class="text-muted">
+                                    {% if component.variants %}
+                                        {{ component.variants|length }} variants
+                                    {% else %}
+                                        {{ component.pictures|length }} images
+                                    {% endif %}
+                                </small>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Delete Modal -->
+                <!-- IMPROVED Compact Delete Modal -->
                 <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Confirm Deletion</h5>
+                    <div class="modal-dialog modal-dialog-compact modal-dialog-centered">
+                        <div class="modal-content modal-content-modern">
+                            <div class="modal-header modal-header-modern">
+                                <h6 class="modal-title">Confirm Deletion</h6>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="modal-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i data-lucide="alert-triangle" class="text-warning me-2" style="width: 24px; height: 24px;"></i>
-                                    <strong>This action cannot be undone!</strong>
-                                </div>
-                                <p>Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?</p>
-                                <p class="text-muted mb-0">This will also delete all associated pictures and properties.</p>
+                            <div class="modal-body modal-body-modern text-center">
+                                <i data-lucide="alert-triangle" class="text-warning mb-3" style="width: 40px; height: 40px;"></i>
+                                <p class="mb-2">Delete <strong>{{ component.product_number }}</strong>?</p>
+                                <p class="text-muted small mb-0">This action cannot be undone.</p>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <div class="modal-footer modal-footer-modern">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                                 <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
-                                    <button type="submit" class="btn btn-danger-modern btn-modern">
-                                        <i data-lucide="trash-2" class="me-2" style="width: 16px; height: 16px;"></i>
-                                        Delete Component
-                                    </button>
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             </div>
                         </div>
@@ -558,10 +787,10 @@
             {% endfor %}
         </div>
 
-        <!-- Pagination -->
+        <!-- IMPROVED Pagination -->
         {% if components.pages > 1 %}
-        <nav aria-label="Component pagination" class="mt-5">
-            <ul class="pagination pagination-modern justify-content-center">
+        <nav aria-label="Component pagination" class="pagination-modern">
+            <ul class="pagination justify-content-center">
                 {% if components.has_prev %}
                     <li class="page-item">
                         <a class="page-link" href="{{ url_for('main.index', page=components.prev_num, **request.args) }}">
@@ -569,7 +798,7 @@
                         </a>
                     </li>
                 {% endif %}
-                
+
                 {% for page_num in components.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
                     {% if page_num %}
                         {% if page_num == components.page %}
@@ -587,7 +816,7 @@
                         </li>
                     {% endif %}
                 {% endfor %}
-                
+
                 {% if components.has_next %}
                     <li class="page-item">
                         <a class="page-link" href="{{ url_for('main.index', page=components.next_num, **request.args) }}">
@@ -600,15 +829,15 @@
         {% endif %}
 
     {% else %}
-        <!-- Empty State -->
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i data-lucide="package" style="width: 80px; height: 80px; color: var(--color-secondary);"></i>
+        <!-- IMPROVED Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon mx-auto">
+                <i data-lucide="package" style="width: 100%; height: 100%;"></i>
             </div>
-            <h3 class="h4 mb-3">No components found</h3>
+            <h4 class="mb-3">No components found</h4>
             <p class="text-muted mb-4">
                 {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') %}
-                    No components match your current filters. Try adjusting your search criteria.
+                    No components match your current filters.<br>Try adjusting your search criteria.
                 {% else %}
                     Get started by adding your first component to the system.
                 {% endif %}
@@ -645,16 +874,13 @@ function componentDashboard() {
         },
 
         init() {
-            // Watch for view mode changes
             this.$watch('viewMode', (value) => {
                 localStorage.setItem('componentViewMode', value);
-                // Re-initialize icons after view change
                 setTimeout(() => lucide.createIcons(), 100);
             });
         },
 
         performSearch() {
-            // Auto-submit form after a delay
             clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => {
                 this.$refs.filterForm.submit();
@@ -663,10 +889,8 @@ function componentDashboard() {
 
         quickFilter(type) {
             this.activeQuickFilter = type;
-            // Implement quick filter logic here
-            // You can modify the URL parameters based on the filter type
             const url = new URL(window.location);
-            
+
             switch(type) {
                 case 'approved':
                     url.searchParams.set('status', 'approved');
@@ -681,7 +905,7 @@ function componentDashboard() {
                     url.searchParams.delete('status');
                     url.searchParams.delete('recent');
             }
-            
+
             window.location.href = url.toString();
         },
 
@@ -703,13 +927,11 @@ function componentDashboard() {
 
             switch(action) {
                 case 'export':
-                    // Implement bulk export
                     const exportUrl = `/api/components/export?ids=${this.selectedComponents.join(',')}`;
                     window.open(exportUrl, '_blank');
                     break;
                 case 'delete':
                     if (confirm(`Are you sure you want to delete ${this.selectedComponents.length} component(s)?`)) {
-                        // Implement bulk delete
                         fetch('/api/components/bulk-delete', {
                             method: 'POST',
                             headers: {
@@ -727,26 +949,58 @@ function componentDashboard() {
 
         navigateToComponent(componentId) {
             window.location.href = `/component/${componentId}`;
-        },
-
-        deleteComponent(componentId) {
-            // This will trigger the modal, actual deletion is handled by the form
         }
     }
 }
 
-// Initialize Alpine.js component
-document.addEventListener('alpine:init', () => {
-    // Component dashboard is already defined above
-});
+// Individual component card behavior
+{% for component in components.items if components %}
+function componentCard{{ component.id }}() {
+    return {
+        originalImageSrc: '',
 
-// Auto-hide alerts after 5 seconds
-setTimeout(() => {
-    const alerts = document.querySelectorAll('.alert-modern');
-    alerts.forEach(alert => {
-        const closeBtn = alert.querySelector('.btn-close');
-        if (closeBtn) closeBtn.click();
-    });
-}, 5000);
+        init() {
+            const mainImage = this.$refs.mainImage;
+            if (mainImage) {
+                this.originalImageSrc = mainImage.src;
+            }
+        },
+
+        changeMainImage(newSrc) {
+            if (newSrc && this.$refs.mainImage) {
+                this.$refs.mainImage.style.opacity = '0.7';
+                setTimeout(() => {
+                    this.$refs.mainImage.src = newSrc;
+                    this.$refs.mainImage.style.opacity = '1';
+                }, 150);
+            }
+        },
+
+        resetMainImage() {
+            if (this.originalImageSrc && this.$refs.mainImage) {
+                this.$refs.mainImage.style.opacity = '0.7';
+                setTimeout(() => {
+                    this.$refs.mainImage.src = this.originalImageSrc;
+                    this.$refs.mainImage.style.opacity = '1';
+                }, 150);
+            }
+        }
+    }
+}
+{% endfor %}
+
+// Initialize icons and auto-hide alerts
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+
+    // Auto-hide alerts after 5 seconds
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert-modern');
+        alerts.forEach(alert => {
+            const closeBtn = alert.querySelector('.btn-close');
+            if (closeBtn) closeBtn.click();
+        });
+    }, 5000);
+});
 </script>
 {% endblock %}
