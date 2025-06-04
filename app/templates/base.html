@@ -274,6 +274,141 @@
                 border-radius: var(--border-radius) var(--border-radius) 0 0;
             }
         }
+
+        .grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+    padding: 0;
+}
+
+.list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.component-card {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background: white;
+    box-shadow: var(--shadow-sm);
+    height: 100%;
+}
+
+.component-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* GRID VIEW STYLES */
+.grid-container .component-image,
+.grid-container .component-image-placeholder {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.grid-container .card-body {
+    padding: 1.25rem;
+}
+
+/* LIST VIEW STYLES */
+.list-container .component-card {
+    margin-bottom: 0;
+}
+
+.list-container .card-body {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 100px;
+}
+
+.list-container .component-image,
+.list-container .component-image-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--border-radius);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.list-container .component-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.list-container .component-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* SHARED IMAGE STYLES */
+.component-image-placeholder {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-secondary);
+}
+
+/* VIEW TOGGLE */
+.view-toggle {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 0.25rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+}
+
+.view-toggle button {
+    border: none;
+    background: transparent;
+    padding: 0.5rem;
+    border-radius: 4px;
+    color: var(--color-secondary);
+    transition: all 0.2s ease;
+}
+
+.view-toggle button.active {
+    background: var(--color-primary);
+    color: white;
+}
+
+/* RESPONSIVE IMPROVEMENTS */
+@media (max-width: 768px) {
+    .grid-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .list-container .card-body {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        text-align: left;
+    }
+
+    .list-container .component-image,
+    .list-container .component-image-placeholder {
+        width: 100%;
+        height: 120px;
+        margin-bottom: 0.5rem;
+    }
+
+    .list-container .component-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
     </style>
     
     {% block extra_css %}{% endblock %}
