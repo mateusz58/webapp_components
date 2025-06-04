@@ -27,7 +27,8 @@ class Supplier(Base):
     supplier_code = db.Column(db.String(50), unique=True, nullable=False, default='NO CODE')
     address = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # REMOVE onupdate since database trigger handles it
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)  # Remove: onupdate=datetime.utcnow
     
     # Relationship to components
     components = db.relationship('Component', backref='supplier', lazy=True)

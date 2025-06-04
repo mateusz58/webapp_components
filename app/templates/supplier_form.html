@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Add New Supplier{% endblock %}
+{% block title %}{{ 'Edit Supplier' if supplier else 'Add New Supplier' }} - ComponentHub{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Add New Supplier</h1>
+    <h1>{{ 'Edit Supplier' if supplier else 'Add New Supplier' }}</h1>
     <a href="{{ url_for('main.suppliers') }}" class="btn btn-secondary">Back to Suppliers</a>
 </div>
 
@@ -16,20 +16,29 @@
         <form method="POST">
             <div class="mb-3">
                 <label for="supplier_code" class="form-label">Supplier Code *</label>
-                <input type="text" class="form-control" id="supplier_code" name="supplier_code" 
-                       value="{{ supplier_code|default('') }}" required>
+                <input type="text"
+                       class="form-control"
+                       id="supplier_code"
+                       name="supplier_code"
+                       value="{{ supplier.supplier_code if supplier else '' }}"
+                       required>
                 <div class="form-text">A unique code to identify this supplier (e.g., SUPP001)</div>
             </div>
             
             <div class="mb-3">
                 <label for="address" class="form-label">Address</label>
-                <textarea class="form-control" id="address" name="address" rows="3">{{ address|default('') }}</textarea>
+                <textarea class="form-control"
+                          id="address"
+                          name="address"
+                          rows="3">{{ supplier.address if supplier and supplier.address else '' }}</textarea>
                 <div class="form-text">Full address of the supplier including country</div>
             </div>
             
             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                 <a href="{{ url_for('main.suppliers') }}" class="btn btn-outline-secondary me-2">Cancel</a>
-                <button type="submit" class="btn btn-primary">Save Supplier</button>
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Update Supplier' if supplier else 'Save Supplier' }}
+                </button>
             </div>
         </form>
     </div>
@@ -38,42 +47,41 @@
 
 {% block scripts %}
 <script>
-    // Add client-side validation
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        const supplierCodeInput = document.getElementById('supplier_code');
-        
-        // Add validation classes on input
-        supplierCodeInput.addEventListener('input', function() {
-            if (this.value.trim() === '') {
-                this.classList.add('is-invalid');
-                this.classList.remove('is-valid');
-            } else {
-                this.classList.add('is-valid');
-                this.classList.remove('is-invalid');
-            }
-        });
-        
-        // Initial validation state
-        if (supplierCodeInput.value.trim() !== '') {
-            supplierCodeInput.classList.add('is-valid');
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const supplierCodeInput = document.getElementById('supplier_code');
+
+    // Add validation classes on input
+    supplierCodeInput.addEventListener('input', function() {
+        if (this.value.trim() === '') {
+            this.classList.add('is-invalid');
+            this.classList.remove('is-valid');
+        } else {
+            this.classList.add('is-valid');
+            this.classList.remove('is-invalid');
         }
-        
-        // Form submission validation
-        form.addEventListener('submit', function(event) {
-            if (supplierCodeInput.value.trim() === '') {
-                supplierCodeInput.classList.add('is-invalid');
-                event.preventDefault();
-                
-                // Show validation message
-                if (!document.querySelector('.alert-danger')) {
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-danger mt-3';
-                    alertDiv.textContent = 'Please provide a supplier code.';
-                    form.prepend(alertDiv);
-                }
-            }
-        });
     });
+
+    // Initial validation state
+    if (supplierCodeInput.value.trim() !== '') {
+        supplierCodeInput.classList.add('is-valid');
+    }
+
+    // Form submission validation
+    form.addEventListener('submit', function(event) {
+        if (supplierCodeInput.value.trim() === '') {
+            supplierCodeInput.classList.add('is-invalid');
+            event.preventDefault();
+
+            // Show validation message
+            if (!document.querySelector('.alert-danger')) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger mt-3';
+                alertDiv.textContent = 'Please provide a supplier code.';
+                form.prepend(alertDiv);
+            }
+        }
+    });
+});
 </script>
 {% endblock %}

@@ -938,9 +938,157 @@ def api_export_components():
         }), 500
 
 # Enhanced Supplier Routes - adapted for new frontend
+
+@main.route('/api/suppliers/<int:supplier_id>', methods=['PUT'])
+def api_update_supplier(supplier_id):
+    """API endpoint to update a supplier."""
+    try:
+        supplier = Supplier.query.get_or_404(supplier_id)
+
+        # Handle both JSON and form data
+        if request.content_type and 'application/json' in request.content_type:
+            data = request.get_json()
+        else:
+            data = request.form
+
+        supplier_code = data.get('supplier_code', '').strip()
+        address = data.get('address', '').strip()
+
+        if not supplier_code:
+            return jsonify({'success': False, 'error': 'Supplier code is required'}), 400
+
+        # Check for duplicate supplier code
+        existing = Supplier.query.filter(
+            Supplier.supplier_code == supplier_code,
+            Supplier.id != supplier_id
+        ).first()
+        if existing:
+            return jsonify({'success': False, 'error': 'Supplier code already exists'}), 400
+
+        # Update supplier
+        supplier.supplier_code = supplier_code
+        supplier.address = address if address else None
+
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Supplier updated successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating supplier via API: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main.route('/api/suppliers/<int:supplier_id>', methods=['DELETE'])
+def api_delete_supplier(supplier_id):
+    """API endpoint to delete a supplier."""
+    try:
+        supplier = Supplier.query.get_or_404(supplier_id)
+
+        # Check if supplier has any components
+        if supplier.components:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot delete supplier. It has {len(supplier.components)} associated components.'
+            }), 400
+
+        db.session.delete(supplier)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Supplier deleted successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting supplier via API: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main.route('/api/suppliers/bulk-delete', methods=['POST'])
+def api_bulk_delete_suppliers():
+    """API endpoint for bulk deletion of suppliers."""
+    try:
+        data = request.get_json()
+        supplier_ids = data.get('ids', [])
+
+        if not supplier_ids:
+            return jsonify({'success': False, 'error': 'No suppliers selected'}), 400
+
+        # Check if any suppliers have components
+        suppliers_with_components = Supplier.query.filter(
+            Supplier.id.in_(supplier_ids)
+        ).filter(Supplier.components.any()).all()
+
+        if suppliers_with_components:
+            supplier_codes = [s.supplier_code for s in suppliers_with_components]
+            return jsonify({
+                'success': False,
+                'error': f'Cannot delete suppliers with components: {", ".join(supplier_codes)}'
+            }), 400
+
+        # Delete suppliers
+        deleted_count = Supplier.query.filter(Supplier.id.in_(supplier_ids)).delete()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f'{deleted_count} supplier(s) deleted successfully'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in bulk delete suppliers: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main.route('/api/suppliers/export')
+def api_export_suppliers():
+    """API endpoint to export suppliers data."""
+    try:
+        # Get selected IDs if provided
+        selected_ids = request.args.get('ids', '')
+
+        if selected_ids:
+            supplier_ids = [int(id.strip()) for id in selected_ids.split(',') if id.strip()]
+            suppliers = Supplier.query.filter(Supplier.id.in_(supplier_ids)).order_by(Supplier.supplier_code).all()
+        else:
+            suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
+
+        # Create CSV data
+        import io
+        import csv
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow(['Supplier Code', 'Address', 'Components Count', 'Created At', 'Updated At'])
+
+        # Write data
+        for supplier in suppliers:
+            writer.writerow([
+                supplier.supplier_code,
+                supplier.address or '',
+                len(supplier.components),
+                supplier.created_at.strftime('%Y-%m-%d %H:%M:%S') if supplier.created_at else '',
+                supplier.updated_at.strftime('%Y-%m-%d %H:%M:%S') if supplier.updated_at else ''
+            ])
+
+        csv_data = output.getvalue()
+        output.close()
+
+        # Return as downloadable file
+        from flask import make_response
+        response = make_response(csv_data)
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=suppliers.csv'
+        return response
+
+    except Exception as e:
+        current_app.logger.error(f"Error exporting suppliers: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
+
+
 @main.route('/suppliers')
 def suppliers():
-    """Suppliers management - MATCHES YOUR suppliers.html"""
+    """Display all suppliers with management interface."""
     try:
         suppliers_query = Supplier.query.order_by(Supplier.supplier_code).all()
 
@@ -1014,13 +1162,24 @@ def new_supplier():
 
 @main.route('/supplier/edit/<int:id>', methods=['GET', 'POST'])
 def edit_supplier(id):
-    """Edit an existing supplier - MATCHES YOUR supplier_form.html"""
-    supplier = Supplier.query.get_or_404(id)
+    """Edit an existing supplier with enhanced debugging"""
+    try:
+        supplier = Supplier.query.get_or_404(id)
+        current_app.logger.info(f"Found supplier: {supplier.supplier_code}, ID: {supplier.id}")
+    except Exception as e:
+        current_app.logger.error(f"Error finding supplier {id}: {str(e)}")
+        flash(f'Supplier not found: {str(e)}', 'danger')
+        return redirect(url_for('main.suppliers'))
 
     if request.method == 'POST':
         try:
+            # Log form data for debugging
+            current_app.logger.info(f"Form data received: {dict(request.form)}")
+
             supplier_code = request.form.get('supplier_code', '').strip()
             address = request.form.get('address', '').strip()
+
+            current_app.logger.info(f"Updating supplier {id}: code='{supplier_code}', address='{address}'")
 
             if not supplier_code:
                 flash('Supplier code is required.', 'danger')
@@ -1031,29 +1190,57 @@ def edit_supplier(id):
                 Supplier.supplier_code == supplier_code,
                 Supplier.id != id
             ).first()
+
             if existing:
+                current_app.logger.warning(f"Duplicate supplier code found: {supplier_code}")
                 flash('Supplier code already exists.', 'danger')
                 return redirect(request.url)
 
-            # Update supplier
+            # Log before update
+            current_app.logger.info(f"Before update - Supplier: {supplier.supplier_code}, Address: {supplier.address}")
+
+            # Update supplier fields
+            old_code = supplier.supplier_code
+            old_address = supplier.address
+
             supplier.supplier_code = supplier_code
             supplier.address = address if address else None
-            supplier.updated_at = datetime.utcnow()
 
+            current_app.logger.info(f"After field update - Old: ({old_code}, {old_address}) -> New: ({supplier.supplier_code}, {supplier.address})")
+
+            # Commit the changes
             db.session.commit()
+            current_app.logger.info(f"Successfully updated supplier {id}")
 
             flash('Supplier updated successfully!', 'success')
             return redirect(url_for('main.suppliers'))
 
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error updating supplier: {str(e)}")
-            flash(f'Error updating supplier: {str(e)}', 'danger')
+            error_msg = str(e)
+            current_app.logger.error(f"Error updating supplier {id}: {error_msg}")
+            current_app.logger.error(f"Exception type: {type(e).__name__}")
+
+            # More detailed error logging
+            import traceback
+            current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
+
+            flash(f'Error updating supplier: {error_msg}', 'danger')
             return redirect(request.url)
 
-    # GET request - USES YOUR EXACT TEMPLATE: supplier_form.html
-    return render_template('supplier_form.html', supplier=supplier)
+    # GET request - show form with existing data
+    try:
+        current_app.logger.info(f"Rendering edit form for supplier {id}: {supplier.supplier_code}")
 
+        # Log the supplier object structure for debugging
+        current_app.logger.info(f"Supplier object: supplier_code={supplier.supplier_code}, address={supplier.address}, id={supplier.id}")
+
+        return render_template('supplier_form.html', supplier=supplier)
+
+    except Exception as e:
+        current_app.logger.error(f"Error rendering template: {str(e)}")
+        flash(f'Error loading edit form: {str(e)}', 'danger')
+        return redirect(url_for('main.suppliers'))
 @main.route('/supplier/delete/<int:id>', methods=['POST'])
 def delete_supplier(id):
     """Delete a supplier."""
