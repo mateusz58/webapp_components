@@ -68,6 +68,39 @@
                 </div>
             </div>
 
+            <!-- NEW: Brand Selection Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tag me-2"></i>
+                                Brand Association
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="brands" class="form-label">Select Brands</label>
+                                <select class="form-select" id="brands" name="brands" multiple size="5">
+                                    {% for brand in brands %}
+                                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Hold Ctrl/Cmd to select multiple brands. You can associate this component with multiple brands.
+                                </div>
+                            </div>
+
+                            <!-- Brand Preview -->
+                            <div id="selectedBrandsPreview" class="mt-3" style="display: none;">
+                                <label class="form-label">Selected Brands:</label>
+                                <div id="brandTags" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-4">
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
@@ -128,45 +161,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const componentTypeSelect = document.getElementById('component_type_id');
     const propertiesSection = document.getElementById('propertiesSection');
     const form = document.getElementById('componentForm');
+    const brandsSelect = document.getElementById('brands');
+    const selectedBrandsPreview = document.getElementById('selectedBrandsPreview');
+    const brandTags = document.getElementById('brandTags');
 
-    // Property field configurations
+    // Property field configurations (UPDATED: removed 'brand' from type properties since it's now handled separately)
     const typeProperties = {
         'Fabrics': {
             'material': { type: 'select', required: true, options: {{ materials | map(attribute='name') | list | tojson }} },
             'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
             'gender': { type: 'multiselect', required: false, options: ['ladies', 'men', 'unisex', 'all', 'kids'] },
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' }
+            'finish': { type: 'text', required: false, placeholder: 'e.g., waterproof, matte' },
+            'weight': { type: 'text', required: false, placeholder: 'e.g., 120gsm' }
         },
         'Shapes': {
             'gender': { type: 'multiselect', required: false, options: ['ladies', 'men', 'unisex', 'all', 'kids'] },
             'style': { type: 'multiselect', required: false, options: ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage'] },
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR', 'MMC', 'UBL'] }
+            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
+            'subcategory': { type: 'text', required: false, placeholder: 'e.g., jacket, pants' }
         },
         'Buttons': {
             'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} },
             'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
             'size': { type: 'text', required: false, placeholder: 'e.g., 12mm, 15mm' }
         },
         'Zippers': {
             'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} },
             'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
             'size': { type: 'text', required: false, placeholder: 'e.g., 5mm, 8mm' }
         },
         'Labels': {
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR', 'MMC', 'UBL'] },
+            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
             'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
         },
         'Hangtags': {
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR', 'MMC', 'UBL'] },
+            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
             'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
         },
         'Packaging': {
-            'brand': { type: 'text', required: false, placeholder: 'e.g., MAR, MMC, UBL' },
             'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
         }
     };
@@ -175,6 +207,11 @@ document.addEventListener('DOMContentLoaded', function() {
     componentTypeSelect.addEventListener('change', function() {
         const selectedType = this.options[this.selectedIndex].text;
         updatePropertiesSection(selectedType);
+    });
+
+    // NEW: Handle brand selection changes
+    brandsSelect.addEventListener('change', function() {
+        updateBrandPreview();
     });
 
     function updatePropertiesSection(componentType) {
@@ -223,6 +260,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         html += '</div>';
         propertiesSection.innerHTML = html;
+    }
+
+    // NEW: Update brand preview
+    function updateBrandPreview() {
+        const selectedOptions = Array.from(brandsSelect.selectedOptions);
+
+        if (selectedOptions.length === 0) {
+            selectedBrandsPreview.style.display = 'none';
+            return;
+        }
+
+        selectedBrandsPreview.style.display = 'block';
+        brandTags.innerHTML = '';
+
+        selectedOptions.forEach(option => {
+            const tag = document.createElement('span');
+            tag.className = 'badge bg-primary';
+            tag.textContent = option.text;
+            brandTags.appendChild(tag);
+        });
     }
 
     function capitalizeFirst(str) {
@@ -276,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Select a component type above to see available properties
                 </div>
             `;
+            selectedBrandsPreview.style.display = 'none';
         }, 100);
     });
 });

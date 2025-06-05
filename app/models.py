@@ -69,6 +69,52 @@ class Material(Base):
     def __repr__(self):
         return f'<Material {self.name}>'
 
+class Brand(Base):
+    __tablename__ = 'brand'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)  # Database trigger handles updates
+
+    # Relationships
+    subbrands = db.relationship('Subbrand', backref='brand', lazy=True, cascade='all, delete-orphan')
+    components = db.relationship('Component', secondary='component_app.component_brand',
+                               back_populates='brands', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<Brand {self.name}>'
+
+    def get_active_subbrands(self):
+        """Get all active subbrands for this brand"""
+        return [sb for sb in self.subbrands]
+
+    def get_components_count(self):
+        """Get count of components using this brand"""
+        return self.components.count()
+
+class Subbrand(Base):
+    __tablename__ = 'subbrand'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    brand_id = db.Column(db.Integer, db.ForeignKey('component_app.brand.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)  # Database trigger handles updates
+
+    # Ensure unique subbrand name per brand
+    __table_args__ = (
+        db.UniqueConstraint('name', 'brand_id', name='_brand_subbrand_uc'),
+        {'schema': 'component_app'}
+    )
+
+    def __repr__(self):
+        return f'<Subbrand {self.brand.name}/{self.name}>'
+
+    def get_full_name(self):
+        """Get full name including brand"""
+        return f"{self.brand.name} - {self.name}"
+
 class Keyword(Base):
     __tablename__ = 'keyword'
     
@@ -84,6 +130,15 @@ keyword_component = db.Table('keyword_component',
     db.Column('component_id', db.Integer, db.ForeignKey('component_app.component.id'), nullable=False),
     db.Column('keyword_id', db.Integer, db.ForeignKey('component_app.keyword.id'), nullable=False),
     db.UniqueConstraint('component_id', 'keyword_id'),
+    schema='component_app'
+)
+
+# Association table for many-to-many brand-component relationship
+component_brand = db.Table('component_brand',
+    db.Column('id', db.Integer, primary_key=True),
+    db.Column('component_id', db.Integer, db.ForeignKey('component_app.component.id'), nullable=False),
+    db.Column('brand_id', db.Integer, db.ForeignKey('component_app.brand.id'), nullable=False),
+    db.UniqueConstraint('component_id', 'brand_id'),
     schema='component_app'
 )
 
@@ -123,7 +178,9 @@ class Component(Base):
     variants = db.relationship('ComponentVariant', backref='component', lazy=True, cascade='all, delete-orphan')
     keywords = db.relationship('Keyword', secondary=keyword_component, lazy='subquery',
                               backref=db.backref('components', lazy=True))
-    
+    brands = db.relationship('Brand', secondary='component_app.component_brand',
+                           back_populates='components', lazy='dynamic')
+
     # Pictures that belong to the main component (not variant-specific)
     pictures = db.relationship('Picture', 
                               foreign_keys='Picture.component_id',
@@ -171,6 +228,25 @@ class Component(Base):
         # Mark as modified for SQLAlchemy
         flag_modified(self, 'properties')
     
+    # Brand management methods
+    def add_brand(self, brand):
+        """Add a brand to this component"""
+        if brand not in self.brands:
+            self.brands.append(brand)
+
+    def remove_brand(self, brand):
+        """Remove a brand from this component"""
+        if brand in self.brands:
+            self.brands.remove(brand)
+
+    def get_brand_names(self):
+        """Get list of brand names for this component"""
+        return [brand.name for brand in self.brands]
+
+    def has_brand(self, brand_name):
+        """Check if component has a specific brand"""
+        return any(brand.name == brand_name for brand in self.brands)
+
     # Variant management methods
     def create_variant(self, color_id, variant_name=None, description=None):
         """Create a new color variant of this component"""
@@ -302,12 +378,12 @@ class Component(Base):
         """Set gender property (can be array)"""
         self.set_property('gender', gender_list, 'array')
     
-    def get_brand(self):
-        """Get brand property"""
+    def get_brand_property(self):
+        """Get brand property from JSON properties (legacy support)"""
         return self.get_property('brand')
     
-    def set_brand(self, brand_name):
-        """Set brand property"""
+    def set_brand_property(self, brand_name):
+        """Set brand property in JSON (legacy support)"""
         self.set_property('brand', brand_name, 'text')
     
     def get_style(self):

@@ -8,8 +8,8 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border-radius: var(--border-radius-lg);
-        padding: 1.5rem;
-        margin-bottom: 1rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
         position: relative;
         overflow: hidden;
     }
@@ -19,19 +19,19 @@
         position: absolute;
         top: 0;
         right: 0;
-        width: 100px;
-        height: 100px;
+        width: 60px;
+        height: 60px;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50%;
-        transform: translate(30px, -30px);
+        transform: translate(20px, -20px);
     }
 
     .filter-panel {
         background: white;
         border-radius: var(--border-radius-lg);
-        padding: 1.5rem;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 2rem;
+        padding: 1rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1rem;
     }
 
     .search-box {
@@ -39,15 +39,16 @@
     }
 
     .search-box .form-control {
-        padding-left: 3rem;
+        padding-left: 2.5rem;
         border-radius: 50px;
-        border: 2px solid #e2e8f0;
-        height: 50px;
+        border: 1px solid #e2e8f0;
+        height: 40px;
+        font-size: 0.875rem;
     }
 
     .search-box .search-icon {
         position: absolute;
-        left: 1rem;
+        left: 0.75rem;
         top: 50%;
         transform: translateY(-50%);
         color: var(--color-secondary);
@@ -55,17 +56,17 @@
 
     .quick-filters {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.375rem;
         flex-wrap: wrap;
-        margin-top: 1rem;
+        margin-top: 0.75rem;
     }
 
     .filter-chip {
         background: #f1f5f9;
         border: 1px solid #e2e8f0;
         border-radius: 50px;
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
         color: var(--color-secondary);
         cursor: pointer;
         transition: all 0.2s ease;
@@ -81,10 +82,10 @@
     .bulk-actions {
         background: white;
         border-radius: var(--border-radius);
-        padding: 1rem;
-        margin-bottom: 1rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
         box-shadow: var(--shadow-sm);
-        border-left: 4px solid var(--color-primary);
+        border-left: 3px solid var(--color-primary);
         display: none;
     }
 
@@ -106,35 +107,173 @@
         }
     }
 
-    .component-meta {
-        font-size: 0.875rem;
-        color: var(--color-secondary);
+    /* COMPACT COMPONENT CARDS */
+    .component-card {
+        border: none;
+        border-radius: var(--border-radius-lg);
         transition: all 0.2s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        background: white;
+        box-shadow: var(--shadow-sm);
+        height: 100%;
     }
 
-    .view-toggle button.active {
-        background: var(--color-primary);
-        color: white;
+    .component-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* GRID VIEW - MUCH MORE COMPACT */
+    .grid-container .component-card .card-img-top {
+    height: 80px;  /* Changed from 120px */
+    object-fit: cover;
+}
+
+.grid-container .component-card .card-body {
+    padding: 0.5rem;  /* Changed from 0.75rem */
+}
+
+.grid-container .component-card .card-title {
+    font-size: 0.8rem;  /* Changed from 0.875rem */
+    font-weight: 600;
+    margin-bottom: 0.25rem;  /* Changed from 0.375rem */
+    line-height: 1.2;
+}
+
+.grid-container .component-card .card-text {
+    font-size: 0.7rem;  /* Changed from 0.75rem */
+    color: var(--color-secondary);
+    margin-bottom: 0.375rem;  /* Changed from 0.5rem */
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;  /* Changed from 2 to show only 1 line */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.component-meta {
+    font-size: 0.65rem;  /* Changed from 0.7rem */
+    color: var(--color-secondary);
+    margin-bottom: 0.375rem;  /* Changed from 0.5rem */
+}
+
+    .component-meta .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+    }
+
+    /* LIST VIEW - COMPACT */
+    .list-container .component-card {
+        margin-bottom: 0.5rem;
+    }
+
+    .list-container .component-card .card-body {
+        padding: 0.75rem;
+    }
+
+    .list-container .component-image {
+        width: 50px;
+        height: 50px;
+        border-radius: var(--border-radius);
+        object-fit: cover;
+    }
+
+    .list-container .component-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        line-height: 1.2;
+    }
+
+    .list-container .component-description {
+        font-size: 0.75rem;
+        color: var(--color-secondary);
+        line-height: 1.3;
+        margin-bottom: 0.25rem;
+    }
+
+    /* COMPACT BADGES AND TAGS */
+    .status-badge {
+        padding: 0.2rem 0.4rem;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
     }
 
     .keyword-tag {
         background: #f1f5f9;
         color: var(--color-secondary);
-        padding: 0.25rem 0.5rem;
+        padding: 0.2rem 0.4rem;
         border-radius: 4px;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         margin-right: 0.25rem;
         margin-bottom: 0.25rem;
         display: inline-block;
     }
 
+    .brand-tag {
+        background: var(--color-primary);
+        color: white;
+        padding: 0.2rem 0.4rem;
+        border-radius: 10px;
+        font-size: 0.65rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+        display: inline-block;
+    }
+
+    /* COMPACT BUTTONS */
+    .btn-group .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 4px;
+    }
+
+    .btn-group .btn-sm i {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    /* COMPACT SELECTION CHECKBOX */
+    .selection-checkbox {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        z-index: 10;
+        transform: scale(0.9);
+    }
+
+    /* COMPACT STATUS BADGE POSITIONING */
+    .status-badge-position {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 10;
+    }
+
+    /* COMPACT PROPERTIES COUNT */
+    .properties-count {
+        font-size: 0.7rem;
+        color: var(--color-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    /* COMPACT PAGINATION */
     .pagination-modern .page-link {
         border: none;
         border-radius: var(--border-radius);
-        margin: 0 0.125rem;
-        padding: 0.5rem 0.75rem;
+        margin: 0 0.1rem;
+        padding: 0.375rem 0.5rem;
         color: var(--color-secondary);
         transition: all 0.2s ease;
+        font-size: 0.875rem;
     }
 
     .pagination-modern .page-link:hover {
@@ -148,7 +287,7 @@
         color: white;
     }
 
-    /* IMPROVED Modal Styles */
+    /* COMPACT MODAL */
     .modal-dialog-compact {
         max-width: 400px;
     }
@@ -161,59 +300,36 @@
 
     .modal-header-modern {
         border-bottom: 1px solid #f1f5f9;
-        padding: 1.5rem 1.5rem 1rem;
+        padding: 1rem;
     }
 
     .modal-body-modern {
-        padding: 1rem 1.5rem;
+        padding: 1rem;
     }
 
     .modal-footer-modern {
         border-top: 1px solid #f1f5f9;
-        padding: 1rem 1.5rem 1.5rem;
+        padding: 1rem;
     }
 
-    /* Loading States */
-    .loading-skeleton {
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-    }
-
-    @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Empty State */
+    /* EMPTY STATE */
     .empty-state {
         text-align: center;
-        padding: 4rem 2rem;
+        padding: 3rem 1rem;
         color: var(--color-secondary);
     }
 
     .empty-state-icon {
-        width: 80px;
-        height: 80px;
-        margin-bottom: 1.5rem;
+        width: 60px;
+        height: 60px;
+        margin-bottom: 1rem;
         opacity: 0.5;
     }
 
-    /* Responsive Improvements for Filters */
+    /* RESPONSIVE IMPROVEMENTS */
     @media (max-width: 768px) {
         .filter-panel {
-            padding: 1rem;
+            padding: 0.75rem;
         }
 
         .quick-filters {
@@ -221,12 +337,44 @@
         }
 
         .filter-chip {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
         }
 
         .stats-card {
-            padding: 1rem;
+            padding: 0.75rem;
+        }
+
+        .grid-container .component-card .card-img-top {
+            height: 100px;
+        }
+
+        .grid-container .component-card .card-body {
+            padding: 0.5rem;
+        }
+
+        .list-container .component-card .card-body {
+            padding: 0.5rem;
+        }
+
+        .list-container .component-image {
+            width: 40px;
+            height: 40px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .grid-container .component-card .card-img-top {
+            height: 80px;
+        }
+
+        .component-meta {
+            font-size: 0.65rem;
+        }
+
+        .btn-group .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.7rem;
         }
     }
 </style>
@@ -235,86 +383,90 @@
 {% block content %}
 <div x-data="componentDashboard()" class="fade-in">
     <!-- Dashboard Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h1 class="h3 mb-0 text-dark fw-bold">Component Dashboard</h1>
-            <p class="text-muted mb-0">Manage and organize your component library</p>
+            <h1 class="h4 mb-0 text-dark fw-bold">Component Dashboard</h1>
+            <p class="text-muted mb-0 small">Manage and organize your component library</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern d-flex align-items-center">
-                <i data-lucide="plus" class="me-2" style="width: 18px; height: 18px;"></i>
+            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
+                <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
                 New Component
             </a>
-            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-success-modern btn-modern d-flex align-items-center">
-                <i data-lucide="upload" class="me-2" style="width: 18px; height: 18px;"></i>
+            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-success-modern btn-modern btn-sm d-flex align-items-center">
+                <i data-lucide="upload" class="me-1" style="width: 16px; height: 16px;"></i>
                 Bulk Upload
+            </a>
+            <a href="{{ url_for('main.suppliers') }}" class="btn btn-outline-primary btn-modern btn-sm d-flex align-items-center">
+                <i data-lucide="users" class="me-1" style="width: 16px; height: 16px;"></i>
+                Suppliers
             </a>
         </div>
     </div>
 
-    <!-- Stats Overview -->
-    <div class="row mb-4">
-        <div class="col-md-3 col-sm-6">
+    <!-- Compact Stats Overview -->
+    <div class="row mb-3">
+        <div class="col-md-3 col-sm-6 mb-2">
             <div class="stats-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ components.total if components else 0 }}</h3>
-                        <p class="mb-0 opacity-75">Total Components</p>
+                        <h4 class="mb-0">{{ components.total if components else 0 }}</h4>
+                        <p class="mb-0 opacity-75 small">Total Components</p>
                     </div>
-                    <i data-lucide="layers" style="width: 32px; height: 32px; opacity: 0.7;"></i>
+                    <i data-lucide="layers" style="width: 24px; height: 24px; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-3 col-sm-6 mb-2">
             <div class="stats-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ suppliers|length }}</h3>
-                        <p class="mb-0 opacity-75">Active Suppliers</p>
+                        <h4 class="mb-0">{{ suppliers|length }}</h4>
+                        <p class="mb-0 opacity-75 small">Active Suppliers</p>
                     </div>
-                    <i data-lucide="truck" style="width: 32px; height: 32px; opacity: 0.7;"></i>
+                    <i data-lucide="truck" style="width: 24px; height: 24px; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-3 col-sm-6 mb-2">
             <div class="stats-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ categories|length }}</h3>
-                        <p class="mb-0 opacity-75">Categories</p>
+                        <h4 class="mb-0">{{ categories|length }}</h4>
+                        <p class="mb-0 opacity-75 small">Categories</p>
                     </div>
-                    <i data-lucide="grid-3x3" style="width: 32px; height: 32px; opacity: 0.7;"></i>
+                    <i data-lucide="grid-3x3" style="width: 24px; height: 24px; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-3 col-sm-6 mb-2">
             <div class="stats-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ component_types|length }}</h3>
-                        <p class="mb-0 opacity-75">Component Types</p>
+                        <h4 class="mb-0">{{ brands_count if brands_count is defined else 0 }}</h4>
+                        <p class="mb-0 opacity-75 small">Active Brands</p>
                     </div>
-                    <i data-lucide="tag" style="width: 32px; height: 32px; opacity: 0.7;"></i>
+                    <i data-lucide="tag" style="width: 24px; height: 24px; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Advanced Filter Panel -->
+    <!-- Compact Filter Panel -->
     <div class="filter-panel">
         <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm">
             <!-- Search Bar -->
-            <div class="row mb-3">
+            <div class="row mb-2">
                 <div class="col-md-6">
                     <div class="search-box">
                         <input type="text"
                                class="form-control form-control-modern"
                                name="search"
                                value="{{ search }}"
-                               placeholder="Search components by name, description, or product number..."
+                               placeholder="Search components..."
                                x-model="searchQuery"
                                @input.debounce.300ms="performSearch()">
-                        <i data-lucide="search" class="search-icon" style="width: 20px; height: 20px;"></i>
+                        <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -323,7 +475,7 @@
                                 name="component_type_id"
                                 x-model="filters.componentType"
                                 @change="performSearch()">
-                            <option value="">All Component Types</option>
+                            <option value="">All Types</option>
                             {% for component_type in component_types %}
                                 <option value="{{ component_type.id }}"
                                         {% if request.args.get('component_type_id')|int == component_type.id %}selected{% endif %}>
@@ -338,22 +490,22 @@
                                     @click="viewMode = 'grid'"
                                     :class="{ 'active': viewMode === 'grid' }"
                                     title="Grid View">
-                                <i data-lucide="grid-3x3" style="width: 18px; height: 18px;"></i>
+                                <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
                             </button>
                             <button type="button"
                                     @click="viewMode = 'list'"
                                     :class="{ 'active': viewMode === 'list' }"
                                     title="List View">
-                                <i data-lucide="list" style="width: 18px; height: 18px;"></i>
+                                <i data-lucide="list" style="width: 16px; height: 16px;"></i>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Advanced Filters -->
+            <!-- Compact Advanced Filters -->
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <select class="form-select form-control-modern"
                             name="category_id"
                             x-model="filters.category"
@@ -367,7 +519,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <select class="form-select form-control-modern"
                             name="supplier_id"
                             x-model="filters.supplier"
@@ -381,14 +533,30 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
+                    <select class="form-select form-control-modern"
+                            name="brand_id"
+                            x-model="filters.brand"
+                            @change="performSearch()">
+                        <option value="">All Brands</option>
+                        {% if brands %}
+                            {% for brand in brands %}
+                                <option value="{{ brand.id }}"
+                                        {% if request.args.get('brand_id')|int == brand.id %}selected{% endif %}>
+                                    {{ brand.name }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-6">
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary-modern btn-modern flex-grow-1">
-                            <i data-lucide="filter" class="me-2" style="width: 16px; height: 16px;"></i>
-                            Apply Filters
+                        <button type="submit" class="btn btn-primary-modern btn-modern btn-sm flex-grow-1">
+                            <i data-lucide="filter" class="me-1" style="width: 14px; height: 14px;"></i>
+                            Apply
                         </button>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
-                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
                         </a>
                     </div>
                 </div>
@@ -398,244 +566,254 @@
         <!-- Quick Filters -->
         <div class="quick-filters">
             <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
-                All Components
+                All
             </div>
             <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
                 Approved
             </div>
             <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
-                Pending Review
+                Pending
             </div>
             <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
-                Recently Added
+                Recent
             </div>
         </div>
     </div>
 
     <!-- Bulk Actions -->
     <div class="bulk-actions" :class="{ 'show': selectedComponents.length > 0 }">
-        <span class="fw-medium">
-            <span x-text="selectedComponents.length"></span> component(s) selected
+        <span class="fw-medium small">
+            <span x-text="selectedComponents.length"></span> selected
         </span>
         <div class="d-flex gap-2">
             <button class="btn btn-warning-modern btn-sm" @click="bulkAction('export')">
-                <i data-lucide="download" class="me-1" style="width: 14px; height: 14px;"></i>
+                <i data-lucide="download" class="me-1" style="width: 12px; height: 12px;"></i>
                 Export
             </button>
             <button class="btn btn-danger-modern btn-sm" @click="bulkAction('delete')">
-                <i data-lucide="trash-2" class="me-1" style="width: 14px; height: 14px;"></i>
+                <i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>
                 Delete
             </button>
             <button class="btn btn-outline-secondary btn-sm" @click="clearSelection()">
-                Clear Selection
+                Clear
             </button>
         </div>
     </div>
 
-    <!-- Components Container - MAIN IMPROVEMENT -->
-    {% if components.items %}
-        <div :class="viewMode === 'grid' ? 'grid-container' : 'list-container'">
+    <!-- Components Container -->
+    {% if components and components.items %}
+        <div :class="viewMode === 'grid' ? 'row' : 'list-container'">
             {% for component in components.items %}
-                <div class="component-card card-modern"
-                     @click="navigateToComponent({{ component.id }})">
+                <!-- GRID VIEW -->
+            <div class="col-lg-2 col-md-3 col-sm-4 mb-2"
+                     x-show="viewMode === 'grid'">
+                    <div class="card component-card h-100"
+                         @click="navigateToComponent({{ component.id }})"
+                         style="cursor: pointer;">
 
-                    <!-- Selection Checkbox -->
-                    <div class="position-absolute top-0 start-0 p-3" style="z-index: 10;">
-                        <input type="checkbox"
-                               class="form-check-input"
-                               @click.stop="toggleSelection({{ component.id }})"
-                               :checked="selectedComponents.includes({{ component.id }})">
-                    </div>
+                        <!-- Selection Checkbox -->
+                        <div class="selection-checkbox">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   @click.stop="toggleSelection({{ component.id }})"
+                                   :checked="selectedComponents.includes({{ component.id }})">
+                        </div>
 
-                    <!-- CONDITIONAL RENDERING FOR GRID VS LIST -->
-                    <template x-if="viewMode === 'grid'">
-                        <div>
-                            <!-- Component Image for Grid -->
-                            {% if component.pictures %}
-                                {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
-                                <img src="{{ primary_picture.url }}"
-                                     alt="{{ primary_picture.picture_name }}"
-                                     class="component-image"
-                                     onerror="this.parentElement.innerHTML='<div class=\'component-image-placeholder\'><i data-lucide=\'image\' style=\'width: 48px; height: 48px;\'></i></div>'">
-                            {% else %}
-                                <div class="component-image-placeholder">
-                                    <i data-lucide="image" style="width: 48px; height: 48px;"></i>
-                                </div>
-                            {% endif %}
+                        <!-- Component Image -->
+                        {% if component.pictures %}
+                            {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
+                            <img src="{{ primary_picture.url }}"
+                                 alt="{{ primary_picture.picture_name }}"
+                                 class="card-img-top"
+                                 onerror="this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center bg-light\' style=\'height: 120px;\'><i data-lucide=\'image\' style=\'width: 32px; height: 32px; color: #9ca3af;\'></i></div>'">
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center bg-light" style="height: 120px;">
+                                <i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>
+                            </div>
+                        {% endif %}
 
-                            <!-- Component Info for Grid -->
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0 fw-bold">{{ component.product_number }}</h5>
-                                    <span class="status-badge status-{{ component.get_overall_status() }}">
-                                        {% if component.get_overall_status() == 'approved' %}
-                                            <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                                        {% elif component.get_overall_status() == 'rejected' %}
-                                            <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i>
-                                        {% else %}
-                                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
-                                        {% endif %}
-                                        {{ component.get_status_display() }}
-                                    </span>
-                                </div>
-
-                                <p class="card-text text-muted mb-2">
-                                    {{ component.description|truncate(80) if component.description else 'No description available' }}
-                                </p>
-
-                                <div class="component-meta mb-2">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <i data-lucide="tag" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span class="badge bg-primary me-2">{{ component.component_type.name }}</span>
-                                        <i data-lucide="truck" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span>{{ component.supplier.supplier_code }}</span>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <i data-lucide="folder" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        <span>{{ component.category.name }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Keywords -->
-                                {% if component.keywords %}
-                                    <div class="mb-2">
-                                        {% for keyword in component.keywords[:3] %}
-                                            <span class="keyword-tag">{{ keyword.name }}</span>
-                                        {% endfor %}
-                                        {% if component.keywords|length > 3 %}
-                                            <span class="keyword-tag">+{{ component.keywords|length - 3 }} more</span>
-                                        {% endif %}
-                                    </div>
+                        <!-- Status Badge -->
+                        <div class="status-badge-position">
+                            <span class="status-badge {{ component.get_status_badge_class() }}">
+                                {% if component.get_overall_status() == 'approved' %}
+                                    <i data-lucide="check-circle" style="width: 10px; height: 10px;"></i>
+                                {% elif component.get_overall_status() == 'rejected' %}
+                                    <i data-lucide="x-circle" style="width: 10px; height: 10px;"></i>
+                                {% else %}
+                                    <i data-lucide="clock" style="width: 10px; height: 10px;"></i>
                                 {% endif %}
+                                {{ component.get_status_display() }}
+                            </span>
+                        </div>
 
-                                <!-- Properties Count -->
-                                {% if component.properties %}
-                                    <div class="text-muted mb-3">
-                                        <i data-lucide="settings" class="me-1" style="width: 14px; height: 14px;"></i>
-                                        {{ component.properties|length }} properties
-                                    </div>
-                                {% endif %}
+                        <!-- Component Info -->
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold mb-2">{{ component.product_number }}</h6>
 
-                                <!-- Action Buttons for Grid -->
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}"
-                                       class="btn btn-outline-primary btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                                    </a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
-                                       class="btn btn-outline-warning btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                    </a>
-                                    <button type="button"
-                                            class="btn btn-outline-danger btn-sm"
-                                            @click.stop="deleteComponent({{ component.id }})"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal{{ component.id }}">
-                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                                    </button>
+                            <p class="card-text text-muted mb-2">
+                                {{ component.description|truncate(40) if component.description else 'No description' }}
+                            </p>
+
+                            <!-- Component Meta -->
+                            <div class="component-meta mb-2">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
+                                    <small>{{ component.supplier.supplier_code }}</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <small>{{ component.category.name }}</small>
                                 </div>
                             </div>
-                        </div>
-                    </template>
 
-                    <!-- LIST VIEW TEMPLATE -->
-                    <template x-if="viewMode === 'list'">
-                        <div class="card-body">
-                            <!-- Component Image for List -->
-                            {% if component.pictures %}
-                                {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
-                                <img src="{{ primary_picture.url }}"
-                                     alt="{{ primary_picture.picture_name }}"
-                                     class="component-image"
-                                     onerror="this.parentElement.innerHTML='<div class=\'component-image-placeholder\'><i data-lucide=\'image\' style=\'width: 32px; height: 32px;\'></i></div>'">
-                            {% else %}
-                                <div class="component-image-placeholder">
-                                    <i data-lucide="image" style="width: 32px; height: 32px;"></i>
-                                </div>
-                            {% endif %}
-
-                            <!-- Component Content for List -->
-                            <div class="component-content">
-                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                    <h5 class="mb-0 fw-bold">{{ component.product_number }}</h5>
-                                    <span class="status-badge status-{{ component.get_overall_status() }}">
-                                        {% if component.get_overall_status() == 'approved' %}
-                                            <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                                        {% elif component.get_overall_status() == 'rejected' %}
-                                            <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i>
-                                        {% else %}
-                                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
-                                        {% endif %}
-                                        {{ component.get_status_display() }}
-                                    </span>
-                                </div>
-                                <p class="text-muted mb-1">
-                                    {{ component.description|truncate(100) if component.description else 'No description available' }}
-                                </p>
-                                <div class="component-meta">
-                                    <span class="badge bg-primary me-2">{{ component.component_type.name }}</span>
-                                    <span class="me-2">{{ component.supplier.supplier_code }}</span>
-                                    {% if component.keywords %}
-                                        {% for keyword in component.keywords[:2] %}
-                                            <span class="keyword-tag">{{ keyword.name }}</span>
-                                        {% endfor %}
-                                        {% if component.keywords|length > 2 %}
-                                            <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
-                                        {% endif %}
+                            <!-- Brand Display -->
+                            {% if component._cached_brands %}
+                                <div class="mb-2">
+                                    {% for brand in component._cached_brands[:2] %}
+                                        <span class="brand-tag">{{ brand.name }}</span>
+                                    {% endfor %}
+                                    {% if component._cached_brands|length > 2 %}
+                                        <span class="brand-tag bg-secondary">+{{ component._cached_brands|length - 2 }}</span>
                                     {% endif %}
                                 </div>
-                            </div>
+                            {% endif %}
 
-                            <!-- Component Actions for List -->
-                            <div class="component-actions">
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}"
-                                       class="btn btn-outline-primary btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                                    </a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
-                                       class="btn btn-outline-warning btn-sm"
-                                       @click.stop>
-                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                    </a>
-                                    <button type="button"
-                                            class="btn btn-outline-danger btn-sm"
-                                            @click.stop="deleteComponent({{ component.id }})"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal{{ component.id }}">
-                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                                    </button>
+                            <!-- Keywords -->
+                            {% if component.keywords %}
+                                <div class="mb-2">
+                                    {% for keyword in component.keywords[:2] %}
+                                        <span class="keyword-tag">{{ keyword.name }}</span>
+                                    {% endfor %}
+                                    {% if component.keywords|length > 2 %}
+                                        <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                            <!-- Properties Count -->
+                            {% if component.properties %}
+                                <div class="properties-count">
+                                    <i data-lucide="settings" class="me-1" style="width: 12px; height: 12px;"></i>
+                                    {{ component.properties|length }} properties
+                                </div>
+                            {% endif %}
+
+                            <!-- Action Buttons -->
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                   class="btn btn-outline-primary btn-sm"
+                                   @click.stop>
+                                    <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
+                                </a>
+                                <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                                   class="btn btn-outline-warning btn-sm"
+                                   @click.stop>
+                                    <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
+                                </a>
+                                <button type="button"
+                                        class="btn btn-outline-danger btn-sm"
+                                        @click.stop="deleteComponent({{ component.id }})"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal{{ component.id }}">
+                                    <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIST VIEW -->
+                <div class="card mb-2" x-show="viewMode === 'list'">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       @click.stop="toggleSelection({{ component.id }})"
+                                       :checked="selectedComponents.includes({{ component.id }})">
+                            </div>
+                            <div class="col-auto">
+                                {% if component.pictures %}
+                                    {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
+                                    <img src="{{ primary_picture.url }}"
+                                         alt="{{ primary_picture.picture_name }}"
+                                         class="component-image">
+                                {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center component-image">
+                                        <i data-lucide="image" style="width: 20px; height: 20px; color: #9ca3af;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="component-title">{{ component.product_number }}</h6>
+                                        <p class="component-description">
+                                            {{ component.description|truncate(80) if component.description else 'No description' }}
+                                        </p>
+                                        <div class="component-meta">
+                                            <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
+                                            <small class="me-2">{{ component.supplier.supplier_code }}</small>
+                                            <small class="me-2">{{ component.category.name }}</small>
+
+                                            <!-- NEW: Brand display for list view -->
+                                            {% if component._cached_brands %}
+                                                {% for brand in component._cached_brands[:2] %}
+                                                    <span class="brand-tag">{{ brand.name }}</span>
+                                                {% endfor %}
+                                                {% if component._cached_brands|length > 2 %}
+                                                    <span class="brand-tag bg-secondary">+{{ component._cached_brands|length - 2 }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="status-badge {{ component.get_status_badge_class() }} mb-2">
+                                            {{ component.get_status_display() }}
+                                        </span>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
+                                            </a>
+                                            <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                                               class="btn btn-outline-warning btn-sm">
+                                                <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteModal{{ component.id }}">
+                                                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </template>
+                    </div>
                 </div>
 
                 <!-- Delete Modal -->
                 <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Confirm Deletion</h5>
+                    <div class="modal-dialog modal-dialog-compact">
+                        <div class="modal-content modal-content-modern">
+                            <div class="modal-header modal-header-modern">
+                                <h6 class="modal-title">Confirm Deletion</h6>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="modal-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i data-lucide="alert-triangle" class="text-warning me-2" style="width: 24px; height: 24px;"></i>
+                            <div class="modal-body modal-body-modern">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i data-lucide="alert-triangle" class="text-warning me-2" style="width: 20px; height: 20px;"></i>
                                     <strong>This action cannot be undone!</strong>
                                 </div>
-                                <p>Are you sure you want to delete component <strong>{{ component.product_number }}</strong>?</p>
-                                <p class="text-muted mb-0">This will also delete all associated pictures and properties.</p>
+                                <p class="small">Delete component <strong>{{ component.product_number }}</strong>?</p>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <div class="modal-footer modal-footer-modern">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                                 <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
-                                    <button type="submit" class="btn btn-danger-modern btn-modern">
-                                        <i data-lucide="trash-2" class="me-2" style="width: 16px; height: 16px;"></i>
-                                        Delete Component
+                                    <button type="submit" class="btn btn-danger-modern btn-modern btn-sm">
+                                        <i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>
+                                        Delete
                                     </button>
                                 </form>
                             </div>
@@ -645,14 +823,14 @@
             {% endfor %}
         </div>
 
-        <!-- Pagination -->
+        <!-- Compact Pagination -->
         {% if components.pages > 1 %}
-        <nav aria-label="Component pagination" class="mt-5">
+        <nav aria-label="Component pagination" class="mt-4">
             <ul class="pagination pagination-modern justify-content-center">
                 {% if components.has_prev %}
                     <li class="page-item">
                         <a class="page-link" href="{{ url_for('main.index', page=components.prev_num, **request.args) }}">
-                            <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i>
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>
                         </a>
                     </li>
                 {% endif %}
@@ -678,7 +856,7 @@
                 {% if components.has_next %}
                     <li class="page-item">
                         <a class="page-link" href="{{ url_for('main.index', page=components.next_num, **request.args) }}">
-                            <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+                            <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
                         </a>
                     </li>
                 {% endif %}
@@ -688,26 +866,26 @@
 
     {% else %}
         <!-- Empty State -->
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i data-lucide="package" style="width: 80px; height: 80px; color: var(--color-secondary);"></i>
+        <div class="empty-state">
+            <div class="mb-3">
+                <i data-lucide="package" class="empty-state-icon"></i>
             </div>
-            <h3 class="h4 mb-3">No components found</h3>
-            <p class="text-muted mb-4">
-                {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') %}
-                    No components match your current filters. Try adjusting your search criteria.
+            <h4 class="h5 mb-2">No components found</h4>
+            <p class="text-muted mb-3 small">
+                {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') or request.args.get('brand_id') %}
+                    No components match your current filters.
                 {% else %}
-                    Get started by adding your first component to the system.
+                    Get started by adding your first component.
                 {% endif %}
             </p>
             <div class="d-flex gap-2 justify-content-center">
-                <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern">
-                    <i data-lucide="plus" class="me-2" style="width: 18px; height: 18px;"></i>
-                    Add First Component
+                <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm">
+                    <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
+                    Add Component
                 </a>
-                {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') %}
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
-                        <i data-lucide="x" class="me-2" style="width: 18px; height: 18px;"></i>
+                {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') or request.args.get('brand_id') %}
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i data-lucide="x" class="me-1" style="width: 16px; height: 16px;"></i>
                         Clear Filters
                     </a>
                 {% endif %}
@@ -728,20 +906,18 @@ function componentDashboard() {
         filters: {
             componentType: '{{ request.args.get("component_type_id", "") }}',
             category: '{{ request.args.get("category_id", "") }}',
-            supplier: '{{ request.args.get("supplier_id", "") }}'
+            supplier: '{{ request.args.get("supplier_id", "") }}',
+            brand: '{{ request.args.get("brand_id", "") }}'
         },
 
         init() {
-            // Watch for view mode changes
             this.$watch('viewMode', (value) => {
                 localStorage.setItem('componentViewMode', value);
-                // Re-initialize icons after view change
                 setTimeout(() => lucide.createIcons(), 100);
             });
         },
 
         performSearch() {
-            // Auto-submit form after a delay
             clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => {
                 this.$refs.filterForm.submit();
@@ -792,7 +968,7 @@ function componentDashboard() {
                     window.open(exportUrl, '_blank');
                     break;
                 case 'delete':
-                    if (confirm(`Are you sure you want to delete ${this.selectedComponents.length} component(s)?`)) {
+                    if (confirm(`Delete ${this.selectedComponents.length} component(s)?`)) {
                         fetch('/api/components/bulk-delete', {
                             method: 'POST',
                             headers: {
@@ -814,47 +990,9 @@ function componentDashboard() {
     }
 }
 
-// Individual component card behavior
-{% for component in components.items if components %}
-function componentCard{{ component.id }}() {
-    return {
-        originalImageSrc: '',
-
-        init() {
-            const mainImage = this.$refs.mainImage;
-            if (mainImage) {
-                this.originalImageSrc = mainImage.src;
-            }
-        },
-
-        changeMainImage(newSrc) {
-            if (newSrc && this.$refs.mainImage) {
-                this.$refs.mainImage.style.opacity = '0.7';
-                setTimeout(() => {
-                    this.$refs.mainImage.src = newSrc;
-                    this.$refs.mainImage.style.opacity = '1';
-                }, 150);
-            }
-        },
-
-        resetMainImage() {
-            if (this.originalImageSrc && this.$refs.mainImage) {
-                this.$refs.mainImage.style.opacity = '0.7';
-                setTimeout(() => {
-                    this.$refs.mainImage.src = this.originalImageSrc;
-                    this.$refs.mainImage.style.opacity = '1';
-                }, 150);
-            }
-        }
-    }
-}
-{% endfor %}
-
-// Initialize icons and auto-hide alerts
 document.addEventListener('DOMContentLoaded', function() {
     lucide.createIcons();
 
-    // Auto-hide alerts after 5 seconds
     setTimeout(() => {
         const alerts = document.querySelectorAll('.alert-modern');
         alerts.forEach(alert => {

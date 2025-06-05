@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if brand else 'New' }} Brand - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .form-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    .form-body {
+        padding: 2rem;
+    }
+
+    .preview-card {
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .preview-card.has-content {
+        background: white;
+        border: 2px solid var(--color-primary);
+        border-style: solid;
+    }
+
+    .validation-feedback {
+        color: var(--color-danger);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .success-feedback {
+        color: var(--color-success);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .form-control:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .stats-preview {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="brandForm()" class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-dark fw-bold">
+                {{ 'Edit Brand' if brand else 'Create New Brand' }}
+            </h1>
+            <p class="text-muted mb-0">
+                {{ 'Modify brand details' if brand else 'Add a new brand to your system' }}
+            </p>
+        </div>
+        <a href="{{ url_for('brands.brands_list') }}" class="btn btn-outline-secondary">
+            <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+            Back to Brands
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="form-container">
+                <!-- Form Header -->
+                <div class="form-header">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i data-lucide="tag" style="width: 32px; height: 32px;"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">Brand Information</h4>
+                            <p class="mb-0 opacity-90">Enter the basic details for your brand</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Body -->
+                <div class="form-body">
+                    <form method="POST" @submit="handleSubmit">
+                        <div class="mb-4">
+                            <label for="name" class="form-label fw-semibold">
+                                Brand Name *
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="name"
+                                   name="name"
+                                   x-model="formData.name"
+                                   @input="validateName(); updatePreview()"
+                                   :class="{
+                                       'is-valid': !errors.name && formData.name.length > 0,
+                                       'is-invalid': errors.name
+                                   }"
+                                   value="{{ brand.name if brand else '' }}"
+                                   placeholder="Enter brand name..."
+                                   required>
+
+                            <div class="validation-feedback" x-show="errors.name">
+                                <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                                <span x-text="errors.name"></span>
+                            </div>
+
+                            <div class="success-feedback" x-show="!errors.name && formData.name.length > 0">
+                                <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                                <span>Brand name looks good!</span>
+                            </div>
+
+                            <div class="form-text">
+                                Choose a unique and memorable name for your brand
+                            </div>
+                        </div>
+
+                        <!-- Character Counter -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Character count:</small>
+                                <small class="text-muted">
+                                    <span x-text="formData.name.length"></span> / 100 characters
+                                </small>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar"
+                                     :style="{ width: (formData.name.length / 100 * 100) + '%' }"
+                                     :class="{
+                                         'bg-danger': formData.name.length > 100,
+                                         'bg-warning': formData.name.length > 80 && formData.name.length <= 100,
+                                         'bg-success': formData.name.length <= 80
+                                     }"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-end gap-3">
+                            <a href="{{ url_for('brands.brands_list') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    :disabled="!isFormValid() || isSubmitting"
+                                    :class="{ 'loading': isSubmitting }">
+                                <span x-show="!isSubmitting">
+                                    <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
+                                    {{ 'Update Brand' if brand else 'Create Brand' }}
+                                </span>
+                                <span x-show="isSubmitting" class="d-flex align-items-center">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    {{ 'Updating...' if brand else 'Creating...' }}
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Sidebar -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 120px;">
+                <!-- Live Preview -->
+                <div class="preview-card" :class="{ 'has-content': formData.name.length > 0 }">
+                    <div x-show="formData.name.length === 0">
+                        <i data-lucide="eye-off" style="width: 48px; height: 48px;" class="text-muted mb-3"></i>
+                        <h6 class="text-muted">Preview</h6>
+                        <p class="text-muted mb-0">Enter a brand name to see the preview</p>
+                    </div>
+
+                    <div x-show="formData.name.length > 0">
+                        <i data-lucide="tag" style="width: 48px; height: 48px;" class="text-primary mb-3"></i>
+                        <h5 class="fw-bold mb-2" x-text="formData.name || 'Brand Name'"></h5>
+                        <p class="text-muted mb-3">Brand will appear in component forms and filters</p>
+
+                        <!-- Example Usage -->
+                        <div class="text-start">
+                            <small class="text-muted fw-semibold">Example component reference:</small>
+                            <div class="bg-light p-2 rounded mt-1">
+                                <small class="text-dark">
+                                    Product: F-WL001<br>
+                                    Brand: <span class="fw-semibold text-primary" x-text="formData.name"></span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if brand %}
+                <!-- Current Statistics -->
+                <div class="stats-preview">
+                    <h6 class="fw-semibold mb-3">Current Statistics</h6>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fw-bold text-primary">{{ brand.get_components_count() }}</div>
+                            <small class="text-muted">Components</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold text-primary">{{ brand.subbrands|length }}</div>
+                            <small class="text-muted">Subbrands</small>
+                        </div>
+                    </div>
+
+                    {% if brand.subbrands %}
+                    <hr>
+                    <h6 class="fw-semibold mb-2">Subbrands:</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for subbrand in brand.subbrands[:3] %}
+                        <span class="badge bg-light text-dark">{{ subbrand.name }}</span>
+                        {% endfor %}
+                        {% if brand.subbrands|length > 3 %}
+                        <span class="badge bg-secondary">+{{ brand.subbrands|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="stats-preview">
+                    <h6 class="fw-semibold mb-3">Quick Actions</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('brands.new_subbrand', brand_id=brand.id) }}"
+                           class="btn btn-outline-primary btn-sm">
+                            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                            Add Subbrand
+                        </a>
+                        <a href="{{ url_for('brands.brand_components', brand_id=brand.id) }}"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                            View Components
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Next Steps -->
+                <div class="stats-preview">
+                    <h6 class="fw-semibold mb-3">Next Steps</h6>
+                    <div class="small text-muted">
+                        <div class="d-flex align-items-start mb-2">
+                            <i data-lucide="check-circle" style="width: 14px; height: 14px;" class="text-success me-2 mt-1"></i>
+                            <span>Create the brand</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2">
+                            <i data-lucide="circle" style="width: 14px; height: 14px;" class="text-muted me-2 mt-1"></i>
+                            <span>Add subbrands (optional)</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2">
+                            <i data-lucide="circle" style="width: 14px; height: 14px;" class="text-muted me-2 mt-1"></i>
+                            <span>Associate with components</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tips -->
+                <div class="stats-preview">
+                    <h6 class="fw-semibold mb-3">Tips</h6>
+                    <div class="small text-muted">
+                        <div class="d-flex align-items-start mb-2">
+                            <i data-lucide="lightbulb" style="width: 14px; height: 14px;" class="text-warning me-2 mt-1"></i>
+                            <span>Use clear, recognizable brand names</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2">
+                            <i data-lucide="lightbulb" style="width: 14px; height: 14px;" class="text-warning me-2 mt-1"></i>
+                            <span>Consider future subbrands when naming</span>
+                        </div>
+                        <div class="d-flex align-items-start">
+                            <i data-lucide="lightbulb" style="width: 14px; height: 14px;" class="text-warning me-2 mt-1"></i>
+                            <span>Brands help organize and filter components</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function brandForm() {
+        return {
+            formData: {
+                name: '{{ brand.name if brand else "" }}'
+            },
+            errors: {},
+            isSubmitting: false,
+
+            validateName() {
+                delete this.errors.name;
+
+                if (!this.formData.name.trim()) {
+                    this.errors.name = 'Brand name is required';
+                } else if (this.formData.name.length > 100) {
+                    this.errors.name = 'Brand name must be 100 characters or less';
+                } else if (this.formData.name.length < 2) {
+                    this.errors.name = 'Brand name must be at least 2 characters';
+                } else if (!/^[a-zA-Z0-9\s\-&.]+$/.test(this.formData.name)) {
+                    this.errors.name = 'Brand name contains invalid characters';
+                }
+            },
+
+            isFormValid() {
+                this.validateName();
+                return Object.keys(this.errors).length === 0 && this.formData.name.trim().length > 0;
+            },
+
+            updatePreview() {
+                // Preview updates automatically via x-model
+            },
+
+            handleSubmit(event) {
+                event.preventDefault();
+
+                if (!this.isFormValid()) {
+                    return;
+                }
+
+                this.isSubmitting = true;
+
+                // Let the form submit naturally after a short delay for UX
+                setTimeout(() => {
+                    event.target.submit();
+                }, 300);
+            }
+        }
+    }
+
+    // Initialize Alpine.js icons
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

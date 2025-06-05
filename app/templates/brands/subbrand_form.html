@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if subbrand else 'New' }} Subbrand for {{ brand.name }} - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .form-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    .brand-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .hierarchy-visual {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .hierarchy-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: var(--border-radius);
+        margin-bottom: 0.5rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .hierarchy-item.preview {
+        border: 2px dashed var(--color-primary);
+        background: #f0f7ff;
+    }
+
+    .connection-line {
+        width: 2px;
+        height: 20px;
+        background: #cbd5e1;
+        margin: 0 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="subbrandForm()" class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-dark fw-bold">
+                {{ 'Edit Subbrand' if subbrand else 'Create New Subbrand' }}
+            </h1>
+            <p class="text-muted mb-0">
+                {{ 'Modify subbrand details for' if subbrand else 'Add a new subbrand to' }}
+                <strong>{{ brand.name }}</strong>
+            </p>
+        </div>
+        <a href="{{ url_for('brands.brands_list') }}" class="btn btn-outline-secondary">
+            <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i>
+            Back to Brands
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="form-container">
+                <!-- Form Header -->
+                <div class="form-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i data-lucide="tag" style="width: 32px; height: 32px;"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1">Subbrand Information</h4>
+                                <p class="mb-0 opacity-90">Create a subbrand under the main brand</p>
+                            </div>
+                        </div>
+                        <div class="brand-badge">
+                            <i data-lucide="tag" style="width: 14px; height: 14px;" class="me-1"></i>
+                            {{ brand.name }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Body -->
+                <div class="form-body">
+                    <!-- Brand Hierarchy Visualization -->
+                    <div class="hierarchy-visual">
+                        <h6 class="fw-semibold mb-3">Brand Hierarchy</h6>
+
+                        <!-- Parent Brand -->
+                        <div class="hierarchy-item">
+                            <i data-lucide="tag" style="width: 20px; height: 20px;" class="text-primary me-3"></i>
+                            <div>
+                                <div class="fw-semibold">{{ brand.name }}</div>
+                                <small class="text-muted">Main Brand</small>
+                            </div>
+                        </div>
+
+                        <!-- Connection Line -->
+                        <div class="d-flex align-items-center">
+                            <div style="width: 32px;"></div>
+                            <div class="connection-line"></div>
+                        </div>
+
+                        <!-- New/Edit Subbrand Preview -->
+                        <div class="hierarchy-item preview">
+                            <i data-lucide="arrow-right" style="width: 20px; height: 20px;" class="text-primary me-3"></i>
+                            <div>
+                                <div class="fw-semibold" x-text="formData.name || 'Subbrand Name'"></div>
+                                <small class="text-muted">{{ 'Current' if subbrand else 'New' }} Subbrand</small>
+                            </div>
+                        </div>
+
+                        <!-- Existing Subbrands -->
+                        {% if brand.subbrands %}
+                        {% for existing_subbrand in brand.subbrands %}
+                        {% if not subbrand or existing_subbrand.id != subbrand.id %}
+                        <div class="d-flex align-items-center">
+                            <div style="width: 32px;"></div>
+                            <div class="connection-line"></div>
+                        </div>
+                        <div class="hierarchy-item">
+                            <i data-lucide="arrow-right" style="width: 20px; height: 20px;" class="text-secondary me-3"></i>
+                            <div>
+                                <div class="fw-semibold">{{ existing_subbrand.name }}</div>
+                                <small class="text-muted">Existing Subbrand</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <form method="POST" @submit="handleSubmit">
+                        <div class="mb-4">
+                            <label for="name" class="form-label fw-semibold">
+                                Subbrand Name *
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="name"
+                                   name="name"
+                                   x-model="formData.name"
+                                   @input="validateName(); updatePreview()"
+                                   :class="{
+                                       'is-valid': !errors.name && formData.name.length > 0,
+                                       'is-invalid': errors.name
+                                   }"
+                                   value="{{ subbrand.name if subbrand else '' }}"
+                                   placeholder="Enter subbrand name..."
+                                   required>
+
+                            <div class="validation-feedback" x-show="errors.name">
+                                <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                                <span x-text="errors.name"></span>
+                            </div>
+
+                            <div class="success-feedback" x-show="!errors.name && formData.name.length > 0">
+                                <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                                <span>Subbrand name looks good!</span>
+                            </div>
+
+                            <div class="form-text">
+                                Enter a unique name for this subbrand under {{ brand.name }}
+                            </div>
+                        </div>
+
+                        <!-- Full Name Preview -->
+                        <div class="mb-4" x-show="formData.name.length > 0">
+                            <label class="form-label text-muted">Full Name Preview</label>
+                            <div class="form-control bg-light" disabled>
+                                {{ brand.name }} - <span x-text="formData.name"></span>
+                            </div>
+                            <div class="form-text">
+                                This is how the subbrand will appear in component forms
+                            </div>
+                        </div>
+
+                        <!-- Character Counter -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Character count:</small>
+                                <small class="text-muted">
+                                    <span x-text="formData.name.length"></span> / 100 characters
+                                </small>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar"
+                                     :style="{ width: (formData.name.length / 100 * 100) + '%' }"
+                                     :class="{
+                                         'bg-danger': formData.name.length > 100,
+                                         'bg-warning': formData.name.length > 80 && formData.name.length <= 100,
+                                         'bg-success': formData.name.length <= 80
+                                     }"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-end gap-3">
+                            <a href="{{ url_for('brands.brands_list') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    :disabled="!isFormValid() || isSubmitting"
+                                    :class="{ 'loading': isSubmitting }">
+                                <span x-show="!isSubmitting">
+                                    <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
+                                    {{ 'Update Subbrand' if subbrand else 'Create Subbrand' }}
+                                </span>
+                                <span x-show="isSubmitting" class="d-flex align-items-center">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    {{ 'Updating...' if subbrand else 'Creating...' }}
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Sidebar -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 120px;">
+                <!-- Brand Info -->
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0 fw-semibold">
+                            <i data-lucide="tag" style="width: 16px; height: 16px;" class="me-2"></i>
+                            Parent Brand
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="fw-bold text-primary mb-2">{{ brand.name }}</h5>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="fw-bold">{{ brand.get_components_count() }}</div>
+                                <small class="text-muted">Components</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="fw-bold">{{ brand.subbrands|length }}</div>
+                                <small class="text-muted">Subbrands</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Existing Subbrands -->
+                {% if brand.subbrands %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0 fw-semibold">Existing Subbrands</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for existing_subbrand in brand.subbrands %}
+                            {% if not subbrand or existing_subbrand.id != subbrand.id %}
+                            <span class="badge bg-light text-dark">{{ existing_subbrand.name }}</span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if brand.subbrands|length == 0 or (subbrand and brand.subbrands|length == 1) %}
+                        <p class="text-muted mb-0 small">No other subbrands yet</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Preview -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0 fw-semibold">Preview</h6>
+                    </div>
+                    <div class="card-body">
+                        <div x-show="formData.name.length === 0" class="text-center text-muted py-3">
+                            <i data-lucide="eye-off" style="width: 32px; height: 32px;" class="mb-2"></i>
+                            <p class="mb-0 small">Enter a name to see preview</p>
+                        </div>
+
+                        <div x-show="formData.name.length > 0">
+                            <div class="mb-3">
+                                <strong>Full Name:</strong><br>
+                                <span class="text-primary">{{ brand.name }} - </span><span x-text="formData.name"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Component Usage:</strong>
+                                <div class="bg-light p-2 rounded mt-1 small">
+                                    Product: F-WL001<br>
+                                    Brand: {{ brand.name }}<br>
+                                    Subbrand: <span class="text-primary" x-text="formData.name"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0 fw-semibold">
+                            <i data-lucide="lightbulb" style="width: 16px; height: 16px;" class="me-2"></i>
+                            Tips
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="small text-muted">
+                            <div class="d-flex align-items-start mb-2">
+                                <i data-lucide="check" style="width: 14px; height: 14px;" class="text-success me-2 mt-1"></i>
+                                <span>Keep subbrand names concise</span>
+                            </div>
+                            <div class="d-flex align-items-start mb-2">
+                                <i data-lucide="check" style="width: 14px; height: 14px;" class="text-success me-2 mt-1"></i>
+                                <span>Use consistent naming conventions</span>
+                            </div>
+                            <div class="d-flex align-items-start mb-2">
+                                <i data-lucide="check" style="width: 14px; height: 14px;" class="text-success me-2 mt-1"></i>
+                                <span>Consider future product lines</span>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <i data-lucide="info" style="width: 14px; height: 14px;" class="text-info me-2 mt-1"></i>
+                                <span>Subbrands help organize product variants</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function subbrandForm() {
+        return {
+            formData: {
+                name: '{{ subbrand.name if subbrand else "" }}'
+            },
+            errors: {},
+            isSubmitting: false,
+            existingSubbrands: {{ brand.subbrands | map(attribute='name') | list | tojson }},
+
+            validateName() {
+                delete this.errors.name;
+
+                if (!this.formData.name.trim()) {
+                    this.errors.name = 'Subbrand name is required';
+                } else if (this.formData.name.length > 100) {
+                    this.errors.name = 'Subbrand name must be 100 characters or less';
+                } else if (this.formData.name.length < 2) {
+                    this.errors.name = 'Subbrand name must be at least 2 characters';
+                } else if (!/^[a-zA-Z0-9\s\-&.]+$/.test(this.formData.name)) {
+                    this.errors.name = 'Subbrand name contains invalid characters';
+                } else {
+                    // Check for duplicates (excluding current subbrand if editing)
+                    const currentName = '{{ subbrand.name if subbrand else "" }}';
+                    const isDuplicate = this.existingSubbrands.some(name =>
+                        name.toLowerCase() === this.formData.name.trim().toLowerCase() &&
+                        name !== currentName
+                    );
+
+                    if (isDuplicate) {
+                        this.errors.name = 'A subbrand with this name already exists for this brand';
+                    }
+                }
+            },
+
+            isFormValid() {
+                this.validateName();
+                return Object.keys(this.errors).length === 0 && this.formData.name.trim().length > 0;
+            },
+
+            updatePreview() {
+                // Preview updates automatically via x-model
+            },
+
+            handleSubmit(event) {
+                event.preventDefault();
+
+                if (!this.isFormValid()) {
+                    return;
+                }
+
+                this.isSubmitting = true;
+
+                // Let the form submit naturally after a short delay for UX
+                setTimeout(() => {
+                    event.target.submit();
+                }, 300);
+            }
+        }
+    }
+
+    // Initialize Alpine.js icons
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

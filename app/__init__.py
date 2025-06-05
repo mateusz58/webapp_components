@@ -48,6 +48,13 @@ def create_app(config_class=Config):
     uploads_dir = app.config.get('UPLOAD_FOLDER')
     if uploads_dir:
         os.makedirs(uploads_dir, exist_ok=True)
+
+    try:
+        from app.brand_routes import brand_bp
+        app.register_blueprint(brand_bp)
+    except ImportError as e:
+        app.logger.warning(f"Brand routes not available: {e}")
+        # Brand management will be unavailable until brand_routes.py is created
     
     # Register blueprints
     from app.routes import main

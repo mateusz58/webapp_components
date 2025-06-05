@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Brand Management - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .brand-card {
+        transition: all 0.2s ease;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .brand-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: var(--color-primary);
+    }
+    
+    .subbrand-tag {
+        background: var(--color-light);
+        color: var(--color-dark);
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin: 0.125rem;
+        display: inline-block;
+    }
+    
+    .stats-badge {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .brand-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .brand-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="brandManager()" class="fade-in">
+    <!-- Page Header -->
+    <div class="brand-header">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="h3 mb-2 fw-bold">Brand Management</h1>
+                <p class="mb-0 opacity-90">Manage brands and subbrands for your components</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <button type="button" class="btn btn-light btn-modern" @click="showCreateForm = true">
+                    <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                    Add New Brand
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="bg-white p-3 border-bottom">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0">
+                        <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control border-0 bg-light"
+                           placeholder="Search brands..."
+                           x-model="searchTerm"
+                           @input="searchBrands()">
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="btn-group" role="group">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="sortBy('name')"
+                            :class="{ 'active': currentSort === 'name' }">
+                        <i data-lucide="type" style="width: 14px; height: 14px;"></i>
+                        Name
+                    </button>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="sortBy('components_count')"
+                            :class="{ 'active': currentSort === 'components_count' }">
+                        <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                        Components
+                    </button>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="sortBy('created_at')"
+                            :class="{ 'active': currentSort === 'created_at' }">
+                        <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                        Date
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bg-light p-3 border-bottom" x-show="selectedBrands.length > 0" x-transition>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">
+                <span x-text="selectedBrands.length"></span> brand(s) selected
+            </span>
+            <div class="btn-group">
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        @click="bulkDelete()"
+                        :disabled="isLoading">
+                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    Delete Selected
+                </button>
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        @click="exportSelected()">
+                    <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                    Export Selected
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Brands Grid -->
+    <div class="p-4">
+        <div class="row" x-show="!isLoading">
+            <template x-for="brand in filteredBrands" :key="brand.id">
+                <div class="col-xl-4 col-lg-6 mb-4">
+                    <div class="card brand-card h-100">
+                        <!-- Brand Header -->
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox"
+                                       class="form-check-input me-3"
+                                       :value="brand.id"
+                                       x-model="selectedBrands">
+                                <h6 class="mb-0 fw-bold" x-text="brand.name"></h6>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        :id="'brandActions' + brand.id"
+                                        data-bs-toggle="dropdown">
+                                    <i data-lucide="more-vertical" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <ul class="dropdown-menu" :aria-labelledby="'brandActions' + brand.id">
+                                    <li><a class="dropdown-item" :href="'/brands/edit/' + brand.id">
+                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i> Edit Brand
+                                    </a></li>
+                                    <li><a class="dropdown-item" :href="'/brands/' + brand.id + '/subbrands/new'">
+                                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Subbrand
+                                    </a></li>
+                                    <li><a class="dropdown-item" :href="'/brands/' + brand.id + '/components'">
+                                        <i data-lucide="package" style="width: 14px; height: 14px;"></i> View Components
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" @click="deleteBrand(brand.id)">
+                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Brand Body -->
+                        <div class="card-body">
+                            <!-- Statistics -->
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="stats-badge">
+                                            <span x-text="brand.components_count"></span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Components</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="stats-badge">
+                                            <span x-text="brand.subbrands_count"></span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Subbrands</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Subbrands -->
+                            <div x-show="brand.subbrands && brand.subbrands.length > 0">
+                                <h6 class="text-muted mb-2">Subbrands:</h6>
+                                <div class="mb-3">
+                                    <template x-for="subbrand in brand.subbrands.slice(0, 4)" :key="subbrand.id">
+                                        <span class="subbrand-tag" x-text="subbrand.name"></span>
+                                    </template>
+                                    <span x-show="brand.subbrands.length > 4"
+                                          class="subbrand-tag bg-secondary text-white">
+                                        +<span x-text="brand.subbrands.length - 4"></span> more
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div x-show="!brand.subbrands || brand.subbrands.length === 0"
+                                 class="text-center text-muted py-3">
+                                <i data-lucide="tag" style="width: 24px; height: 24px;" class="mb-2"></i>
+                                <p class="mb-0 small">No subbrands yet</p>
+                            </div>
+                        </div>
+
+                        <!-- Brand Footer -->
+                        <div class="card-footer bg-transparent border-0 pt-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Created: <span x-text="formatDate(brand.created_at)"></span>
+                                </small>
+                                <div class="d-flex gap-2">
+                                    <button type="button"
+                                            class="action-btn btn-outline-primary"
+                                            :onclick="'window.location.href=\'/brands/' + brand.id + '/components\''"
+                                            title="View Components">
+                                        <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="action-btn btn-outline-secondary"
+                                            :onclick="'window.location.href=\'/brands/edit/' + brand.id + '\''"
+                                            title="Edit Brand">
+                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-3">Loading brands...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="!isLoading && filteredBrands.length === 0" class="text-center py-5">
+            <i data-lucide="package" style="width: 64px; height: 64px;" class="text-muted mb-4"></i>
+            <h5 class="text-muted">No brands found</h5>
+            <p class="text-muted mb-4">
+                <span x-show="searchTerm">No brands match your search criteria.</span>
+                <span x-show="!searchTerm">Start by creating your first brand.</span>
+            </p>
+            <button type="button" class="btn btn-primary" @click="showCreateForm = true">
+                <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                Create First Brand
+            </button>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav x-show="brands.length > 0" class="px-4 pb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Showing <span x-text="filteredBrands.length"></span> of <span x-text="brands.length"></span> brands
+            </small>
+            <!-- Add pagination controls here if needed -->
+        </div>
+    </nav>
+
+    <!-- Create Brand Modal -->
+    <div class="modal fade" :class="{ 'show d-block': showCreateForm }" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showCreateForm">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Brand</h5>
+                    <button type="button" class="btn-close" @click="showCreateForm = false"></button>
+                </div>
+                <form @submit.prevent="createBrand()">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="brandName" class="form-label">Brand Name *</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="brandName"
+                                   x-model="newBrandName"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="showCreateForm = false">Cancel</button>
+                        <button type="submit" class="btn btn-primary" :disabled="!newBrandName.trim() || isLoading">
+                            <span x-show="!isLoading">Create Brand</span>
+                            <span x-show="isLoading">Creating...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function brandManager() {
+        return {
+            brands: {{ brands_data | tojson }},
+            filteredBrands: {{ brands_data | tojson }},
+            selectedBrands: [],
+            searchTerm: '{{ search }}',
+            currentSort: '{{ sort_by }}',
+            sortOrder: '{{ sort_order }}',
+            isLoading: false,
+            showCreateForm: false,
+            newBrandName: '',
+
+            init() {
+                this.filterAndSort();
+            },
+
+            searchBrands() {
+                this.filterAndSort();
+            },
+
+            sortBy(field) {
+                if (this.currentSort === field) {
+                    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.currentSort = field;
+                    this.sortOrder = 'asc';
+                }
+                this.filterAndSort();
+            },
+
+            filterAndSort() {
+                let filtered = this.brands;
+
+                // Apply search filter
+                if (this.searchTerm) {
+                    filtered = filtered.filter(brand =>
+                        brand.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+                    );
+                }
+
+                // Apply sorting
+                filtered.sort((a, b) => {
+                    let aVal = a[this.currentSort];
+                    let bVal = b[this.currentSort];
+
+                    if (this.currentSort === 'created_at') {
+                        aVal = new Date(aVal);
+                        bVal = new Date(bVal);
+                    }
+
+                    if (this.sortOrder === 'desc') {
+                        return bVal > aVal ? 1 : -1;
+                    } else {
+                        return aVal > bVal ? 1 : -1;
+                    }
+                });
+
+                this.filteredBrands = filtered;
+            },
+
+            async createBrand() {
+                if (!this.newBrandName.trim()) return;
+
+                this.isLoading = true;
+                try {
+                    const response = await fetch('/brands/new', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            'name': this.newBrandName.trim()
+                        })
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error creating brand');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error creating brand');
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            async deleteBrand(brandId) {
+                if (!confirm('Are you sure you want to delete this brand? This action cannot be undone.')) {
+                    return;
+                }
+
+                this.isLoading = true;
+                try {
+                    const response = await fetch(`/brands/api/brands/${brandId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        // Remove from local array
+                        this.brands = this.brands.filter(b => b.id !== brandId);
+                        this.filterAndSort();
+                        alert(result.message);
+                    } else {
+                        alert(result.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error deleting brand');
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            async bulkDelete() {
+                if (this.selectedBrands.length === 0) return;
+
+                if (!confirm(`Are you sure you want to delete ${this.selectedBrands.length} brand(s)? This action cannot be undone.`)) {
+                    return;
+                }
+
+                this.isLoading = true;
+                try {
+                    const response = await fetch('/brands/api/brands/bulk-delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            ids: this.selectedBrands
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        // Remove from local array
+                        this.brands = this.brands.filter(b => !this.selectedBrands.includes(b.id));
+                        this.selectedBrands = [];
+                        this.filterAndSort();
+                        alert(result.message);
+                    } else {
+                        alert(result.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error deleting brands');
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            exportSelected() {
+                const ids = this.selectedBrands.length > 0 ? this.selectedBrands.join(',') : '';
+                window.location.href = `/brands/api/brands/export?ids=${ids}`;
+            },
+
+            formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                return new Date(dateString).toLocaleDateString();
+            }
+        }
+    }
+
+    // Initialize Alpine.js icons
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

@@ -4,7 +4,8 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
-from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, ComponentVariant
+from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, \
+    ComponentVariant, Brand
 from app.utils import process_csv_file
 from sqlalchemy import or_, text, func
 from datetime import datetime, timedelta
@@ -75,17 +76,20 @@ def save_uploaded_file(file, folder='uploads'):
 
 @main.route('/')
 def index():
-    """Dashboard with enhanced filtering and search - MATCHES YOUR index.html"""
+    """Dashboard with enhanced filtering and search - FIXED brand loading and len() issue"""
     try:
         # Get filter parameters
         search = request.args.get('search', '').strip()
         component_type_id = request.args.get('component_type_id', type=int)
         category_id = request.args.get('category_id', type=int)
         supplier_id = request.args.get('supplier_id', type=int)
+        brand_id = request.args.get('brand_id', type=int)  # NEW: Brand filter
         status = request.args.get('status', '')
         recent = request.args.get('recent', type=int)
         
         # Base query with eager loading for performance
+        # NOTE: We can't use joinedload for many-to-many relationships (brands)
+        # So we'll load brands separately or use subqueryload
         query = Component.query.options(
             db.joinedload(Component.component_type),
             db.joinedload(Component.supplier),
@@ -93,6 +97,7 @@ def index():
             db.joinedload(Component.keywords),
             db.subqueryload(Component.pictures),
             db.subqueryload(Component.variants).joinedload(ComponentVariant.color)
+            # Remove the problematic db.joinedload(Component.brands) line
         )
         
         # Apply search filter
@@ -116,6 +121,14 @@ def index():
         if supplier_id:
             query = query.filter(Component.supplier_id == supplier_id)
         
+        # NEW: Apply brand filter (only if Brand model exists)
+        if brand_id:
+            try:
+                query = query.filter(Component.brands.any(Brand.id == brand_id))
+            except NameError:
+                # Brand model not available yet, skip brand filtering
+                pass
+
         # Apply status filter
         if status:
             if status == 'approved':
@@ -147,22 +160,67 @@ def index():
             error_out=False
         )
         
+        # IMPORTANT: Load brands separately for each component to avoid N+1 queries
+        # This is more efficient than trying to eager load many-to-many relationships
+        if components.items:
+            component_ids = [c.id for c in components.items]
+            try:
+                # Pre-load all brands for the components in this page
+                from sqlalchemy import text
+                brand_data = db.session.execute(text("""
+                    SELECT cb.component_id, b.id, b.name 
+                    FROM component_app.component_brand cb
+                    JOIN component_app.brand b ON cb.brand_id = b.id
+                    WHERE cb.component_id = ANY(:component_ids)
+                    ORDER BY b.name
+                """), {'component_ids': component_ids}).fetchall()
+
+                # Organize brands by component
+                component_brands = {}
+                for row in brand_data:
+                    comp_id = row[0]
+                    if comp_id not in component_brands:
+                        component_brands[comp_id] = []
+                    component_brands[comp_id].append({'id': row[1], 'name': row[2]})
+
+                # Attach brands to components
+                for component in components.items:
+                    component._cached_brands = component_brands.get(component.id, [])
+            except Exception as e:
+                # Brand tables don't exist yet, just add empty brands
+                for component in components.items:
+                    component._cached_brands = []
+
         # Get filter options for dropdowns
         component_types = ComponentType.query.order_by(ComponentType.name).all()
         categories = Category.query.order_by(Category.name).all()
         suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-        
-        # USES YOUR EXACT TEMPLATE: index.html
+
+        # FIXED: Get brands safely - check if Brand model exists
+        try:
+            brands = Brand.query.order_by(Brand.name).all()
+            brands_count = len(brands)
+        except NameError:
+            # Brand model not imported/available yet
+            brands = []
+            brands_count = 0
+
         return render_template('index.html',
                               components=components,
                               component_types=component_types,
                               categories=categories,
                               suppliers=suppliers,
+                              brands=brands,  # Safe to pass empty list
+                              brands_count=brands_count,  # Add explicit count
                               search=search)
                               
     except Exception as e:
         current_app.logger.error(f"Error in index route: {str(e)}")
+        # For debugging, you might want to see the full error:
+        import traceback
+        current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
         return render_template('connection_error.html', error=str(e))
+
 
 @main.route('/component/<int:id>')
 def component_detail(id):
@@ -188,7 +246,7 @@ def component_detail(id):
 
 @main.route('/component/new', methods=['GET', 'POST'])
 def new_component():
-    """Create new component - MATCHES YOUR component_form.html"""
+    """Create new component - UPDATED with brand handling"""
     if request.method == 'POST':
         try:
             # Get form data
@@ -237,6 +295,15 @@ def new_component():
                     if keyword not in component.keywords:
                         component.keywords.append(keyword)
             
+            # NEW: Process brand associations
+            selected_brands = request.form.getlist('brands')  # Get list of selected brand IDs
+            if selected_brands:
+                for brand_id in selected_brands:
+                    if brand_id:  # Check for empty values
+                        brand = Brand.query.get(int(brand_id))
+                        if brand:
+                            component.add_brand(brand)
+
             # Process flexible properties based on component type
             component_type = ComponentType.query.get(component_type_id)
             if component_type:
@@ -255,27 +322,30 @@ def new_component():
             flash(f'Error creating component: {str(e)}', 'danger')
             return redirect(request.url)
     
-    # GET request - USES YOUR EXACT TEMPLATE: component_form.html
+    # GET request
     component_types = ComponentType.query.order_by(ComponentType.name).all()
     categories = Category.query.order_by(Category.name).all()
     suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
-    
+    brands = Brand.query.order_by(Brand.name).all()  # NEW: Add brands
+
     return render_template('component_form.html',
                           component=None,
                           component_types=component_types,
                           categories=categories,
                           suppliers=suppliers,
                           colors=colors,
-                          materials=materials)
+                          materials=materials,
+                          brands=brands)  # NEW: Pass brands to template
 
 @main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
 def edit_component(id):
-    """Edit component - MATCHES YOUR component_edit_form.html"""
+    """Edit component - UPDATED with brand handling"""
     component = Component.query.options(
         db.joinedload(Component.keywords),
-        db.joinedload(Component.pictures)
+        db.joinedload(Component.pictures),
+        db.joinedload(Component.brands)  # NEW: Load brands
     ).get_or_404(id)
     
     if request.method == 'POST':
@@ -300,6 +370,16 @@ def edit_component(id):
                         db.session.add(keyword)
                     component.keywords.append(keyword)
             
+            # NEW: Update brand associations
+            component.brands.clear()  # Remove all existing brand associations
+            selected_brands = request.form.getlist('brands')  # Get list of selected brand IDs
+            if selected_brands:
+                for brand_id in selected_brands:
+                    if brand_id:  # Check for empty values
+                        brand = Brand.query.get(int(brand_id))
+                        if brand:
+                            component.add_brand(brand)
+
             # Update properties
             component_type = ComponentType.query.get(component.component_type_id)
             if component_type:
@@ -319,20 +399,22 @@ def edit_component(id):
             flash(f'Error updating component: {str(e)}', 'danger')
             return redirect(request.url)
     
-    # GET request - show form with existing data using new template
+    # GET request - show form with existing data
     component_types = ComponentType.query.order_by(ComponentType.name).all()
     categories = Category.query.order_by(Category.name).all()
     suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
-    
+    brands = Brand.query.order_by(Brand.name).all()  # NEW: Add brands
+
     return render_template('component_edit_form.html',
                           component=component,
                           component_types=component_types,
                           categories=categories,
                           suppliers=suppliers,
                           colors=colors,
-                          materials=materials)
+                          materials=materials,
+                          brands=brands)  # NEW: Pass brands to template
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
@@ -651,55 +733,55 @@ def upload_csv():
     # GET request - show upload form
     return render_template('upload.html')
 
-@main.route('/download/csv-template')  
-def download_csv_template():  
-    """Generate and download CSV template without picture_order fields."""  
-    try:  
-        # Create CSV template (removed picture_order fields)  
-        template_data = [  
-            [  
-                'product_number', 'description', 'component_type', 'supplier_code',  
-                'category_name', 'keywords', 'material', 'color', 'gender', 'style',  
-                'brand', 'subbrand', 'size', 'finish', 'weight',  
-                'picture_1_name', 'picture_1_url',  
-                'picture_2_name', 'picture_2_url',  
-                'picture_3_name', 'picture_3_url',  
-                'picture_4_name', 'picture_4_url',  
-                'picture_5_name', 'picture_5_url'  
-            ],  
-            [  
-                'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',  
-                'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',  
-                'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'waterproof', '120gsm',  
-                'fabric_front.jpg', 'http://example.com/fabric_front.jpg',  
-                'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',  
-                '', '', '', '', '', ''  
-            ]  
-        ]  
-
-        # Create CSV in memory  
-        output = io.StringIO()  
-        writer = csv.writer(output, delimiter=';')  
-        for row in template_data:  
-            writer.writerow(row)  
-
-        # Create file-like object  
-        csv_data = output.getvalue()  
-        output.close()  
-
-        # Return as downloadable file  
-        return current_app.response_class(  
-            csv_data,  
-            mimetype='text/csv',  
-            headers={  
-                'Content-Disposition': 'attachment; filename=component_template.csv'  
-            }  
-        )  
-
-    except Exception as e:  
-        current_app.logger.error(f"Error generating CSV template: {str(e)}")  
-        flash('Error generating template', 'danger')  
-        return redirect(url_for('main.upload_csv'))
+# @main.route('/download/csv-template')
+# def download_csv_template():
+#     """Generate and download CSV template without picture_order fields."""
+#     try:
+#         # Create CSV template (removed picture_order fields)
+#         template_data = [
+#             [
+#                 'product_number', 'description', 'component_type', 'supplier_code',
+#                 'category_name', 'keywords', 'material', 'color', 'gender', 'style',
+#                 'brand', 'subbrand', 'size', 'finish', 'weight',
+#                 'picture_1_name', 'picture_1_url',
+#                 'picture_2_name', 'picture_2_url',
+#                 'picture_3_name', 'picture_3_url',
+#                 'picture_4_name', 'picture_4_url',
+#                 'picture_5_name', 'picture_5_url'
+#             ],
+#             [
+#                 'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',
+#                 'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',
+#                 'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'waterproof', '120gsm',
+#                 'fabric_front.jpg', 'http://example.com/fabric_front.jpg',
+#                 'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',
+#                 '', '', '', '', '', ''
+#             ]
+#         ]
+#
+#         # Create CSV in memory
+#         output = io.StringIO()
+#         writer = csv.writer(output, delimiter=';')
+#         for row in template_data:
+#             writer.writerow(row)
+#
+#         # Create file-like object
+#         csv_data = output.getvalue()
+#         output.close()
+#
+#         # Return as downloadable file
+#         return current_app.response_class(
+#             csv_data,
+#             mimetype='text/csv',
+#             headers={
+#                 'Content-Disposition': 'attachment; filename=component_template.csv'
+#             }
+#         )
+#
+#     except Exception as e:
+#         current_app.logger.error(f"Error generating CSV template: {str(e)}")
+#         flash('Error generating template', 'danger')
+#         return redirect(url_for('main.upload_csv'))
 
 # API Routes for AJAX functionality - Enhanced for new frontend
 @main.route('/api/components/search')
@@ -1266,15 +1348,15 @@ def delete_supplier(id):
 
 # Helper functions - Enhanced for new frontend
 def _process_component_properties(component, component_type_name, form_data):
-    """Process component properties based on component type - enhanced for new frontend."""
+    """Process component properties based on component type - UPDATED for new brand handling"""
     type_properties = {
-        'Fabrics': ['material', 'color', 'gender', 'brand', 'finish', 'weight'],
-        'Shapes': ['gender', 'style', 'brand', 'subbrand', 'subcategory'],
-        'Buttons': ['material', 'color', 'brand', 'size'],
-        'Zippers': ['material', 'color', 'brand', 'size'],
-        'Labels': ['brand', 'subbrand', 'material'],
-        'Hangtags': ['brand', 'subbrand', 'material'],
-        'Packaging': ['brand', 'material']
+        'Fabrics': ['material', 'color', 'gender', 'finish', 'weight'],  # Removed 'brand' - now handled separately
+        'Shapes': ['gender', 'style', 'subbrand', 'subcategory'],  # Removed 'brand' - now handled separately
+        'Buttons': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
+        'Zippers': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
+        'Labels': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
+        'Hangtags': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
+        'Packaging': ['material']  # Removed 'brand' - now handled separately
     }
     
     allowed_properties = type_properties.get(component_type_name, [])
@@ -1445,6 +1527,100 @@ def _update_variant_images(variant, request):
             except Exception as e:
                 current_app.logger.error(f"Error uploading new variant image {i}: {str(e)}")
 
+@main.route('/api/brands/search')
+def api_search_brands():
+    """API endpoint for brand search with autocomplete."""
+    try:
+        query = request.args.get('q', '').strip()
+        limit = min(int(request.args.get('limit', 10)), 50)
+
+        if len(query) < 1:
+            return jsonify([])
+
+        brands = Brand.query.filter(
+            Brand.name.ilike(f'%{query}%')
+        ).limit(limit).all()
+
+        results = [{
+            'id': b.id,
+            'name': b.name,
+            'components_count': b.get_components_count(),
+            'subbrands_count': len(b.subbrands)
+        } for b in brands]
+
+        return jsonify(results)
+
+    except Exception as e:
+        current_app.logger.error(f"Error in brand search: {str(e)}")
+        return jsonify({'error': 'Search failed'}), 500
+
+def get_brands_list(self):
+    """Get brands for this component (with caching support)"""
+    # Check if we have cached brands from the index route
+    if hasattr(self, '_cached_brands'):
+        return [type('Brand', (), brand) for brand in self._cached_brands]
+
+    # Fallback to normal relationship access
+    return list(self.brands)
+
+@main.route('/api/components/<int:component_id>/brands', methods=['GET', 'POST', 'DELETE'])
+def api_component_brands(component_id):
+    """API endpoint to manage component brand associations"""
+    try:
+        component = Component.query.get_or_404(component_id)
+
+        if request.method == 'GET':
+            # Return current brands for this component
+            brands = [{
+                'id': brand.id,
+                'name': brand.name
+            } for brand in component.brands]
+            return jsonify(brands)
+
+        elif request.method == 'POST':
+            # Add brand to component
+            data = request.get_json()
+            brand_id = data.get('brand_id')
+
+            if not brand_id:
+                return jsonify({'success': False, 'error': 'Brand ID required'}), 400
+
+            brand = Brand.query.get(brand_id)
+            if not brand:
+                return jsonify({'success': False, 'error': 'Brand not found'}), 404
+
+            if brand not in component.brands:
+                component.add_brand(brand)
+                db.session.commit()
+                return jsonify({'success': True, 'message': f'Brand {brand.name} added'})
+            else:
+                return jsonify({'success': False, 'error': 'Brand already associated'}), 400
+
+        elif request.method == 'DELETE':
+            # Remove brand from component
+            data = request.get_json()
+            brand_id = data.get('brand_id')
+
+            if not brand_id:
+                return jsonify({'success': False, 'error': 'Brand ID required'}), 400
+
+            brand = Brand.query.get(brand_id)
+            if not brand:
+                return jsonify({'success': False, 'error': 'Brand not found'}), 404
+
+            if brand in component.brands:
+                component.remove_brand(brand)
+                db.session.commit()
+                return jsonify({'success': True, 'message': f'Brand {brand.name} removed'})
+            else:
+                return jsonify({'success': False, 'error': 'Brand not associated'}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error managing component brands: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # Error handlers for better UX
 @main.errorhandler(404)
 def not_found_error(error):
@@ -1465,3 +1641,53 @@ def file_too_large_error(error):
 
 # Add any remaining routes from your original file that weren't covered above
 # (supplier management, additional API endpoints, etc.)
+
+@main.route('/download/csv-template')
+def download_csv_template():
+    """Generate and download CSV template - UPDATED with brand fields."""
+    try:
+        # Create CSV template with brand fields
+        template_data = [
+            [
+                'product_number', 'description', 'component_type', 'supplier_code',
+                'category_name', 'keywords', 'material', 'color', 'gender', 'style',
+                'brands', 'subbrand', 'size', 'finish', 'weight',  # NEW: Added 'brands' field
+                'picture_1_name', 'picture_1_url',
+                'picture_2_name', 'picture_2_url',
+                'picture_3_name', 'picture_3_url',
+                'picture_4_name', 'picture_4_url',
+                'picture_5_name', 'picture_5_url'
+            ],
+            [
+                'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',
+                'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',
+                'ladies,unisex', 'casual', 'MAR,MMC', 'MAR Sport,MMC Pro', '50D', 'waterproof', '120gsm',  # NEW: Example brand data
+                'fabric_front.jpg', 'http://example.com/fabric_front.jpg',
+                'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',
+                '', '', '', '', '', ''
+            ]
+        ]
+
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';')
+        for row in template_data:
+            writer.writerow(row)
+
+        # Create file-like object
+        csv_data = output.getvalue()
+        output.close()
+
+        # Return as downloadable file
+        return current_app.response_class(
+            csv_data,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=component_template.csv'
+            }
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating CSV template: {str(e)}")
+        flash('Error generating template', 'danger')
+        return redirect(url_for('main.upload_csv'))
