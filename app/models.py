@@ -79,8 +79,8 @@ class Brand(Base):
 
     # Relationships
     subbrands = db.relationship('Subbrand', backref='brand', lazy=True, cascade='all, delete-orphan')
-    components = db.relationship('Component', secondary='component_app.component_brand',
-                               back_populates='brands', lazy='dynamic')
+    # Use the ComponentBrand association object for the relationship
+    component_associations = db.relationship('ComponentBrand', back_populates='brand', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Brand {self.name}>'
@@ -91,7 +91,12 @@ class Brand(Base):
 
     def get_components_count(self):
         """Get count of components using this brand"""
-        return self.components.count()
+        return len(self.component_associations)
+
+    @property
+    def components(self):
+        """Get components associated with this brand"""
+        return [assoc.component for assoc in self.component_associations]
 
 class Subbrand(Base):
     __tablename__ = 'subbrand'
@@ -133,14 +138,27 @@ keyword_component = db.Table('keyword_component',
     schema='component_app'
 )
 
-# Association table for many-to-many brand-component relationship
-component_brand = db.Table('component_brand',
-    db.Column('id', db.Integer, primary_key=True),
-    db.Column('component_id', db.Integer, db.ForeignKey('component_app.component.id'), nullable=False),
-    db.Column('brand_id', db.Integer, db.ForeignKey('component_app.brand.id'), nullable=False),
-    db.UniqueConstraint('component_id', 'brand_id'),
-    schema='component_app'
-)
+class ComponentBrand(Base):
+    """Association object for Component-Brand many-to-many relationship with additional fields"""
+    __tablename__ = 'component_brand'
+
+    id = db.Column(db.Integer, primary_key=True)
+    component_id = db.Column(db.Integer, db.ForeignKey('component_app.component.id', ondelete='CASCADE'), nullable=False)
+    brand_id = db.Column(db.Integer, db.ForeignKey('component_app.brand.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Unique constraint
+    __table_args__ = (
+        db.UniqueConstraint('component_id', 'brand_id'),
+        {'schema': 'component_app'}
+    )
+
+    # Relationships
+    component = db.relationship('Component', back_populates='brand_associations')
+    brand = db.relationship('Brand', back_populates='component_associations')
+
+    def __repr__(self):
+        return f'<ComponentBrand {self.component.product_number} - {self.brand.name}>'
 
 class Component(Base):
     __tablename__ = 'component'
@@ -178,8 +196,9 @@ class Component(Base):
     variants = db.relationship('ComponentVariant', backref='component', lazy=True, cascade='all, delete-orphan')
     keywords = db.relationship('Keyword', secondary=keyword_component, lazy='subquery',
                               backref=db.backref('components', lazy=True))
-    brands = db.relationship('Brand', secondary='component_app.component_brand',
-                           back_populates='components', lazy='dynamic')
+
+    # Use the ComponentBrand association object for the brand relationship
+    brand_associations = db.relationship('ComponentBrand', back_populates='component', cascade='all, delete-orphan')
 
     # Pictures that belong to the main component (not variant-specific)
     pictures = db.relationship('Picture', 
@@ -196,6 +215,12 @@ class Component(Base):
     def __repr__(self):
         return f'<Component {self.product_number}>'
     
+    # Property to get brands easily
+    @property
+    def brands(self):
+        """Get list of brands associated with this component"""
+        return [assoc.brand for assoc in self.brand_associations]
+
     # Helper methods for properties
     def get_property(self, key, default=None):
         """Get a property value from the JSON properties field"""
@@ -231,13 +256,29 @@ class Component(Base):
     # Brand management methods
     def add_brand(self, brand):
         """Add a brand to this component"""
-        if brand not in self.brands:
-            self.brands.append(brand)
+        # Check if association already exists
+        existing = ComponentBrand.query.filter_by(
+            component_id=self.id,
+            brand_id=brand.id
+        ).first()
+
+        if not existing:
+            association = ComponentBrand(component_id=self.id, brand_id=brand.id)
+            db.session.add(association)
+            return association
+        return existing
 
     def remove_brand(self, brand):
         """Remove a brand from this component"""
-        if brand in self.brands:
-            self.brands.remove(brand)
+        association = ComponentBrand.query.filter_by(
+            component_id=self.id,
+            brand_id=brand.id
+        ).first()
+
+        if association:
+            db.session.delete(association)
+            return True
+        return False
 
     def get_brand_names(self):
         """Get list of brand names for this component"""
@@ -331,14 +372,14 @@ class Component(Base):
         """Get CSS class for status badge"""
         status = self.get_overall_status()
         status_classes = {
-            'approved': 'bg-success',
-            'rejected': 'bg-danger', 
-            'pending_pps': 'bg-warning',
-            'pending_sms': 'bg-info',
-            'pending_proto': 'bg-secondary',
-            'in_progress': 'bg-primary'
+            'approved': 'status-approved',
+            'rejected': 'status-rejected',
+            'pending_pps': 'status-pending',
+            'pending_sms': 'status-pending',
+            'pending_proto': 'status-pending',
+            'in_progress': 'status-pending'
         }
-        return status_classes.get(status, 'bg-secondary')
+        return status_classes.get(status, 'status-pending')
     
     def get_status_display(self):
         """Get human-readable status display"""
@@ -494,3 +535,55 @@ class Picture(Base):
             return self.parent_component
         else:
             return self.variant
+
+# Helper functions for working with ComponentBrand relationships
+def add_brand_to_component(component_id, brand_id):
+    """Add a brand to a component"""
+    try:
+        # Check if association already exists
+        existing = ComponentBrand.query.filter_by(
+            component_id=component_id,
+            brand_id=brand_id
+        ).first()
+
+        if not existing:
+            association = ComponentBrand(
+                component_id=component_id,
+                brand_id=brand_id
+            )
+            db.session.add(association)
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def remove_brand_from_component(component_id, brand_id):
+    """Remove a brand from a component"""
+    try:
+        association = ComponentBrand.query.filter_by(
+            component_id=component_id,
+            brand_id=brand_id
+        ).first()
+
+        if association:
+            db.session.delete(association)
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def get_components_by_brand(brand_id):
+    """Get all components for a specific brand"""
+    return db.session.query(Component).join(ComponentBrand).filter(
+        ComponentBrand.brand_id == brand_id
+    ).all()
+
+def get_brands_for_component(component_id):
+    """Get all brands for a specific component"""
+    return db.session.query(Brand).join(ComponentBrand).filter(
+        ComponentBrand.component_id == component_id
+    ).all()

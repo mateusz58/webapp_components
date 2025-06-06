@@ -48,18 +48,7 @@
             </div>
 
             <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="category_id" class="form-label">Category *</label>
-                        <select class="form-select" id="category_id" name="category_id" required>
-                            <option value="">Select Category</option>
-                            {% for category in categories %}
-                                <option value="{{ category.id }}">{{ category.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="mb-3">
                         <label for="keywords" class="form-label">Keywords *</label>
                         <input type="text" class="form-control" id="keywords" name="keywords" required>
@@ -128,19 +117,9 @@
                         <h6 class="mb-0">Picture {{ i }}</h6>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="picture_{{ i }}" class="form-label">Image File</label>
-                                    <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="picture_{{ i }}_order" class="form-label">Display Order</label>
-                                    <input type="number" class="form-control" id="picture_{{ i }}_order" name="picture_{{ i }}_order" value="{{ i }}" min="1">
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label for="picture_{{ i }}" class="form-label">Image File</label>
+                            <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*">
                         </div>
                     </div>
                 </div>
@@ -288,15 +267,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form validation
     form.addEventListener('submit', function(event) {
-        const productNumber = document.getElementById('product_number').value;
-        const componentType = document.getElementById('component_type_id').value;
-        const keywords = document.getElementById('keywords').value;
-        
-        if (!productNumber || !componentType || !keywords) {
-            alert('Please fill in all required fields (Product Number, Component Type, and Keywords)');
-            event.preventDefault();
-            return;
-        }
+    const productNumber = document.getElementById('product_number').value;
+    const componentType = document.getElementById('component_type_id').value;
+    const supplier = document.getElementById('supplier_id').value;
+    const keywords = document.getElementById('keywords').value;
+
+    if (!productNumber || !componentType || !supplier || !keywords) {
+        alert('Please fill in all required fields (Product Number, Component Type, Supplier, and Keywords)');
+        event.preventDefault();
+        return;
+    }
 
         // Validate product number format based on component type
         const selectedTypeName = componentTypeSelect.options[componentTypeSelect.selectedIndex].text;

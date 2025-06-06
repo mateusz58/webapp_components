@@ -780,54 +780,56 @@
                         </div>
 
                         <!-- Step 2: Brand Selection -->
-                        <div class="step-content" :class="{ 'active': currentStep === 2 }">
-                            <div class="form-section">
-                                <h5 class="section-title">
-                                    <i data-lucide="tag" class="me-2" style="width: 20px; height: 20px;"></i>
-                                    Brand Association
-                                </h5>
+                        <!-- Step 2: Brand Selection - FIXED -->
+<div class="step-content" :class="{ 'active': currentStep === 2 }">
+    <div class="form-section">
+        <h5 class="section-title">
+            <i data-lucide="tag" class="me-2" style="width: 20px; height: 20px;"></i>
+            Brand Association
+        </h5>
 
-                                <div class="mb-3">
-                                    <label class="form-label form-label-modern">Select Brands</label>
-                                    <div class="brand-selection">
-                                        <select class="form-select form-control-modern"
-                                                x-model="selectedBrandId"
-                                                @change="addBrand()">
-                                            <option value="">Choose a brand to add...</option>
-                                            {% if brands %}
-                                            <template x-for="brand in availableBrands" :key="brand.id">
-                                                <option :value="brand.id" x-text="brand.name"></option>
-                                            </template>
-                                            {% endif %}
-                                        </select>
-                                        <div class="form-text">
-                                            You can associate this component with multiple brands. Select from the dropdown to add.
-                                        </div>
-                                    </div>
-                                </div>
+        <div class="mb-3">
+            <label class="form-label form-label-modern">Select Brands</label>
+            <div class="brand-selection">
+                <select class="form-select form-control-modern"
+                        x-model="selectedBrandId"
+                        @change="addBrand()">
+                    <option value="">Choose a brand to add...</option>
+                    <!-- FIXED: Use server-side brands data directly -->
+                    {% if brands %}
+                    {% for brand in brands %}
+                    <option value="{{ brand.id }}">{{ brand.name }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                <div class="form-text">
+                    You can associate this component with multiple brands. Select from the dropdown to add.
+                </div>
+            </div>
+        </div>
 
-                                <!-- Selected Brands Display -->
-                                <div class="brand-tags">
-                                    <template x-for="(brand, index) in selectedBrands" :key="brand.id">
-                                        <span class="brand-tag">
-                                            <span x-text="brand.name"></span>
-                                            <span class="brand-remove" @click="removeBrand(index)">
-                                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-                                            </span>
-                                        </span>
-                                    </template>
-                                    <div x-show="selectedBrands.length === 0" class="text-muted text-center p-2">
-                                        <i data-lucide="tag" style="width: 20px; height: 20px;"></i>
-                                        <p class="mb-0 mt-1">No brands selected yet</p>
-                                    </div>
-                                </div>
+        <!-- Selected Brands Display -->
+        <div class="brand-tags">
+            <template x-for="(brand, index) in selectedBrands" :key="brand.id || index">
+                <span class="brand-tag">
+                    <span x-text="brand.name || 'Unknown Brand'"></span>
+                    <span class="brand-remove" @click="removeBrand(index)">
+                        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                    </span>
+                </span>
+            </template>
+            <div x-show="selectedBrands.length === 0" class="text-muted text-center p-2">
+                <i data-lucide="tag" style="width: 20px; height: 20px;"></i>
+                <p class="mb-0 mt-1">No brands selected yet</p>
+            </div>
+        </div>
 
-                                <!-- Hidden inputs for form submission -->
-                                <template x-for="brand in selectedBrands" :key="brand.id">
-                                    <input type="hidden" name="brands" :value="brand.id">
-                                </template>
-                            </div>
-                        </div>
+        <!-- Hidden inputs for form submission -->
+        <template x-for="brand in selectedBrands" :key="brand.id || brand.name">
+            <input type="hidden" name="brands" :value="brand.id">
+        </template>
+    </div>
+</div>
 
                         <!-- Step 3: Properties -->
                         <div class="step-content" :class="{ 'active': currentStep === 3 }">
@@ -1222,60 +1224,60 @@
 {% endblock %}
 {% block scripts %}
 <script>
-    function componentForm() {
-        return {
-            currentStep: 1,
-            totalSteps: 5, // Updated to 5 steps
-            dragOver: false,
-            keywordInput: '',
-            keywords: {{ (component.keywords | map(attribute='name') | list) | tojson if component and component.keywords else '[]' }},
-            keywordSuggestions: [],
-            images: [],
-            lastSaved: null,
-            showAutoSaveIndicator: false,
-            isSubmitting: false,
-            errors: {},
+ function componentForm() {
+    return {
+        currentStep: 1,
+        totalSteps: 5,
+        dragOver: false,
+        keywordInput: '',
+        keywords: {% if component and component.keywords %}{{ (component.keywords | map(attribute='name') | list) | tojson }}{% else %}[]{% endif %},
+        keywordSuggestions: [],
+        images: [],
+        lastSaved: null,
+        showAutoSaveIndicator: false,
+        isSubmitting: false,
+        errors: {},
 
-            // Brand selection
-            selectedBrands: {% if component and component._cached_brands %}{{ component._cached_brands | tojson }}{% else %}[]{% endif %},
-            selectedBrandId: '',
-            availableBrands: {{ brands | tojson if brands else '[]' }},
+        // FIXED: Brand selection using serializable data passed from route
+        selectedBrands: {% if component_brands_json is defined %}{{ component_brands_json | tojson }}{% else %}[]{% endif %},
+        selectedBrandId: '',
+        availableBrands: {% if available_brands_json is defined %}{{ available_brands_json | tojson }}{% else %}[]{% endif %},
 
-            formData: {
-                product_number: '{{ component.product_number if component else "" }}',
-                description: '{{ component.description if component else "" }}',
-                component_type_id: '{{ component.component_type_id if component else "" }}',
-                supplier_id: '{{ component.supplier_id if component else "" }}',
-                category_id: '{{ component.category_id if component else "" }}',
-                properties: {{ component.properties | tojson if component and component.properties else '{}' }}
-            },
+        formData: {
+            product_number: {% if component %}'{{ component.product_number | replace("'", "\\'") }}'{% else %}''{% endif %},
+            description: {% if component %}'{{ (component.description | replace("'", "\\'") | replace("\n", "\\n")) if component.description else "" }}'{% else %}''{% endif %},
+            component_type_id: {% if component %}'{{ component.component_type_id }}'{% else %}''{% endif %},
+            supplier_id: {% if component %}'{{ component.supplier_id }}'{% else %}''{% endif %},
+            category_id: {% if component %}'{{ component.category_id }}'{% else %}''{% endif %},
+            properties: {% if component and component.properties %}{{ component.properties | tojson }}{% else %}{}{% endif %}
+        },
 
-            availableProperties: [],
-            propertyTypes: {
-                'material': 'select',
-                'color': 'select',
-                'gender': 'multiselect',
-                'style': 'multiselect',
-                'subbrand': 'multiselect',
-                'size': 'text',
-                'finish': 'text',
-                'weight': 'text',
-                'subcategory': 'text'
-            },
+        availableProperties: [],
+        propertyTypes: {
+            'material': 'select',
+            'color': 'select',
+            'gender': 'multiselect',
+            'style': 'multiselect',
+            'subbrand': 'multiselect',
+            'size': 'text',
+            'finish': 'text',
+            'weight': 'text',
+            'subcategory': 'text'
+        },
 
-            propertyOptions: {
-                'material': {{ materials | map(attribute='name') | list | tojson if materials else '[]' }},
-                'color': {{ colors | map(attribute='name') | list | tojson if colors else '[]' }},
-                'gender': ['ladies', 'men', 'unisex', 'all', 'kids'],
-                'style': ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage'],
-                'subbrand': ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic']
-            },
+        propertyOptions: {
+            'material': {% if materials %}{{ materials | map(attribute='name') | list | tojson }}{% else %}[]{% endif %},
+            'color': {% if colors %}{{ colors | map(attribute='name') | list | tojson }}{% else %}[]{% endif %},
+            'gender': ['ladies', 'men', 'unisex', 'all', 'kids'],
+            'style': ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage'],
+            'subbrand': ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic']
+        },
 
-            propertyPlaceholders: {
-                'size': 'e.g., 12mm, 15mm',
-                'weight': 'e.g., 50g',
-                'finish': 'e.g., matte, glossy'
-            },
+        propertyPlaceholders: {
+            'size': 'e.g., 12mm, 15mm',
+            'weight': 'e.g., 50g',
+            'finish': 'e.g., matte, glossy'
+        },
 
             // Component type properties mapping (brand removed - now handled separately)
             typePropertiesMap: {
@@ -1288,274 +1290,294 @@
                 'Packaging': ['material']
             },
 
-            init() {
-                // Load component type properties if editing
-                if (this.formData.component_type_id) {
-                    this.loadComponentTypeProperties();
+        init() {
+            // Debug logging
+            console.log('Component data:', {% if component %}true{% else %}false{% endif %});
+            console.log('Selected brands:', this.selectedBrands);
+            console.log('Available brands:', this.availableBrands);
+
+            // Load component type properties if editing
+            if (this.formData.component_type_id) {
+                this.loadComponentTypeProperties();
+            }
+
+            // Initialize form validation
+            this.validateForm();
+
+            // FIXED: Ensure data is always arrays with proper structure
+            if (!Array.isArray(this.selectedBrands)) {
+                this.selectedBrands = [];
+            }
+
+            if (!Array.isArray(this.availableBrands)) {
+                this.availableBrands = [];
+            }
+
+            // Ensure all brand objects have required properties
+            this.selectedBrands = this.selectedBrands.map(brand => ({
+                id: brand.id || brand.brand_id,
+                name: brand.name || 'Unknown Brand'
+            }));
+
+            this.availableBrands = this.availableBrands.map(brand => ({
+                id: brand.id,
+                name: brand.name || 'Unknown Brand'
+            }));
+        },
+
+        // FIXED: Brand management methods
+        addBrand() {
+            if (this.selectedBrandId) {
+                const brand = this.availableBrands.find(b => b.id == this.selectedBrandId);
+                if (brand && !this.selectedBrands.find(b => b.id == brand.id)) {
+                    this.selectedBrands.push({
+                        id: brand.id,
+                        name: brand.name
+                    });
+                    this.selectedBrandId = '';
+                    this.autoSave();
                 }
+            }
+        },
 
-                // Initialize form validation
-                this.validateForm();
-            },
-
-            // Brand management methods
-            addBrand() {
-                if (this.selectedBrandId) {
-                    const brand = this.availableBrands.find(b => b.id == this.selectedBrandId);
-                    if (brand && !this.selectedBrands.find(b => b.id == brand.id)) {
-                        this.selectedBrands.push(brand);
-                        this.selectedBrandId = '';
-                        this.autoSave();
-                    }
-                }
-            },
-
-            removeBrand(index) {
+        removeBrand(index) {
+            if (index >= 0 && index < this.selectedBrands.length) {
                 this.selectedBrands.splice(index, 1);
                 this.autoSave();
-            },
+            }
+        },
 
-            // Navigation methods
-            nextStep() {
-                if (this.isStepValid(this.currentStep) && this.currentStep < this.totalSteps) {
-                    this.currentStep++;
-                }
-            },
+        // Rest of the methods remain the same...
+        nextStep() {
+            if (this.isStepValid(this.currentStep) && this.currentStep < this.totalSteps) {
+                this.currentStep++;
+            }
+        },
 
-            previousStep() {
-                if (this.currentStep > 1) {
-                    this.currentStep--;
-                }
-            },
+        previousStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+            }
+        },
 
-            isStepValid(step) {
-                switch(step) {
-                    case 1:
-                        return this.formData.product_number &&
-                               this.formData.component_type_id &&
-                               this.formData.supplier_id &&
-                               this.formData.category_id &&
-                               Object.keys(this.errors).length === 0;
-                    case 2:
-                        return true; // Brands are optional
-                    case 3:
-                        return true; // Properties are optional
-                    case 4:
-                        return true; // Images are optional
-                    case 5:
-                        return true; // Keywords are optional
-                    default:
-                        return true;
-                }
-            },
+        isStepValid(step) {
+            switch(step) {
+                case 1:
+                    return this.formData.product_number &&
+                           this.formData.component_type_id &&
+                           this.formData.supplier_id &&
+                           this.formData.category_id &&
+                           Object.keys(this.errors).length === 0;
+                case 2:
+                    return true; // Brands are optional
+                case 3:
+                    return true; // Properties are optional
+                case 4:
+                    return true; // Images are optional
+                case 5:
+                    return true; // Keywords are optional
+                default:
+                    return true;
+            }
+        },
 
-            // Validation methods
-            validateField(fieldName) {
-                // Clear previous error
-                delete this.errors[fieldName];
+        validateField(fieldName) {
+            delete this.errors[fieldName];
 
-                switch(fieldName) {
-                    case 'product_number':
-                        if (!this.formData.product_number) {
-                            this.errors.product_number = 'Product number is required';
-                        } else if (this.formData.product_number.length < 3) {
-                            this.errors.product_number = 'Product number must be at least 3 characters';
-                        }
-                        break;
-                    case 'component_type_id':
-                        if (!this.formData.component_type_id) {
-                            this.errors.component_type_id = 'Component type is required';
-                        }
-                        break;
-                    case 'supplier_id':
-                        if (!this.formData.supplier_id) {
-                            this.errors.supplier_id = 'Supplier is required';
-                        }
-                        break;
-                    case 'category_id':
-                        if (!this.formData.category_id) {
-                            this.errors.category_id = 'Category is required';
-                        }
-                        break;
-                }
-            },
+            switch(fieldName) {
+                case 'product_number':
+                    if (!this.formData.product_number) {
+                        this.errors.product_number = 'Product number is required';
+                    } else if (this.formData.product_number.length < 3) {
+                        this.errors.product_number = 'Product number must be at least 3 characters';
+                    }
+                    break;
+                case 'component_type_id':
+                    if (!this.formData.component_type_id) {
+                        this.errors.component_type_id = 'Component type is required';
+                    }
+                    break;
+                case 'supplier_id':
+                    if (!this.formData.supplier_id) {
+                        this.errors.supplier_id = 'Supplier is required';
+                    }
+                    break;
+                case 'category_id':
+                    if (!this.formData.category_id) {
+                        this.errors.category_id = 'Category is required';
+                    }
+                    break;
+            }
+        },
 
-            validateForm() {
-                this.validateField('product_number');
-                this.validateField('component_type_id');
-                this.validateField('supplier_id');
-                this.validateField('category_id');
-                return Object.keys(this.errors).length === 0;
-            },
+        validateForm() {
+            this.validateField('product_number');
+            this.validateField('component_type_id');
+            this.validateField('supplier_id');
+            this.validateField('category_id');
+            return Object.keys(this.errors).length === 0;
+        },
 
-            isFormValid() {
-                return this.isStepValid(1); // Basic validation
-            },
+        isFormValid() {
+            return this.isStepValid(1);
+        },
 
-            // Properties methods
-            loadComponentTypeProperties() {
-                const componentTypeSelect = document.getElementById('component_type_id');
-                const selectedText = componentTypeSelect.options[componentTypeSelect.selectedIndex]?.text;
+        loadComponentTypeProperties() {
+            const componentTypeSelect = document.getElementById('component_type_id');
+            const selectedText = componentTypeSelect?.options[componentTypeSelect.selectedIndex]?.text;
 
-                if (selectedText && this.typePropertiesMap[selectedText]) {
-                    this.availableProperties = this.typePropertiesMap[selectedText];
+            if (selectedText && this.typePropertiesMap[selectedText]) {
+                this.availableProperties = this.typePropertiesMap[selectedText];
 
-                    // Initialize properties object for new properties
-                    this.availableProperties.forEach(prop => {
-                        if (!(prop in this.formData.properties)) {
-                            this.formData.properties[prop] = '';
-                        }
-                    });
-                } else {
-                    this.availableProperties = [];
-                }
-            },
-
-    // Image handling methods
-            handleImageSelect(event) {
-                const files = event.target.files;
-                this.processImages(files);
-            },
-
-            handleImageDrop(event) {
-                this.dragOver = false;
-                const files = event.dataTransfer.files;
-                this.processImages(files);
-            },
-
-            processImages(files) {
-                Array.from(files).forEach(file => {
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            this.images.push({
-                                id: Date.now() + Math.random(),
-                                file: file,
-                                name: file.name,
-                                url: e.target.result,
-                                order: this.images.length + 1
-                            });
-                        };
-                        reader.readAsDataURL(file);
+                this.availableProperties.forEach(prop => {
+                    if (!(prop in this.formData.properties)) {
+                        this.formData.properties[prop] = '';
                     }
                 });
-            },
-
-            removeImage(index) {
-                this.images.splice(index, 1);
-                // Reorder remaining images
-                this.images.forEach((img, i) => {
-                    img.order = i + 1;
-                });
-            },
-
-            updateImageName(index, name) {
-                this.images[index].name = name;
-            },
-
-            updateImageOrder(index, order) {
-                this.images[index].order = parseInt(order) || 1;
-            },
-
-            // Keyword methods
-            searchKeywords() {
-                // Simulate keyword suggestions based on input
-                const input = this.keywordInput.toLowerCase();
-                if (input.length > 1) {
-                    // Here you could make an API call to get real suggestions
-                    const allKeywords = ['polyester', 'cotton', 'silk', 'wool', 'synthetic',
-                                       'organic', 'sustainable', 'waterproof', 'breathable',
-                                       'stretch', 'durable', 'lightweight', 'heavyweight',
-                                       'luxury', 'sport', 'casual', 'formal', 'outdoor'];
-
-                    this.keywordSuggestions = allKeywords
-                        .filter(kw => kw.includes(input) && !this.keywords.includes(kw))
-                        .slice(0, 5);
-                } else {
-                    this.keywordSuggestions = [];
-                }
-            },
-
-            addKeyword() {
-                const keyword = this.keywordInput.trim().toLowerCase();
-                if (keyword && !this.keywords.includes(keyword)) {
-                    this.keywords.push(keyword);
-                    this.keywordInput = '';
-                    this.keywordSuggestions = [];
-                    this.autoSave();
-                }
-            },
-
-            addKeywordFromSuggestion(suggestion) {
-                if (suggestion && !this.keywords.includes(suggestion)) {
-                    this.keywords.push(suggestion);
-                    this.keywordInput = '';
-                    this.keywordSuggestions = [];
-                    this.autoSave();
-                }
-            },
-
-            removeKeyword(index) {
-                this.keywords.splice(index, 1);
-                this.autoSave();
-            },
-
-            // Auto-save functionality
-            autoSave() {
-                // Only auto-save if editing existing component
-                if (!'{{ component.id if component else "" }}') return;
-
-                clearTimeout(this.autoSaveTimeout);
-                this.autoSaveTimeout = setTimeout(() => {
-                    // Here you would make an API call to save draft
-                    this.lastSaved = new Date().toLocaleTimeString();
-                    this.showAutoSaveIndicator = true;
-                    setTimeout(() => {
-                        this.showAutoSaveIndicator = false;
-                    }, 2000);
-                }, 1000);
-            },
-
-            // Form submission
-            handleSubmit(event) {
-                if (!this.isFormValid()) {
-                    event.preventDefault();
-                    alert('Please fill in all required fields before submitting.');
-                    return;
-                }
-
-                this.isSubmitting = true;
-
-                // Add images to form data
-                this.images.forEach((image, index) => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.name = `picture_${index + 1}`;
-                    input.files = this.createFileList(image.file);
-                    this.$refs.mainForm.appendChild(input);
-                });
-
-                // Form will submit normally
-            },
-
-            // Helper methods
-            getSelectedText(selectName) {
-                const select = document.getElementById(selectName);
-                return select?.options[select.selectedIndex]?.text || '';
-            },
-
-            capitalizeFirst(str) {
-                return str.charAt(0).toUpperCase() + str.slice(1);
-            },
-
-            createFileList(file) {
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                return dt.files;
+            } else {
+                this.availableProperties = [];
             }
+        },
+
+        // Image handling methods remain the same...
+        handleImageSelect(event) {
+            const files = event.target.files;
+            this.processImages(files);
+        },
+
+        handleImageDrop(event) {
+            this.dragOver = false;
+            const files = event.dataTransfer.files;
+            this.processImages(files);
+        },
+
+        processImages(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.images.push({
+                            id: Date.now() + Math.random(),
+                            file: file,
+                            name: file.name,
+                            url: e.target.result,
+                            order: this.images.length + 1
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        },
+
+        removeImage(index) {
+            this.images.splice(index, 1);
+            this.images.forEach((img, i) => {
+                img.order = i + 1;
+            });
+        },
+
+        updateImageName(index, name) {
+            if (this.images[index]) {
+                this.images[index].name = name;
+            }
+        },
+
+        updateImageOrder(index, order) {
+            if (this.images[index]) {
+                this.images[index].order = parseInt(order) || 1;
+            }
+        },
+
+        // Keyword methods remain the same...
+        searchKeywords() {
+            const input = this.keywordInput.toLowerCase();
+            if (input.length > 1) {
+                const allKeywords = ['polyester', 'cotton', 'silk', 'wool', 'synthetic',
+                                   'organic', 'sustainable', 'waterproof', 'breathable',
+                                   'stretch', 'durable', 'lightweight', 'heavyweight',
+                                   'luxury', 'sport', 'casual', 'formal', 'outdoor'];
+
+                this.keywordSuggestions = allKeywords
+                    .filter(kw => kw.includes(input) && !this.keywords.includes(kw))
+                    .slice(0, 5);
+            } else {
+                this.keywordSuggestions = [];
+            }
+        },
+
+        addKeyword() {
+            const keyword = this.keywordInput.trim().toLowerCase();
+            if (keyword && !this.keywords.includes(keyword)) {
+                this.keywords.push(keyword);
+                this.keywordInput = '';
+                this.keywordSuggestions = [];
+                this.autoSave();
+            }
+        },
+
+        addKeywordFromSuggestion(suggestion) {
+            if (suggestion && !this.keywords.includes(suggestion)) {
+                this.keywords.push(suggestion);
+                this.keywordInput = '';
+                this.keywordSuggestions = [];
+                this.autoSave();
+            }
+        },
+
+        removeKeyword(index) {
+            this.keywords.splice(index, 1);
+            this.autoSave();
+        },
+
+        autoSave() {
+            // Only auto-save if editing existing component
+            {% if component %}
+            clearTimeout(this.autoSaveTimeout);
+            this.autoSaveTimeout = setTimeout(() => {
+                this.lastSaved = new Date().toLocaleTimeString();
+                this.showAutoSaveIndicator = true;
+                setTimeout(() => {
+                    this.showAutoSaveIndicator = false;
+                }, 2000);
+            }, 1000);
+            {% endif %}
+        },
+
+        handleSubmit(event) {
+            if (!this.isFormValid()) {
+                event.preventDefault();
+                alert('Please fill in all required fields before submitting.');
+                return;
+            }
+
+            this.isSubmitting = true;
+
+            // Add images to form data
+            this.images.forEach((image, index) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.name = `picture_${index + 1}`;
+                input.files = this.createFileList(image.file);
+                this.$refs.mainForm.appendChild(input);
+            });
+        },
+
+        getSelectedText(selectName) {
+            const select = document.getElementById(selectName);
+            return select?.options[select.selectedIndex]?.text || '';
+        },
+
+        capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        createFileList(file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            return dt.files;
         }
     }
-
+}
     // Initialize Lucide icons and other UI components
     document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
