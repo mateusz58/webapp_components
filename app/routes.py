@@ -89,6 +89,7 @@ def save_uploaded_file(file, folder='uploads'):
 def index():
     """
     Main components listing with advanced pagination and filtering
+    UPDATED: Filter suppliers to only show those with components
     """
     try:
         # Get pagination parameters
@@ -256,14 +257,21 @@ def index():
             for component in component_items:
                 component._cached_brands = component_brands.get(component.id, [])
 
-        # Get filter options
-        component_types = ComponentType.query.order_by(ComponentType.name).all()
-        categories = Category.query.order_by(Category.name).all()
-        suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-        brands = Brand.query.order_by(Brand.name).all()
+        # UPDATED: Get filter options - only show options that have components
+        # Only get component types that have at least one component
+        component_types_with_components = db.session.query(ComponentType).join(Component).distinct().order_by(ComponentType.name).all()
+
+        # FIXED: Only get suppliers that have at least one component
+        suppliers_with_components = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
+
+        # UPDATED: Only get categories that have at least one component (optional)
+        categories_with_components = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
+
+        # UPDATED: Only get brands that have at least one component
+        brands_with_components = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
 
         # Get statistics
-        brands_count = Brand.query.count()
+        brands_count = len(brands_with_components)
 
         # Pagination info for template
         pagination_info = {
@@ -279,10 +287,10 @@ def index():
         return render_template(
             'index.html',
             components=components_pagination,
-            component_types=component_types,
-            categories=categories,
-            suppliers=suppliers,
-            brands=brands,
+            component_types=component_types_with_components,  # UPDATED: Only component types with components
+            categories=categories_with_components,           # UPDATED: Only categories with components
+            suppliers=suppliers_with_components,             # UPDATED: Only suppliers with components
+            brands=brands_with_components,                   # UPDATED: Only brands with components
             brands_count=brands_count,
             search=search,
             pagination_info=pagination_info,
@@ -494,11 +502,24 @@ def edit_component(id):
 
     # GET request - show form with existing data
     component_types = ComponentType.query.order_by(ComponentType.name).all()
+
+    # UPDATED: Get only data that is actually used in components
+    # For edit form, we might want to show all options (including unused ones)
+    # so users can select new suppliers/categories/brands
+    # But we can also use filtered data if preferred
+
+    # Option 1: Show all options (recommended for edit forms)
     categories = Category.query.order_by(Category.name).all()
     suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
+    brands = Brand.query.order_by(Brand.name).all()
+
+    # Option 2: Show only options with existing components (uncomment if preferred)
+    # categories = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
+    # suppliers = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
+    # brands = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
+
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
-    brands = Brand.query.order_by(Brand.name).all()
 
     # FIXED: Prepare serializable data for template
     try:
