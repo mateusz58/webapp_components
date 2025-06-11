@@ -1,19 +1,27 @@
 #!/bin/bash
+# docker/app/init.sh (Updated - removed database wait logic)
 set -e
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL to start..."
-while ! nc -z 192.168.100.35 5432; do
-  sleep 0.5
-done
-echo "PostgreSQL is accessible"
-
-# Set Flask configuration
-export FLASK_APP=run.py
-
-# Do not run migrations automatically to avoid permission issues
-# Instead, we'll need to run them manually as a superuser
+# Test database connection (optional - will fail gracefully if DB is not ready)
+echo "Testing database connection..."
+python3 -c "
+try:
+    from app import create_app, db
+    from sqlalchemy import text
+    app = create_app()
+    with app.app_context():
+        result = db.session.execute(text('SELECT 1'))
+        print('✅ Database connection successful')
+except Exception as e:
+    print(f'⚠️  Database connection failed: {e}')
+    print('Application will start anyway - check your DATABASE_URL')
+" || echo "Database connection test failed, but continuing..."
 
 # Start the application
-echo "Starting Flask application..."
-exec "$@"
+if [ "$FLASK_ENV" = "development" ]; then
+    echo "Starting Flask development server..."
+    exec python run.py
+else
+    echo "Starting Gunicorn production server..."
+    exec gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 --access-logfile - --error-logfile - run:app
+fi

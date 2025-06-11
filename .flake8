@@ -1,0 +1,21 @@
+# .flake8
+# Python linting configuration
+[flake8]
+max-line-length = 88
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .tox,
+    dist,
+    docs,
+    build,
+    migrations
+ignore =
+    E203,  # whitespace before ':'
+    E501,  # line too long (handled by black)
+    W503,  # line break before binary operator
+per-file-ignores =
+    tests/*:F401,F811
+max-complexity = 10

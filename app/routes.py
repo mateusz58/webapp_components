@@ -1,1825 +1,1224 @@
-import os
-import json
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, send_file, abort
-from werkzeug.utils import secure_filename
-from werkzeug.exceptions import RequestEntityTooLarge
+# app/routes.py - Fixed with proper pagination handling
+import time
+from datetime import datetime
+
+import time
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app, flash
+from sqlalchemy import text
+
 from app import db
-from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, \
-    ComponentVariant, Brand, ComponentBrand
-from app.utils import process_csv_file
-from sqlalchemy import or_, text, func
-from datetime import datetime, timedelta
-import uuid
-import io
-import csv
-from PIL import Image
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import and_, or_, desc, asc, text
-from sqlalchemy.orm import joinedload
-import math
-from datetime import datetime, timedelta
+from app.models import ProductData, enhanced_cache
+from app.utils import export_to_csv, calculate_percentages, get_metafield_completeness, calculate_comprehensive_quality_score, format_metafield_name
+import json
+from threading import Thread
+import asyncio
+
+import hashlib
+from threading import Thread
+from datetime import datetime
+
+import time
+import json
+import hashlib
+from threading import Thread
+from datetime import datetime
+
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app, flash
+from app.models import ProductData, enhanced_cache
+from app.utils import (
+    export_to_csv,
+    calculate_percentages,
+    get_metafield_completeness,
+    calculate_comprehensive_quality_score,
+    format_metafield_name
+)
 
 
 main = Blueprint('main', __name__)
 
-# Configuration for improved file handling
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-THUMBNAIL_SIZE = (300, 300)
-
-DEFAULT_PER_PAGE = 20
-MAX_PER_PAGE = 200  # Safety limit to prevent too many elements
-SHOW_ALL_LIMIT = 1000  # Maximum allowed for "show all"
-
-def allowed_file(filename):
-    """Check if the uploaded file has an allowed extension."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def optimize_image(image_file, max_size=(1920, 1920), quality=85):
-    """Optimize image for web display"""
-    try:
-        image = Image.open(image_file)
-
-        # Convert RGBA to RGB if necessary
-        if image.mode in ('RGBA', 'LA'):
-            background = Image.new('RGB', image.size, (255, 255, 255))
-            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-            image = background
-
-        # Resize if larger than max_size
-        image.thumbnail(max_size, Image.Resampling.LANCZOS)
-
-        # Save optimized image
-        output = io.BytesIO()
-        image.save(output, format='JPEG', quality=quality, optimize=True)
-        output.seek(0)
-
-        return output
-    except Exception as e:
-        current_app.logger.error(f"Image optimization error: {str(e)}")
-        return image_file
-
-def save_uploaded_file(file, folder='uploads'):
-    """Save uploaded file (simplified version without PIL optimization)"""
-    if file and allowed_file(file.filename):
-        try:
-            # Generate unique filename
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4().hex}_{filename}"
-
-            # Create upload directory if it doesn't exist
-            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
-            os.makedirs(upload_path, exist_ok=True)
-
-            # Save file directly
-            file_path = os.path.join(upload_path, unique_filename)
-            file.save(file_path)
-
-            # Return relative URL for web access
-            return f"/static/uploads/{unique_filename}"
-
-        except Exception as e:
-            current_app.logger.error(f"File upload error: {str(e)}")
-            flash(f'Error uploading file: {str(e)}', 'error')
-            return None
-    return None
-
 @main.route('/')
-@main.route('/components')
 def index():
     """
-    Main components listing with advanced pagination and filtering
-    UPDATED: Filter suppliers to only show those with components
+    Main dashboard page with shop statistics and caching.
     """
     try:
-        # Get pagination parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', DEFAULT_PER_PAGE, type=int)
-        show_all = request.args.get('show_all', False, type=bool)
+        # Get basic shop list (fast query)
+        shops = ProductData.get_all_shops()
 
-        # Safety checks for per_page
-        if per_page > MAX_PER_PAGE:
-            per_page = MAX_PER_PAGE
-            flash(f'Maximum {MAX_PER_PAGE} items per page allowed. Showing {MAX_PER_PAGE} items.', 'warning')
-        elif per_page < 1:
-            per_page = DEFAULT_PER_PAGE
+        # Get detailed shop statistics (cached)
+        shop_stats = ProductData.get_shop_statistics()
 
-        # Get filter parameters
-        search = request.args.get('search', '', type=str).strip()
-        component_type_id = request.args.get('component_type_id', type=int)
-        category_id = request.args.get('category_id', type=int)
-        supplier_id = request.args.get('supplier_id', type=int)
-        brand_id = request.args.get('brand_id', type=int)
-        status = request.args.get('status', type=str)
-        recent = request.args.get('recent', type=int)
-        
-        # Sort parameters
-        sort_by = request.args.get('sort_by', 'created_at', type=str)
-        sort_order = request.args.get('sort_order', 'desc', type=str)
+        # Get overall health summary (cached)
+        health_summary = ProductData.get_shop_health_summary()
 
-        # Build base query with optimized loading
-        query = Component.query.options(
-            joinedload(Component.component_type),
-            joinedload(Component.supplier),
-            joinedload(Component.category),
-            joinedload(Component.pictures),
-            joinedload(Component.keywords)
-        )
-        
-        # Apply filters
-        filters = []
+        # Merge shop data with statistics
+        enhanced_shops = []
+        for shop in shops:
+            shop_data = shop.copy()
 
-        # Search filter
-        if search:
-            search_filter = or_(
-                Component.product_number.ilike(f'%{search}%'),
-                Component.description.ilike(f'%{search}%'),
-                Component.supplier.has(Supplier.supplier_code.ilike(f'%{search}%')),
-                Component.category.has(Category.name.ilike(f'%{search}%')),
-                Component.component_type.has(ComponentType.name.ilike(f'%{search}%'))
-            )
-            filters.append(search_filter)
-        
-        # Component type filter
-        if component_type_id:
-            filters.append(Component.component_type_id == component_type_id)
-
-        # Category filter
-        if category_id:
-            filters.append(Component.category_id == category_id)
-
-        # Supplier filter
-        if supplier_id:
-            filters.append(Component.supplier_id == supplier_id)
-
-        # Brand filter
-        if brand_id:
-            # Filter components that have the specified brand
-            brand_components_subquery = db.session.query(ComponentBrand.component_id).filter(
-                ComponentBrand.brand_id == brand_id
-            ).subquery()
-            filters.append(Component.id.in_(brand_components_subquery))
-
-        # Status filter
-        if status:
-            if status == 'approved':
-                filters.append(and_(
-                    Component.proto_status == 'ok',
-                    Component.sms_status == 'ok',
-                    Component.pps_status == 'ok'
-                ))
-            elif status == 'pending':
-                filters.append(or_(
-                    Component.proto_status == 'pending',
-                    Component.sms_status == 'pending',
-                    Component.pps_status == 'pending'
-                ))
-            elif status == 'rejected':
-                filters.append(or_(
-                    Component.proto_status == 'not_ok',
-                    Component.sms_status == 'not_ok',
-                    Component.pps_status == 'not_ok'
-                ))
-        
-        # Recent filter (days)
-        if recent:
-            recent_date = datetime.utcnow() - timedelta(days=recent)
-            filters.append(Component.created_at >= recent_date)
-
-        # Apply all filters
-        if filters:
-            query = query.filter(and_(*filters))
-        
-        # Apply sorting
-        sort_column = getattr(Component, sort_by, None)
-        if sort_column:
-            if sort_order == 'desc':
-                query = query.order_by(desc(sort_column))
+            # Add statistics if available
+            if shop['id'] in shop_stats:
+                stats = shop_stats[shop['id']]
+                shop_data.update({
+                    'product_count': stats['product_count'],
+                    'variant_count': stats['variant_count'],
+                    'active_variants': stats['active_variants'],
+                    'zero_inventory': stats['zero_inventory'],
+                    'missing_sku': stats['missing_sku'],
+                    'health_score': stats['health_score']
+                })
             else:
-                query = query.order_by(asc(sort_column))
-        else:
-            # Default sort
-            query = query.order_by(desc(Component.created_at))
+                # Default values if no stats available
+                shop_data.update({
+                    'product_count': 0,
+                    'variant_count': 0,
+                    'active_variants': 0,
+                    'zero_inventory': 0,
+                    'missing_sku': 0,
+                    'health_score': 0
+                })
 
-        # Handle "show all" with safety limit
-        if show_all:
-            total_count = query.count()
-            if total_count > SHOW_ALL_LIMIT:
-                flash(f'Too many results ({total_count}). Showing first {SHOW_ALL_LIMIT} items. Please use filters to narrow down results.', 'warning')
-                # Use regular pagination with the limit as per_page
-                components_pagination = query.paginate(
-                    page=1,
-                    per_page=SHOW_ALL_LIMIT,
-                    error_out=False,
-                    max_per_page=SHOW_ALL_LIMIT
-                )
-            else:
-                # Use regular pagination with total count as per_page
-                components_pagination = query.paginate(
-                    page=1,
-                    per_page=total_count,
-                    error_out=False,
-                    max_per_page=SHOW_ALL_LIMIT
-                )
-        else:
-            # Regular pagination
-            components_pagination = query.paginate(
-                page=page,
-                per_page=per_page,
-                error_out=False,
-                max_per_page=MAX_PER_PAGE
-            )
-            components = components_pagination
+            enhanced_shops.append(shop_data)
 
-        # Load brands for each component (optimized)
-        component_items = components_pagination.items
-
-        # Batch load brands for all components (using ComponentBrand association)
-        component_ids = [c.id for c in component_items]
-        if component_ids:
-            # Query the ComponentBrand association table to get brands for components
-            brands_query = db.session.query(
-                ComponentBrand.component_id,
-                Brand.id,
-                Brand.name
-            ).join(Brand, ComponentBrand.brand_id == Brand.id).filter(
-                ComponentBrand.component_id.in_(component_ids)
-            ).all()
-
-            # Group brands by component
-            component_brands = {}
-            for comp_id, brand_id, brand_name in brands_query:
-                if comp_id not in component_brands:
-                    component_brands[comp_id] = []
-                component_brands[comp_id].append({'id': brand_id, 'name': brand_name})
-
-            # Attach brands to components
-            for component in component_items:
-                component._cached_brands = component_brands.get(component.id, [])
-
-        # UPDATED: Get filter options - only show options that have components
-        # Only get component types that have at least one component
-        component_types_with_components = db.session.query(ComponentType).join(Component).distinct().order_by(ComponentType.name).all()
-
-        # FIXED: Only get suppliers that have at least one component
-        suppliers_with_components = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
-
-        # UPDATED: Only get categories that have at least one component (optional)
-        categories_with_components = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
-
-        # UPDATED: Only get brands that have at least one component
-        brands_with_components = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
-
-        # Get statistics
-        brands_count = len(brands_with_components)
-
-        # Pagination info for template
-        pagination_info = {
-            'page': components_pagination.page if hasattr(components_pagination, 'page') else 1,
-            'per_page': per_page,
-            'total': components_pagination.total if hasattr(components_pagination, 'total') else len(component_items),
-            'pages': components_pagination.pages if hasattr(components_pagination, 'pages') else 1,
-            'has_prev': components_pagination.has_prev if hasattr(components_pagination, 'has_prev') else False,
-            'has_next': components_pagination.has_next if hasattr(components_pagination, 'has_next') else False,
-            'show_all': show_all
-        }
-
-        return render_template(
-            'index.html',
-            components=components_pagination,
-            component_types=component_types_with_components,  # UPDATED: Only component types with components
-            categories=categories_with_components,           # UPDATED: Only categories with components
-            suppliers=suppliers_with_components,             # UPDATED: Only suppliers with components
-            brands=brands_with_components,                   # UPDATED: Only brands with components
-            brands_count=brands_count,
-            search=search,
-            pagination_info=pagination_info,
-            current_filters={
-                'component_type_id': component_type_id,
-                'category_id': category_id,
-                'supplier_id': supplier_id,
-                'brand_id': brand_id,
-                'status': status,
-                'recent': recent,
-                'sort_by': sort_by,
-                'sort_order': sort_order
-            }
-        )
+        return render_template('index.html',
+                               shops=enhanced_shops,
+                               health_summary=health_summary)
 
     except Exception as e:
-        flash(f'An error occurred while loading components: {str(e)}', 'error')
-        return render_template('index.html', components=None)
-
-
-
-@main.route('/component/<int:id>')
-def component_detail(id):
-    """Component detail view - MATCHES YOUR component_detail.html"""
-    try:
-        component = Component.query.options(
-            db.joinedload(Component.component_type),
-            db.joinedload(Component.supplier),
-            db.joinedload(Component.category),
-            db.joinedload(Component.keywords),
-            db.joinedload(Component.pictures),
-            db.joinedload(Component.variants).joinedload(ComponentVariant.color),
-            db.joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures)
-        ).get_or_404(id)
-
-        # USES YOUR EXACT TEMPLATE: component_detail.html
-        return render_template('component_detail.html', component=component)
-        
-    except Exception as e:
-        current_app.logger.error(f"Error loading component {id}: {str(e)}")
-        flash(f'Error loading component: {str(e)}', 'danger')
-        return redirect(url_for('main.index'))
-
-@main.route('/component/new', methods=['GET', 'POST'])
-def new_component():
-    """Create new component - UPDATED with brand handling"""
-    if request.method == 'POST':
-        try:
-            # Get form data
-            product_number = request.form.get('product_number', '').strip()
-            description = request.form.get('description', '').strip()
-            component_type_id = request.form.get('component_type_id')
-            supplier_id = request.form.get('supplier_id')
-            category_id = request.form.get('category_id')
-
-            # Validate required fields
-            if not all([product_number, component_type_id, supplier_id, category_id]):
-                flash('Please fill in all required fields.', 'danger')
-                return redirect(request.url)
-
-            # Check if product_number already exists for this supplier
-            existing = Component.query.filter_by(
-                product_number=product_number,
-                supplier_id=supplier_id
-            ).first()
-            if existing:
-                flash('Product number already exists for this supplier.', 'danger')
-                return redirect(request.url)
-
-            # Create new component
-            component = Component(
-                product_number=product_number,
-                description=description,
-                component_type_id=int(component_type_id),
-                supplier_id=int(supplier_id),
-                category_id=int(category_id)
-            )
-
-            db.session.add(component)
-            db.session.flush()  # Get the ID
-
-            # Process keywords
-            keywords = request.form.get('keywords', '').strip()
-            if keywords:
-                keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
-                for keyword_name in keyword_list:
-                    keyword = Keyword.query.filter_by(name=keyword_name).first()
-                    if not keyword:
-                        keyword = Keyword(name=keyword_name)
-                        db.session.add(keyword)
-
-                    if keyword not in component.keywords:
-                        component.keywords.append(keyword)
-
-            # NEW: Process brand associations
-            selected_brands = request.form.getlist('brands')  # Get list of selected brand IDs
-            if selected_brands:
-                for brand_id in selected_brands:
-                    if brand_id:  # Check for empty values
-                        brand = Brand.query.get(int(brand_id))
-                        if brand:
-                            component.add_brand(brand)
-
-            # Process flexible properties based on component type
-            component_type = ComponentType.query.get(component_type_id)
-            if component_type:
-                _process_component_properties(component, component_type.name, request.form)
-
-            # Process image uploads
-            _process_image_uploads(component, request)
-
-            db.session.commit()
-            flash('Component created successfully!', 'success')
-            return redirect(url_for('main.component_detail', id=component.id))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error creating component: {str(e)}")
-            flash(f'Error creating component: {str(e)}', 'danger')
-            return redirect(request.url)
-
-    # GET request
-    component_types = ComponentType.query.order_by(ComponentType.name).all()
-    categories = Category.query.order_by(Category.name).all()
-    suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-    colors = Color.query.order_by(Color.name).all()
-    materials = Material.query.order_by(Material.name).all()
-    brands = Brand.query.order_by(Brand.name).all()  # NEW: Add brands
-
-    return render_template('component_form.html',
-                          component=None,
-                          component_types=component_types,
-                          categories=categories,
-                          suppliers=suppliers,
-                          colors=colors,
-                          materials=materials,
-                          brands=brands)  # NEW: Pass brands to template
-
-@main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
-def edit_component(id):
-    """Edit component - FIXED with proper brand handling and JSON serialization"""
-
-    # FIXED: Load brand_associations relationship instead of brands property
-    component = Component.query.options(
-        db.joinedload(Component.keywords),
-        db.joinedload(Component.pictures),
-        db.joinedload(Component.brand_associations).joinedload(ComponentBrand.brand)
-    ).get_or_404(id)
-
-    if request.method == 'POST':
-        try:
-            # Update basic information
-            component.product_number = request.form.get('product_number', '').strip()
-            component.description = request.form.get('description', '').strip()
-            component.component_type_id = int(request.form.get('component_type_id'))
-            component.supplier_id = int(request.form.get('supplier_id'))
-            component.category_id = int(request.form.get('category_id'))
-            component.updated_at = datetime.utcnow()
-
-            # Update keywords
-            component.keywords.clear()
-            keywords = request.form.get('keywords', '').strip()
-            if keywords:
-                keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
-                for keyword_name in keyword_list:
-                    keyword = Keyword.query.filter_by(name=keyword_name).first()
-                    if not keyword:
-                        keyword = Keyword(name=keyword_name)
-                        db.session.add(keyword)
-                    component.keywords.append(keyword)
-
-            # FIXED: Update brand associations properly
-            # Clear existing brand associations
-            for association in component.brand_associations[:]:  # Use slice to avoid modification during iteration
-                db.session.delete(association)
-
-            # Add new brand associations
-            selected_brands = request.form.getlist('brands')
-            if selected_brands:
-                for brand_id in selected_brands:
-                    if brand_id:  # Check for empty values
-                        brand = Brand.query.get(int(brand_id))
-                        if brand:
-                            # Create new ComponentBrand association
-                            association = ComponentBrand(
-                                component_id=component.id,
-                                brand_id=brand.id
-                            )
-                            db.session.add(association)
-
-            # Update properties
-            component_type = ComponentType.query.get(component.component_type_id)
-            if component_type:
-                component.properties = {}  # Clear existing properties
-                _process_component_properties(component, component_type.name, request.form)
-
-            # Update images with improved handling
-            _update_component_images(component, request)
-
-            db.session.commit()
-            flash('Component updated successfully!', 'success')
-            return redirect(url_for('main.component_detail', id=component.id))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error updating component {id}: {str(e)}")
-            flash(f'Error updating component: {str(e)}', 'danger')
-            return redirect(request.url)
-
-    # GET request - show form with existing data
-    component_types = ComponentType.query.order_by(ComponentType.name).all()
-
-    # UPDATED: Get only data that is actually used in components
-    # For edit form, we might want to show all options (including unused ones)
-    # so users can select new suppliers/categories/brands
-    # But we can also use filtered data if preferred
-
-    # Option 1: Show all options (recommended for edit forms)
-    categories = Category.query.order_by(Category.name).all()
-    suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-    brands = Brand.query.order_by(Brand.name).all()
-
-    # Option 2: Show only options with existing components (uncomment if preferred)
-    # categories = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
-    # suppliers = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
-    # brands = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
-
-    colors = Color.query.order_by(Color.name).all()
-    materials = Material.query.order_by(Material.name).all()
-
-    # FIXED: Prepare serializable data for template
-    try:
-        # Convert brands to serializable format
-        component_cached_brands = [{'id': brand.id, 'name': brand.name} for brand in component.brands]
-        available_brands = [{'id': brand.id, 'name': brand.name} for brand in brands]
-
-        # Set as attributes for template access
-        component._cached_brands = component_cached_brands
-
-    except Exception as e:
-        # Fallback if brands property fails
-        current_app.logger.warning(f"Could not load brands for component {component.id}: {e}")
-        component._cached_brands = []
-        available_brands = [{'id': brand.id, 'name': brand.name} for brand in brands]
-
-    return render_template('component_edit_form.html',
-                          component=component,
-                          component_types=component_types,
-                          categories=categories,
-                          suppliers=suppliers,
-                          colors=colors,
-                          materials=materials,
-                          brands=brands,
-                          available_brands_json=available_brands,  # FIXED: Pass serializable data
-                          component_brands_json=component_cached_brands)  # FIXED: Pass serializable data
-
-
-@main.route('/component/delete/<int:id>', methods=['POST'])
-def delete_component(id):
-    """Delete a component with cascade - improved error handling."""
-    try:
-        component = Component.query.get_or_404(id)
-
-        # Delete associated files
-        for picture in component.pictures:
-            try:
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except Exception as e:
-                current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
-
-        # Delete variant files
-        for variant in component.variants:
-            for picture in variant.variant_pictures:
-                try:
-                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                except Exception as e:
-                    current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
-
-        # Delete associated pictures and variants (handled by cascade)
-        db.session.delete(component)
-        db.session.commit()
-
-        flash('Component deleted successfully!', 'success')
-        return redirect(url_for('main.index'))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting component {id}: {str(e)}")
-        flash(f'Error deleting component: {str(e)}', 'danger')
-        return redirect(url_for('main.component_detail', id=id))
-
-# Status Management Routes - Enhanced for new frontend
-@main.route('/component/<int:id>/status/proto', methods=['POST'])
-def update_proto_status(id):
-    """Update proto status for a component."""
-    try:
-        component = Component.query.get_or_404(id)
-        status = request.form.get('status')
-        comment = request.form.get('comment', '').strip()
-
-        if status not in ['pending', 'ok', 'not_ok']:
-            flash('Invalid status value', 'danger')
-            return redirect(url_for('main.component_detail', id=id))
-
-        component.proto_status = status
-        component.proto_comment = comment if comment else None
-        component.proto_date = datetime.utcnow()
-        component.updated_at = datetime.utcnow()
-
-        db.session.commit()
-        flash(f'Proto status updated to {status}', 'success')
-        return redirect(url_for('main.component_detail', id=id))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating proto status: {str(e)}")
-        flash(f'Error updating status: {str(e)}', 'danger')
-        return redirect(url_for('main.component_detail', id=id))
-
-@main.route('/component/<int:id>/status/sms', methods=['POST'])
-def update_sms_status(id):
-    """Update SMS status for a component."""
-    try:
-        component = Component.query.get_or_404(id)
-        status = request.form.get('status')
-        comment = request.form.get('comment', '').strip()
-
-        if status not in ['pending', 'ok', 'not_ok']:
-            flash('Invalid status value', 'danger')
-            return redirect(url_for('main.component_detail', id=id))
-
-        component.sms_status = status
-        component.sms_comment = comment if comment else None
-        component.sms_date = datetime.utcnow()
-        component.updated_at = datetime.utcnow()
-
-        db.session.commit()
-        flash(f'SMS status updated to {status}', 'success')
-        return redirect(url_for('main.component_detail', id=id))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating SMS status: {str(e)}")
-        flash(f'Error updating status: {str(e)}', 'danger')
-        return redirect(url_for('main.component_detail', id=id))
-
-@main.route('/component/<int:id>/status/pps', methods=['POST'])
-def update_pps_status(id):
-    """Update PPS status for a component."""
-    try:
-        component = Component.query.get_or_404(id)
-        status = request.form.get('status')
-        comment = request.form.get('comment', '').strip()
-
-        if status not in ['pending', 'ok', 'not_ok']:
-            flash('Invalid status value', 'danger')
-            return redirect(url_for('main.component_detail', id=id))
-
-        component.pps_status = status
-        component.pps_comment = comment if comment else None
-        component.pps_date = datetime.utcnow()
-        component.updated_at = datetime.utcnow()
-
-        db.session.commit()
-        flash(f'PPS status updated to {status}', 'success')
-        return redirect(url_for('main.component_detail', id=id))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating PPS status: {str(e)}")
-        flash(f'Error updating status: {str(e)}', 'danger')
-        return redirect(url_for('main.component_detail', id=id))
-
-# Variant Management Routes
-@main.route('/component/<int:id>/variant/new', methods=['GET', 'POST'])
-def new_variant(id):
-    """Create a new variant for a component - MATCHES YOUR variant_form.html"""
-    component = Component.query.get_or_404(id)
-
-    if request.method == 'POST':
-        try:
-            color_id = request.form.get('color_id')
-            variant_name = request.form.get('variant_name', '').strip()
-            description = request.form.get('description', '').strip()
-
-            if not color_id:
-                flash('Please select a color for the variant.', 'danger')
-                return redirect(request.url)
-
-            # Check if variant with this color already exists
-            existing_variant = ComponentVariant.query.filter_by(
-                component_id=component.id,
-                color_id=color_id
-            ).first()
-            if existing_variant:
-                color = Color.query.get(color_id)
-                flash(f'Variant with color {color.name} already exists', 'danger')
-                return redirect(request.url)
-
-            # Create new variant
-            variant = ComponentVariant(
-                component_id=component.id,
-                color_id=int(color_id),
-                variant_name=variant_name if variant_name else None,
-                description=description if description else None,
-                is_active=True
-            )
-
-            db.session.add(variant)
-            db.session.flush()
-
-            # Process variant images
-            _process_variant_images(variant, request)
-
-            db.session.commit()
-
-            flash('Variant created successfully!', 'success')
-            return redirect(url_for('main.component_detail', id=id))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error creating variant: {str(e)}")
-            flash(f'Error creating variant: {str(e)}', 'danger')
-            return redirect(request.url)
-
-    # GET request - Get available colors (exclude already used ones)
-    used_color_ids = [v.color_id for v in component.variants]
-    available_colors = Color.query.filter(
-        ~Color.id.in_(used_color_ids)
-    ).order_by(Color.name).all()
-
-    # USES YOUR EXACT TEMPLATE: variant_form.html
-    return render_template('variant_form.html',
-                          component=component,
-                          variant=None,
-                          colors=available_colors)
-
-@main.route('/component/<int:component_id>/variant/<int:variant_id>/edit', methods=['GET', 'POST'])
-def edit_variant(component_id, variant_id):
-    """Edit an existing variant - MATCHES YOUR variant_form.html"""
-    component = Component.query.get_or_404(component_id)
-    variant = ComponentVariant.query.filter_by(
-        id=variant_id,
-        component_id=component_id
-    ).first_or_404()
-
-    if request.method == 'POST':
-        try:
-            variant_name = request.form.get('variant_name', '').strip()
-            description = request.form.get('description', '').strip()
-            is_active = 'is_active' in request.form
-
-            # Update variant details
-            variant.variant_name = variant_name if variant_name else None
-            variant.description = description if description else None
-            variant.is_active = is_active
-            variant.updated_at = datetime.utcnow()
-
-            # Update variant images
-            _update_variant_images(variant, request)
-
-            db.session.commit()
-
-            flash('Variant updated successfully!', 'success')
-            return redirect(url_for('main.component_detail', id=component_id))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error updating variant: {str(e)}")
-            flash(f'Error updating variant: {str(e)}', 'danger')
-            return redirect(request.url)
-
-    # GET request - USES YOUR EXACT TEMPLATE: variant_form.html
-    return render_template('variant_form.html',
-                           component=component,
-                           variant=variant,
-                           colors=[])  # No color selection when editing
-
-@main.route('/component/<int:component_id>/variant/<int:variant_id>/delete', methods=['POST'])
-def delete_variant(component_id, variant_id):
-    """Delete a variant."""
-    try:
-        component = Component.query.get_or_404(component_id)
-        variant = ComponentVariant.query.filter_by(
-            id=variant_id,
-            component_id=component_id
-        ).first_or_404()
-
-        # Delete variant image files
-        for picture in variant.variant_pictures:
-            try:
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except Exception as e:
-                current_app.logger.warning(f"Could not delete file {picture.url}: {str(e)}")
-
-        # Delete variant (pictures will be cascade deleted)
-        db.session.delete(variant)
-        db.session.commit()
-
-        flash('Color variant deleted successfully!', 'success')
-        return redirect(url_for('main.component_detail', id=component_id))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting variant: {str(e)}")
-        flash(f'Error deleting variant: {str(e)}', 'danger')
-        return redirect(url_for('main.component_detail', id=component_id))
-
-@main.route('/upload', methods=['GET', 'POST'])
-def upload_csv():
-    """Enhanced CSV upload with progress tracking."""
-    if request.method == 'POST':
-        try:
-            # Check if a file was uploaded
-            if 'file' not in request.files:
-                return jsonify({'success': False, 'error': 'No file uploaded'}), 400
-
-            file = request.files['file']
-
-            # Check if a file was selected
-            if file.filename == '':
-                return jsonify({'success': False, 'error': 'No file selected'}), 400
-
-            # Check if the file has an allowed extension
-            if file and file.filename.lower().endswith('.csv'):
-                filename = secure_filename(file.filename)
-                temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], f"temp_{uuid.uuid4().hex}_{filename}")
-                file.save(temp_path)
-
-                # Process the CSV file
-                results = process_csv_file(temp_path)
-
-                # Delete the temporary file
-                os.remove(temp_path)
-
-                # Return results as JSON for AJAX requests
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({
-                        'success': True,
-                        'results': results
-                    })
-
-                # Handle traditional form submission
-                if results['errors']:
-                    for error in results['errors']:
-                        flash(error, 'danger')
-                else:
-                    flash(f"CSV processed successfully! Created: {results['created']}, Updated: {results['updated']}", 'success')
-
-                return redirect(url_for('main.index'))
-            else:
-                error_msg = 'File type not allowed. Please upload a CSV file.'
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({'success': False, 'error': error_msg}), 400
-                flash(error_msg, 'danger')
-                return redirect(request.url)
-
-        except Exception as e:
-            current_app.logger.error(f"Error processing CSV: {str(e)}")
-            error_msg = f'Error processing file: {str(e)}'
-            if request.headers.get('Content-Type') == 'application/json':
-                return jsonify({'success': False, 'error': error_msg}), 500
-            flash(error_msg, 'danger')
-            return redirect(request.url)
-
-    # GET request - show upload form
-    return render_template('upload.html')
-
-# @main.route('/download/csv-template')
-# def download_csv_template():
-#     """Generate and download CSV template without picture_order fields."""
-#     try:
-#         # Create CSV template (removed picture_order fields)
-#         template_data = [
-#             [
-#                 'product_number', 'description', 'component_type', 'supplier_code',
-#                 'category_name', 'keywords', 'material', 'color', 'gender', 'style',
-#                 'brand', 'subbrand', 'size', 'finish', 'weight',
-#                 'picture_1_name', 'picture_1_url',
-#                 'picture_2_name', 'picture_2_url',
-#                 'picture_3_name', 'picture_3_url',
-#                 'picture_4_name', 'picture_4_url',
-#                 'picture_5_name', 'picture_5_url'
-#             ],
-#             [
-#                 'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',
-#                 'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',
-#                 'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'waterproof', '120gsm',
-#                 'fabric_front.jpg', 'http://example.com/fabric_front.jpg',
-#                 'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',
-#                 '', '', '', '', '', ''
-#             ]
-#         ]
-#
-#         # Create CSV in memory
-#         output = io.StringIO()
-#         writer = csv.writer(output, delimiter=';')
-#         for row in template_data:
-#             writer.writerow(row)
-#
-#         # Create file-like object
-#         csv_data = output.getvalue()
-#         output.close()
-#
-#         # Return as downloadable file
-#         return current_app.response_class(
-#             csv_data,
-#             mimetype='text/csv',
-#             headers={
-#                 'Content-Disposition': 'attachment; filename=component_template.csv'
-#             }
-#         )
-#
-#     except Exception as e:
-#         current_app.logger.error(f"Error generating CSV template: {str(e)}")
-#         flash('Error generating template', 'danger')
-#         return redirect(url_for('main.upload_csv'))
-
-# API Routes for AJAX functionality - Enhanced for new frontend
-@main.route('/api/components/search')
-def api_search_components():
-    """API endpoint for component search with autocomplete."""
-    try:
-        query = request.args.get('q', '').strip()
-        limit = min(int(request.args.get('limit', 10)), 50)
-
-        if len(query) < 2:
-            return jsonify([])
-
-        components = Component.query.filter(
-            or_(
-                Component.product_number.ilike(f'%{query}%'),
-                Component.description.ilike(f'%{query}%')
-            )
-        ).limit(limit).all()
-
-        results = [{
-            'id': c.id,
-            'product_number': c.product_number,
-            'description': c.description,
-            'supplier': c.supplier.supplier_code,
-            'type': c.component_type.name
-        } for c in components]
-
-        return jsonify(results)
-
-    except Exception as e:
-        current_app.logger.error(f"Error in component search: {str(e)}")
-        return jsonify({'error': 'Search failed'}), 500
-
-@main.route('/api/components/<int:component_id>/duplicate', methods=['POST'])
-def api_duplicate_component(component_id):
-    """API endpoint to duplicate a component - enhanced for new frontend."""
-    try:
-        original = Component.query.get_or_404(component_id)
-
-        # Create new component with modified product number
-        base_number = original.product_number
-        new_product_number = f"{base_number}_COPY"
-        counter = 1
-        while Component.query.filter_by(product_number=new_product_number).first():
-            new_product_number = f"{base_number}_COPY_{counter}"
-            counter += 1
-
-        new_component = Component(
-            product_number=new_product_number,
-            description=f"Copy of {original.description}" if original.description else None,
-            component_type_id=original.component_type_id,
-            supplier_id=original.supplier_id,
-            category_id=original.category_id,
-            properties=original.properties.copy() if original.properties else {}
-        )
-
-        db.session.add(new_component)
-        db.session.flush()
-
-        # Copy keywords
-        for keyword in original.keywords:
-            new_component.keywords.append(keyword)
-
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'new_id': new_component.id,
-            'new_product_number': new_product_number
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error duplicating component: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@main.route('/api/components/<int:component_id>/export')
-def api_export_component(component_id):
-    """API endpoint to export component data - enhanced for new frontend."""
-    try:
-        component = Component.query.options(
-            db.joinedload(Component.component_type),
-            db.joinedload(Component.supplier),
-            db.joinedload(Component.category),
-            db.joinedload(Component.keywords),
-            db.joinedload(Component.pictures),
-            db.joinedload(Component.variants)
-        ).get_or_404(component_id)
-
-        export_data = {
-            'product_number': component.product_number,
-            'description': component.description,
-            'component_type': component.component_type.name,
-            'supplier_code': component.supplier.supplier_code,
-            'category_name': component.category.name,
-            'keywords': [k.name for k in component.keywords],
-            'properties': component.properties,
-            'pictures': [{
-                'name': p.picture_name,
-                'url': p.url,
-                'order': p.picture_order
-            } for p in component.pictures],
-            'variants': [{
-                'variant_name': v.variant_name,
-                'color_name': v.color.name if v.color else None,
-                'description': v.description,
-                'is_active': v.is_active,
-                'pictures': [{
-                    'name': vp.picture_name,
-                    'url': vp.url,
-                    'order': vp.picture_order
-                } for vp in v.variant_pictures]
-            } for v in component.variants],
-            'status': {
-                'proto': {
-                    'status': component.proto_status,
-                    'comment': component.proto_comment,
-                    'date': component.proto_date.isoformat() if component.proto_date else None
-                },
-                'sms': {
-                    'status': component.sms_status,
-                    'comment': component.sms_comment,
-                    'date': component.sms_date.isoformat() if component.sms_date else None
-                },
-                'pps': {
-                    'status': component.pps_status,
-                    'comment': component.pps_comment,
-                    'date': component.pps_date.isoformat() if component.pps_date else None
-                }
-            },
-            'created_at': component.created_at.isoformat() if component.created_at else None,
-            'updated_at': component.updated_at.isoformat() if component.updated_at else None
-        }
-
-        # Return as JSON download
-        json_data = json.dumps(export_data, indent=2)
-        return current_app.response_class(
-            json_data,
-            mimetype='application/json',
-            headers={
-                'Content-Disposition': f'attachment; filename=component_{component.product_number}.json'
-            }
-        )
-
-    except Exception as e:
-        current_app.logger.error(f"Error exporting component: {str(e)}")
-        return jsonify({'error': 'Export failed'}), 500
-
-@main.route('/api/components/bulk-delete', methods=['POST'])
-def api_bulk_delete_components():
-    """API endpoint for bulk deletion of components - enhanced for new frontend."""
-    try:
-        data = request.get_json()
-        component_ids = data.get('ids', [])
-
-        if not component_ids:
-            return jsonify({'success': False, 'error': 'No components selected'}), 400
-
-        deleted_count = 0
-        for component_id in component_ids:
-            component = Component.query.get(component_id)
-            if component:
-                # Delete associated files
-                for picture in component.pictures:
-                    try:
-                        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                    except Exception:
-                        pass  # Continue even if file deletion fails
-
-                # Delete variant files
-                for variant in component.variants:
-                    for picture in variant.variant_pictures:
-                        try:
-                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture.url.lstrip('/static/uploads/'))
-                            if os.path.exists(file_path):
-                                os.remove(file_path)
-                        except Exception:
-                            pass
-
-                db.session.delete(component)
-                deleted_count += 1
-
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'deleted_count': deleted_count
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error in bulk delete: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@main.route('/api/components/export')
-def api_export_components():
-    """API endpoint to export multiple components data."""
-    try:
-        component_ids = request.args.get('ids', '').split(',')
-
-        if component_ids and component_ids[0]:
-            components = Component.query.filter(Component.id.in_(component_ids)).all()
-        else:
-            components = Component.query.all()
-
-        export_data = []
-        for component in components:
-            export_data.append({
-                'id': component.id,
-                'product_number': component.product_number,
-                'description': component.description,
-                'component_type': component.component_type.name,
-                'supplier': component.supplier.supplier_code,
-                'category': component.category.name,
-                'properties': component.properties,
-                'keywords': [k.name for k in component.keywords],
-                'variants_count': len(component.variants),
-                'images_count': len(component.pictures),
-                'overall_status': component.get_overall_status() if hasattr(component, 'get_overall_status') else 'pending',
-                'created_at': component.created_at.isoformat() if component.created_at else None
+        # Fallback to basic shop list if statistics fail
+        current_app.logger.error(f"Error loading shop statistics: {str(e)}")
+        shops = ProductData.get_all_shops()
+
+        # Add empty stats
+        for shop in shops:
+            shop.update({
+                'product_count': 0,
+                'variant_count': 0,
+                'active_variants': 0,
+                'zero_inventory': 0,
+                'missing_sku': 0,
+                'health_score': 0
             })
 
+        return render_template('index.html',
+                               shops=shops,
+                               health_summary={})
+
+
+# Add API endpoint for refreshing cache
+@main.route('/api/refresh-shop-stats', methods=['POST'])
+def refresh_shop_stats():
+    """API endpoint to refresh shop statistics cache"""
+    try:
+        ProductData.clear_shop_cache()
+
+        # Warm up the cache with fresh data
+        ProductData.get_shop_statistics()
+        ProductData.get_shop_health_summary()
+
         return jsonify({
             'success': True,
-            'data': export_data,
-            'total_count': len(export_data)
+            'message': 'Shop statistics cache refreshed successfully'
         })
 
     except Exception as e:
-        current_app.logger.error(f"Export error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Error exporting data'
+            'error': str(e)
         }), 500
 
-# Enhanced Supplier Routes - adapted for new frontend
+# @main.route('/api/cache-status')
+# def cache_status():
+#     """Get cache status information"""
+#     current_time = time.time()
+#
+#     cache_info = {}
+#     for key, timestamp in _cache_timestamps.items():
+#         age = current_time - timestamp
+#         cache_info[key] = {
+#             'age_seconds': round(age, 2),
+#             'age_minutes': round(age / 60, 2),
+#             'size_bytes': len(str(_cache.get(key, '')))
+#         }
+#
+#     return jsonify({
+#         'total_entries': len(_cache),
+#         'entries': cache_info
+#     })
 
-@main.route('/api/suppliers/<int:supplier_id>', methods=['PUT'])
-def api_update_supplier(supplier_id):
-    """API endpoint to update a supplier."""
+@main.route('/products')
+def products():
+    """
+    Enhanced products listing page with caching and responsive pagination.
+    """
+    start_time = time.time()
+
+    # EXTRACT PAGINATION PARAMETERS
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+
+    # Ensure reasonable limits
+    per_page = min(max(10, per_page), 200)
+    page = max(1, page)
+
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+    if not shop_ids:
+        single_shop_id = request.args.get('shop_ids', type=int)
+        if single_shop_id:
+            shop_ids = [single_shop_id]
+
+    # EXTRACT FILTER PARAMETERS
+    filters = {
+        # Pagination
+        'page': page,
+        'per_page': per_page,
+
+        # Basic filters
+        'shop_ids': request.args.getlist('shop_ids[]', type=int),
+        'status': request.args.get('status'),
+        'vendors': request.args.getlist('vendors[]'),
+        'product_types': request.args.getlist('product_types[]'),
+        'search_term': request.args.get('search_term')
+    }
+
+    # INVENTORY FILTERS
+    if request.args.get('inventory_tracked_only'):
+        filters['inventory_tracked_only'] = True
+    if request.args.get('zero_inventory'):
+        filters['zero_inventory'] = True
+    if request.args.get('low_stock_threshold'):
+        filters['low_stock_threshold'] = request.args.get('low_stock_threshold', type=int)
+    if request.args.get('available_for_sale_only'):
+        filters['available_for_sale_only'] = True
+    if request.args.get('non_shopify_inventory_management'):
+        filters['non_shopify_inventory_management'] = True
+
+    # MISSING DATA FILTERS
+    if request.args.get('missing_sku'):
+        filters['missing_sku'] = True
+    if request.args.get('missing_barcode'):
+        filters['missing_barcode'] = True
+    if request.args.get('missing_images'):
+        filters['missing_images'] = True
+    if request.args.get('missing_title_tag'):
+        filters['missing_title_tag'] = True
+    if request.args.get('missing_description_tag'):
+        filters['missing_description_tag'] = True
+
+    # DATE FILTERS
+    if request.args.get('created_after'):
+        filters['created_after'] = request.args.get('created_after')
+    if request.args.get('created_before'):
+        filters['created_before'] = request.args.get('created_before')
+    if request.args.get('updated_after'):
+        filters['updated_after'] = request.args.get('updated_after')
+    if request.args.get('updated_before'):
+        filters['updated_before'] = request.args.get('updated_before')
+
+    # Sorting
+    if request.args.get('sort_by'):
+        filters['sort_by'] = request.args.get('sort_by')
+
+    # Legacy date filters (keep existing)
+    if request.args.get('created_days_ago'):
+        filters['created_days_ago'] = request.args.get('created_days_ago', type=int)
+    if request.args.get('updated_days_ago'):
+        filters['updated_days_ago'] = request.args.get('updated_days_ago', type=int)
+
+    # CLEAN UP FILTERS
+    filters = {k: v for k, v in filters.items() if v is not None and v != '' and v != []}
+
     try:
-        supplier = Supplier.query.get_or_404(supplier_id)
+        # GET PAGINATED DATA (now with caching)
+        result = ProductData.get_filtered_data(filters)
+        products = result['data']
+        pagination = result['pagination']
 
-        # Handle both JSON and form data
-        if request.content_type and 'application/json' in request.content_type:
-            data = request.get_json()
-        else:
-            data = request.form
+        # GET DATA FOR FILTER DROPDOWNS (cached)
+        shops = ProductData.get_all_shops()
+        all_vendors = ProductData.get_vendors()
+        all_types = ProductData.get_product_types()
 
-        supplier_code = data.get('supplier_code', '').strip()
-        address = data.get('address', '').strip()
+        load_time = time.time() - start_time
+        current_app.logger.info(f"Products page loaded in {load_time:.2f}s")
 
-        if not supplier_code:
-            return jsonify({'success': False, 'error': 'Supplier code is required'}), 400
-
-        # Check for duplicate supplier code
-        existing = Supplier.query.filter(
-            Supplier.supplier_code == supplier_code,
-            Supplier.id != supplier_id
-        ).first()
-        if existing:
-            return jsonify({'success': False, 'error': 'Supplier code already exists'}), 400
-
-        # Update supplier
-        supplier.supplier_code = supplier_code
-        supplier.address = address if address else None
-
-        db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Supplier updated successfully'})
+        # RENDER TEMPLATE WITH PAGINATION DATA
+        return render_template('products.html',
+                               products=products,
+                               pagination=pagination,
+                               shops=shops,
+                               vendors=all_vendors,
+                               product_types=all_types,
+                               filters=request.args,
+                               total_results=pagination['total'],
+                               load_time=load_time)
 
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating supplier via API: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error(f"Error in products route: {str(e)}")
+        flash(f"Error loading products: {str(e)}", 'error')
 
-@main.route('/api/suppliers/<int:supplier_id>', methods=['DELETE'])
-def api_delete_supplier(supplier_id):
-    """API endpoint to delete a supplier."""
+        # Fallback with empty data
+        return render_template('products.html',
+                               products=[],
+                               pagination={'page': 1, 'per_page': 50, 'total': 0, 'pages': 0},
+                               shops=[],
+                               vendors=[],
+                               product_types=[],
+                               filters=request.args,
+                               total_results=0,
+                               load_time=0)
+@main.route('/export')
+def export_products():
+    """Enhanced export with better performance and caching"""
+    start_time = time.time()
+
+    # Get all current filters but remove pagination for export
+    filters = {
+        'shop_ids': request.args.getlist('shop_ids[]', type=int),
+        'status': request.args.get('status'),
+        'vendors': request.args.getlist('vendors[]'),
+        'product_types': request.args.getlist('product_types[]'),
+        'search_term': request.args.get('search_term'),
+        'per_page': 5000  # Higher limit for export, but still reasonable
+    }
+
+    # Apply same filter logic as products route
+    if request.args.get('inventory_tracked_only'):
+        filters['inventory_tracked_only'] = True
+    if request.args.get('zero_inventory'):
+        filters['zero_inventory'] = True
+    if request.args.get('low_stock_threshold'):
+        filters['low_stock_threshold'] = request.args.get('low_stock_threshold', type=int)
+    if request.args.get('available_for_sale_only'):
+        filters['available_for_sale_only'] = True
+    if request.args.get('missing_sku'):
+        filters['missing_sku'] = True
+    if request.args.get('missing_barcode'):
+        filters['missing_barcode'] = True
+    if request.args.get('missing_images'):
+        filters['missing_images'] = True
+    if request.args.get('missing_title_tag'):
+        filters['missing_title_tag'] = True
+    if request.args.get('missing_description_tag'):
+        filters['missing_description_tag'] = True
+    if request.args.get('created_days_ago'):
+        filters['created_days_ago'] = request.args.get('created_days_ago', type=int)
+    if request.args.get('updated_days_ago'):
+        filters['updated_days_ago'] = request.args.get('updated_days_ago', type=int)
+
+    # Remove empty filters
+    filters = {k: v for k, v in filters.items() if v is not None and v != '' and v != []}
+
     try:
-        supplier = Supplier.query.get_or_404(supplier_id)
+        # GET DATA (cached for performance)
+        result = ProductData.get_filtered_data(filters)
+        products = result['data']
 
-        # Check if supplier has any components
-        if supplier.components:
-            return jsonify({
-                'success': False,
-                'error': f'Cannot delete supplier. It has {len(supplier.components)} associated components.'
-            }), 400
+        if not products:
+            flash('No products found matching your criteria', 'warning')
+            return redirect(url_for('main.products'))
 
-        db.session.delete(supplier)
-        db.session.commit()
+        # CREATE FILENAME WITH FILTER INFO
+        filename_parts = ["products_export"]
+        if filters.get('search_term'):
+            filename_parts.append(f"search_{filters['search_term'][:20]}")
+        if filters.get('shop_ids'):
+            filename_parts.append(f"{len(filters['shop_ids'])}shops")
 
-        return jsonify({'success': True, 'message': 'Supplier deleted successfully'})
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = "_".join(filename_parts) + f"_{timestamp}.csv"
+
+        export_time = time.time() - start_time
+        current_app.logger.info(f"Export prepared in {export_time:.2f}s for {len(products)} products")
+
+        return export_to_csv(products, filename)
 
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting supplier via API: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error(f"Error in export: {str(e)}")
+        flash(f"Export failed: {str(e)}", 'error')
+        return redirect(url_for('main.products'))
 
-@main.route('/api/suppliers/bulk-delete', methods=['POST'])
-def api_bulk_delete_suppliers():
-    """API endpoint for bulk deletion of suppliers."""
+@main.route('/api/products/search-suggestions')
+def api_product_search_suggestions():
+    """API endpoint for search suggestions"""
+    query = request.args.get('q', '').strip()
+
+    if len(query) < 2:
+        return jsonify({'suggestions': []})
+
     try:
-        data = request.get_json()
-        supplier_ids = data.get('ids', [])
+        # Get cached suggestions or generate new ones
+        cache_key = f"search_suggestions_{hashlib.md5(query.encode()).hexdigest()}"
+        cached_suggestions = enhanced_cache.get(cache_key, ttl=300)  # 5 min cache
 
-        if not supplier_ids:
-            return jsonify({'success': False, 'error': 'No suppliers selected'}), 400
+        if cached_suggestions is not None:
+            return jsonify({'suggestions': cached_suggestions})
 
-        # Check if any suppliers have components
-        suppliers_with_components = Supplier.query.filter(
-            Supplier.id.in_(supplier_ids)
-        ).filter(Supplier.components.any()).all()
+        # Generate suggestions based on actual data
+        suggestions_query = text("""
+            SELECT DISTINCT 
+                CASE 
+                    WHEN variant_sku ILIKE :query THEN 'SKU: ' || variant_sku
+                    WHEN variant_barcode ILIKE :query THEN 'Barcode: ' || variant_barcode
+                    WHEN title ILIKE :query THEN 'Product: ' || title
+                    WHEN vendor ILIKE :query THEN 'Vendor: ' || vendor
+                    ELSE 'Search: ' || :raw_query
+                END as suggestion
+            FROM catalogue.all_shops_product_data_extended
+            WHERE variant_sku ILIKE :query 
+               OR variant_barcode ILIKE :query 
+               OR title ILIKE :query 
+               OR vendor ILIKE :query
+            LIMIT 5
+        """)
 
-        if suppliers_with_components:
-            supplier_codes = [s.supplier_code for s in suppliers_with_components]
-            return jsonify({
-                'success': False,
-                'error': f'Cannot delete suppliers with components: {", ".join(supplier_codes)}'
-            }), 400
+        result = db.session.execute(suggestions_query, {
+            'query': f'%{query}%',
+            'raw_query': query
+        })
 
-        # Delete suppliers
-        deleted_count = Supplier.query.filter(Supplier.id.in_(supplier_ids)).delete()
-        db.session.commit()
+        suggestions = [row[0] for row in result]
+
+        # Cache the suggestions
+        enhanced_cache.set(cache_key, suggestions, ttl=300)
+
+        return jsonify({'suggestions': suggestions})
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating search suggestions: {str(e)}")
+        return jsonify({'suggestions': []})
+
+@main.route('/api/products/quick-stats')
+def api_products_quick_stats():
+    """API endpoint for quick product statistics"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        # Use cached basic metrics
+        basic_stats = ProductData.get_basic_metrics_fast(shop_ids if shop_ids else None)
+        core_stats = ProductData.get_core_quality_metrics(shop_ids if shop_ids else None)
+
+        combined_stats = {**basic_stats, **core_stats}
 
         return jsonify({
             'success': True,
-            'deleted_count': deleted_count,
-            'message': f'{deleted_count} supplier(s) deleted successfully'
+            'data': combined_stats
         })
 
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error in bulk delete suppliers: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error(f"Error in quick stats API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-@main.route('/api/suppliers/export')
-def api_export_suppliers():
-    """API endpoint to export suppliers data."""
+@main.route('/api/cache/clear-products', methods=['POST'])
+def api_clear_products_cache():
+    """API endpoint to clear products-specific cache"""
     try:
-        # Get selected IDs if provided
-        selected_ids = request.args.get('ids', '')
+        ProductData.clear_products_cache()
 
-        if selected_ids:
-            supplier_ids = [int(id.strip()) for id in selected_ids.split(',') if id.strip()]
-            suppliers = Supplier.query.filter(Supplier.id.in_(supplier_ids)).order_by(Supplier.supplier_code).all()
-        else:
-            suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-
-        # Create CSV data
-        import io
-        import csv
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-
-        # Write header
-        writer.writerow(['Supplier Code', 'Address', 'Components Count', 'Created At', 'Updated At'])
-
-        # Write data
-        for supplier in suppliers:
-            writer.writerow([
-                supplier.supplier_code,
-                supplier.address or '',
-                len(supplier.components),
-                supplier.created_at.strftime('%Y-%m-%d %H:%M:%S') if supplier.created_at else '',
-                supplier.updated_at.strftime('%Y-%m-%d %H:%M:%S') if supplier.updated_at else ''
-            ])
-
-        csv_data = output.getvalue()
-        output.close()
-
-        # Return as downloadable file
-        from flask import make_response
-        response = make_response(csv_data)
-        response.headers['Content-Type'] = 'text/csv'
-        response.headers['Content-Disposition'] = 'attachment; filename=suppliers.csv'
-        return response
+        return jsonify({
+            'success': True,
+            'message': 'Products cache cleared successfully'
+        })
 
     except Exception as e:
-        current_app.logger.error(f"Error exporting suppliers: {str(e)}")
-        return jsonify({'error': 'Export failed'}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
+@main.route('/api/cache/warm-products', methods=['POST'])
+def api_warm_products_cache():
+    """API endpoint to warm products cache"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
 
-@main.route('/suppliers')
-def suppliers():
-    """Display all suppliers with management interface."""
     try:
-        suppliers_query = Supplier.query.order_by(Supplier.supplier_code).all()
-
-        # Convert suppliers to JSON-serializable format for JavaScript
-        suppliers_data = []
-        for supplier in suppliers_query:
-            supplier_dict = {
-                'id': supplier.id,
-                'supplier_code': supplier.supplier_code,
-                'address': supplier.address,
-                'created_at': supplier.created_at.isoformat() if supplier.created_at else None,
-                'updated_at': supplier.updated_at.isoformat() if supplier.updated_at else None,
-                'components': [
-                    {
-                        'id': comp.id,
-                        'product_number': comp.product_number,
-                        'description': comp.description,
-                        'created_at': comp.created_at.isoformat() if comp.created_at else None
-                    } for comp in supplier.components
-                ]
-            }
-            suppliers_data.append(supplier_dict)
-
-        return render_template('suppliers.html',
-                             suppliers=suppliers_query,  # For server-side rendering
-                             suppliers_data=suppliers_data)  # For JavaScript
-
-    except Exception as e:
-        current_app.logger.error(f"Error loading suppliers: {str(e)}")
-        flash(f'Error loading suppliers: {str(e)}', 'danger')
-        return redirect(url_for('main.index'))
-
-@main.route('/supplier/new', methods=['GET', 'POST'])
-def new_supplier():
-    """Create a new supplier - MATCHES YOUR supplier_form.html"""
-    if request.method == 'POST':
-        try:
-            supplier_code = request.form.get('supplier_code', '').strip()
-            address = request.form.get('address', '').strip()
-
-            if not supplier_code:
-                flash('Supplier code is required.', 'danger')
-                return redirect(request.url)
-
-            # Check if supplier code already exists
-            existing = Supplier.query.filter_by(supplier_code=supplier_code).first()
-            if existing:
-                flash('Supplier code already exists.', 'danger')
-                return redirect(request.url)
-
-            # Create new supplier
-            supplier = Supplier(
-                supplier_code=supplier_code,
-                address=address if address else None
-            )
-
-            db.session.add(supplier)
-            db.session.commit()
-
-            flash('Supplier created successfully!', 'success')
-            return redirect(url_for('main.suppliers'))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error creating supplier: {str(e)}")
-            flash(f'Error creating supplier: {str(e)}', 'danger')
-            return redirect(request.url)
-
-    # GET request - USES YOUR EXACT TEMPLATE: supplier_form.html
-    return render_template('supplier_form.html')
-
-@main.route('/supplier/edit/<int:id>', methods=['GET', 'POST'])
-def edit_supplier(id):
-    """Edit an existing supplier with enhanced debugging"""
-    try:
-        supplier = Supplier.query.get_or_404(id)
-        current_app.logger.info(f"Found supplier: {supplier.supplier_code}, ID: {supplier.id}")
-    except Exception as e:
-        current_app.logger.error(f"Error finding supplier {id}: {str(e)}")
-        flash(f'Supplier not found: {str(e)}', 'danger')
-        return redirect(url_for('main.suppliers'))
-
-    if request.method == 'POST':
-        try:
-            # Log form data for debugging
-            current_app.logger.info(f"Form data received: {dict(request.form)}")
-
-            supplier_code = request.form.get('supplier_code', '').strip()
-            address = request.form.get('address', '').strip()
-
-            current_app.logger.info(f"Updating supplier {id}: code='{supplier_code}', address='{address}'")
-
-            if not supplier_code:
-                flash('Supplier code is required.', 'danger')
-                return redirect(request.url)
-
-            # Check if supplier code already exists (excluding current supplier)
-            existing = Supplier.query.filter(
-                Supplier.supplier_code == supplier_code,
-                Supplier.id != id
-            ).first()
-
-            if existing:
-                current_app.logger.warning(f"Duplicate supplier code found: {supplier_code}")
-                flash('Supplier code already exists.', 'danger')
-                return redirect(request.url)
-
-            # Log before update
-            current_app.logger.info(f"Before update - Supplier: {supplier.supplier_code}, Address: {supplier.address}")
-
-            # Update supplier fields
-            old_code = supplier.supplier_code
-            old_address = supplier.address
-
-            supplier.supplier_code = supplier_code
-            supplier.address = address if address else None
-
-            current_app.logger.info(f"After field update - Old: ({old_code}, {old_address}) -> New: ({supplier.supplier_code}, {supplier.address})")
-
-            # Commit the changes
-            db.session.commit()
-            current_app.logger.info(f"Successfully updated supplier {id}")
-
-            flash('Supplier updated successfully!', 'success')
-            return redirect(url_for('main.suppliers'))
-
-        except Exception as e:
-            db.session.rollback()
-            error_msg = str(e)
-            current_app.logger.error(f"Error updating supplier {id}: {error_msg}")
-            current_app.logger.error(f"Exception type: {type(e).__name__}")
-
-            # More detailed error logging
-            import traceback
-            current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
-
-            flash(f'Error updating supplier: {error_msg}', 'danger')
-            return redirect(request.url)
-
-    # GET request - show form with existing data
-    try:
-        current_app.logger.info(f"Rendering edit form for supplier {id}: {supplier.supplier_code}")
-
-        # Log the supplier object structure for debugging
-        current_app.logger.info(f"Supplier object: supplier_code={supplier.supplier_code}, address={supplier.address}, id={supplier.id}")
-
-        return render_template('supplier_form.html', supplier=supplier)
-
-    except Exception as e:
-        current_app.logger.error(f"Error rendering template: {str(e)}")
-        flash(f'Error loading edit form: {str(e)}', 'danger')
-        return redirect(url_for('main.suppliers'))
-@main.route('/supplier/delete/<int:id>', methods=['POST'])
-def delete_supplier(id):
-    """Delete a supplier."""
-    try:
-        supplier = Supplier.query.get_or_404(id)
-
-        # Check if supplier has any components
-        if supplier.components:
-            flash(f'Cannot delete supplier {supplier.supplier_code}. It has {len(supplier.components)} associated components.', 'danger')
-            return redirect(url_for('main.suppliers'))
-
-        db.session.delete(supplier)
-        db.session.commit()
-
-        flash('Supplier deleted successfully!', 'success')
-        return redirect(url_for('main.suppliers'))
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting supplier {id}: {str(e)}")
-        flash(f'Error deleting supplier: {str(e)}', 'danger')
-        return redirect(url_for('main.suppliers'))
-
-# Helper functions - Enhanced for new frontend
-def _process_component_properties(component, component_type_name, form_data):
-    """Process component properties based on component type - UPDATED for new brand handling"""
-    type_properties = {
-        'Fabrics': ['material', 'color', 'gender', 'finish', 'weight'],  # Removed 'brand' - now handled separately
-        'Shapes': ['gender', 'style', 'subbrand', 'subcategory'],  # Removed 'brand' - now handled separately
-        'Buttons': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
-        'Zippers': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
-        'Labels': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
-        'Hangtags': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
-        'Packaging': ['material']  # Removed 'brand' - now handled separately
-    }
-    
-    allowed_properties = type_properties.get(component_type_name, [])
-
-    # Initialize properties dict if it doesn't exist
-    if not hasattr(component, 'properties') or component.properties is None:
-        component.properties = {}
-
-    for prop in allowed_properties:
-        prop_value = form_data.get(prop)
-        if prop_value:
-            # Handle array properties
-            if prop in ['gender', 'style', 'subbrand']:
-                if isinstance(prop_value, list):
-                    component.properties[prop] = {
-                        'value': prop_value,
-                        'updated_at': datetime.utcnow().isoformat()
-                    }
-                else:
-                    # Convert string to array if needed
-                    values = [v.strip() for v in prop_value.split(',') if v.strip()]
-                    if values:
-                        component.properties[prop] = {
-                            'value': values,
-                            'updated_at': datetime.utcnow().isoformat()
-                        }
-            else:
-                component.properties[prop] = {
-                    'value': prop_value,
-                    'updated_at': datetime.utcnow().isoformat()
-                }
-
-
-# Update the image processing helper function
-# Update the image processing helper function
-def _process_image_uploads(component, request):
-    """Process image uploads for a component with auto-assigned order - enhanced for new frontend."""
-    uploaded_count = 0
-    picture_order = 1
-
-    for i in range(1, 11):  # Up to 10 pictures for better capacity
-        picture_file = request.files.get(f'picture_{i}')
-
-        if picture_file and picture_file.filename:
-            try:
-                # Use the improved save_uploaded_file function
-                file_url = save_uploaded_file(picture_file)
-                if file_url:
-                    picture = Picture(
-                        component_id=component.id,
-                        picture_name=picture_file.filename,
-                        url=file_url,
-                        picture_order=picture_order
-                    )
-                    db.session.add(picture)
-                    uploaded_count += 1
-                    picture_order += 1
-
-            except Exception as e:
-                current_app.logger.error(f"Error uploading image {i}: {str(e)}")
-                continue
-
-    return uploaded_count
-
-def _update_component_images(component, request):
-    """Update component images, handling both new uploads and existing images - enhanced for new frontend."""
-    # Handle existing picture updates
-    for picture in component.pictures:
-        picture_index = None
-        for i, existing_picture in enumerate(component.pictures, 1):
-            if existing_picture.id == picture.id:
-                picture_index = i
-                break
-
-        if picture_index:
-            name_key = f'existing_picture_{picture_index}_name'
-            order_key = f'existing_picture_{picture_index}_order'
-
-            if name_key in request.form:
-                picture.picture_name = request.form[name_key]
-            if order_key in request.form:
-                picture.picture_order = int(request.form[order_key] or picture.picture_order)
-
-    # Process new uploaded images
-    max_order = max([p.picture_order for p in component.pictures] + [0])
-    for i in range(1, 11):  # Up to 10 new images
-        picture_file = request.files.get(f'picture_{i}')
-        if picture_file and picture_file.filename:
-            try:
-                file_url = save_uploaded_file(picture_file)
-                if file_url:
-                    max_order += 1
-                    picture = Picture(
-                        component_id=component.id,
-                        picture_name=picture_file.filename,
-                        url=file_url,
-                        picture_order=max_order
-                    )
-                    db.session.add(picture)
-            except Exception as e:
-                current_app.logger.error(f"Error uploading new image {i}: {str(e)}")
-
-# Helper functions for variant image processing
-def _process_variant_images(variant, request):
-    """Process image uploads for a variant with auto-assigned order - enhanced for new frontend."""
-    uploaded_count = 0
-    picture_order = 1
-
-    for i in range(1, 11):  # Up to 10 pictures per variant
-        picture_file = request.files.get(f'variant_picture_{i}')
-
-        if picture_file and picture_file.filename:
-            try:
-                # Use the improved save_uploaded_file function
-                file_url = save_uploaded_file(picture_file, 'variant_uploads')
-                if file_url:
-                    picture = Picture(
-                        variant_id=variant.id,
-                        picture_name=picture_file.filename,
-                        url=file_url,
-                        picture_order=picture_order
-                    )
-                    db.session.add(picture)
-                    uploaded_count += 1
-                    picture_order += 1
-
-            except Exception as e:
-                current_app.logger.error(f"Error uploading variant image {i}: {str(e)}")
-                continue
-
-    return uploaded_count
-
-def _update_variant_images(variant, request):
-    """Update variant images, handling both new uploads and existing images - enhanced for new frontend."""
-    # Handle existing picture updates
-    for picture in variant.variant_pictures:
-        picture_index = None
-        for i, existing_picture in enumerate(variant.variant_pictures, 1):
-            if existing_picture.id == picture.id:
-                picture_index = i
-                break
-
-        if picture_index:
-            name_key = f'existing_variant_picture_{picture_index}_name'
-            order_key = f'existing_variant_picture_{picture_index}_order'
-
-            if name_key in request.form:
-                picture.picture_name = request.form[name_key]
-            if order_key in request.form:
-                picture.picture_order = int(request.form[order_key] or picture.picture_order)
-
-    # Process new uploaded images
-    max_order = max([p.picture_order for p in variant.variant_pictures] + [0])
-    for i in range(1, 11):  # Up to 10 new images
-        picture_file = request.files.get(f'variant_picture_{i}')
-        if picture_file and picture_file.filename:
-            try:
-                file_url = save_uploaded_file(picture_file, 'variant_uploads')
-                if file_url:
-                    max_order += 1
-                    picture = Picture(
-                        variant_id=variant.id,
-                        picture_name=picture_file.filename,
-                        url=file_url,
-                        picture_order=max_order
-                    )
-                    db.session.add(picture)
-            except Exception as e:
-                current_app.logger.error(f"Error uploading new variant image {i}: {str(e)}")
-
-@main.route('/api/brands/search')
-def api_search_brands():
-    """API endpoint for brand search with autocomplete."""
-    try:
-        query = request.args.get('q', '').strip()
-        limit = min(int(request.args.get('limit', 10)), 50)
-
-        if len(query) < 1:
-            return jsonify([])
-
-        brands = Brand.query.filter(
-            Brand.name.ilike(f'%{query}%')
-        ).limit(limit).all()
-
-        results = [{
-            'id': b.id,
-            'name': b.name,
-            'components_count': b.get_components_count(),
-            'subbrands_count': len(b.subbrands)
-        } for b in brands]
-
-        return jsonify(results)
-
-    except Exception as e:
-        current_app.logger.error(f"Error in brand search: {str(e)}")
-        return jsonify({'error': 'Search failed'}), 500
-
-def get_brands_list(self):
-    """Get brands for this component (with caching support)"""
-    # Check if we have cached brands from the index route
-    if hasattr(self, '_cached_brands'):
-        return [type('Brand', (), brand) for brand in self._cached_brands]
-
-    # Fallback to normal relationship access
-    return list(self.brands)
-
-@main.route('/api/components/<int:component_id>/brands', methods=['GET', 'POST', 'DELETE'])
-def api_component_brands(component_id):
-    """API endpoint to manage component brand associations"""
-    try:
-        component = Component.query.get_or_404(component_id)
-
-        if request.method == 'GET':
-            # Return current brands for this component
-            brands = [{
-                'id': brand.id,
-                'name': brand.name
-            } for brand in component.brands]
-            return jsonify(brands)
-
-        elif request.method == 'POST':
-            # Add brand to component
-            data = request.get_json()
-            brand_id = data.get('brand_id')
-
-            if not brand_id:
-                return jsonify({'success': False, 'error': 'Brand ID required'}), 400
-
-            brand = Brand.query.get(brand_id)
-            if not brand:
-                return jsonify({'success': False, 'error': 'Brand not found'}), 404
-
-            if brand not in component.brands:
-                component.add_brand(brand)
-                db.session.commit()
-                return jsonify({'success': True, 'message': f'Brand {brand.name} added'})
-            else:
-                return jsonify({'success': False, 'error': 'Brand already associated'}), 400
-
-        elif request.method == 'DELETE':
-            # Remove brand from component
-            data = request.get_json()
-            brand_id = data.get('brand_id')
-
-            if not brand_id:
-                return jsonify({'success': False, 'error': 'Brand ID required'}), 400
-
-            brand = Brand.query.get(brand_id)
-            if not brand:
-                return jsonify({'success': False, 'error': 'Brand not found'}), 404
-
-            if brand in component.brands:
-                component.remove_brand(brand)
-                db.session.commit()
-                return jsonify({'success': True, 'message': f'Brand {brand.name} removed'})
-            else:
-                return jsonify({'success': False, 'error': 'Brand not associated'}), 400
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error managing component brands: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-# Error handlers for better UX
-@main.errorhandler(404)
-def not_found_error(error):
-    """Handle 404 errors"""
-    return render_template('errors/404.html'), 404
-
-@main.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    db.session.rollback()
-    return render_template('errors/500.html'), 500
-
-@main.errorhandler(RequestEntityTooLarge)
-def file_too_large_error(error):
-    """Handle file upload size errors"""
-    flash('File is too large. Maximum size is 16MB.', 'error')
-    return redirect(request.url or url_for('main.index'))
-
-# Add any remaining routes from your original file that weren't covered above
-# (supplier management, additional API endpoints, etc.)
-
-@main.route('/download/csv-template')
-def download_csv_template():
-    """Generate and download CSV template - UPDATED with brand fields."""
-    try:
-        # Create CSV template with brand fields
-        template_data = [
-            [
-                'product_number', 'description', 'component_type', 'supplier_code',
-                'category_name', 'keywords', 'material', 'color', 'gender', 'style',
-                'brands', 'subbrand', 'size', 'finish', 'weight',  # NEW: Added 'brands' field
-                'picture_1_name', 'picture_1_url',
-                'picture_2_name', 'picture_2_url',
-                'picture_3_name', 'picture_3_url',
-                'picture_4_name', 'picture_4_url',
-                'picture_5_name', 'picture_5_url'
-            ],
-            [
-                'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',
-                'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',
-                'ladies,unisex', 'casual', 'MAR,MMC', 'MAR Sport,MMC Pro', '50D', 'waterproof', '120gsm',  # NEW: Example brand data
-                'fabric_front.jpg', 'http://example.com/fabric_front.jpg',
-                'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',
-                '', '', '', '', '', ''
+        def warm_products_cache():
+            # Warm common queries
+            ProductData.get_all_shops()
+            ProductData.get_vendors(shop_ids if shop_ids else None)
+            ProductData.get_product_types(shop_ids if shop_ids else None)
+
+            # Warm common filter combinations
+            common_filters = [
+                {'page': 1, 'per_page': 50},
+                {'page': 1, 'per_page': 100},
+                {'missing_sku': True, 'page': 1, 'per_page': 50},
+                {'zero_inventory': True, 'page': 1, 'per_page': 50},
             ]
-        ]
 
-        # Create CSV in memory
-        output = io.StringIO()
-        writer = csv.writer(output, delimiter=';')
-        for row in template_data:
-            writer.writerow(row)
+            if shop_ids:
+                for filters in common_filters:
+                    filters['shop_ids'] = shop_ids
+                    try:
+                        ProductData.get_filtered_data(filters)
+                    except:
+                        pass  # Continue warming other filters
 
-        # Create file-like object
-        csv_data = output.getvalue()
-        output.close()
+        # Start warming in background
+        Thread(target=warm_products_cache).start()
 
-        # Return as downloadable file
-        return current_app.response_class(
-            csv_data,
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': 'attachment; filename=component_template.csv'
-            }
-        )
+        return jsonify({
+            'success': True,
+            'message': 'Products cache warming started'
+        })
 
     except Exception as e:
-        current_app.logger.error(f"Error generating CSV template: {str(e)}")
-        flash('Error generating template', 'danger')
-        return redirect(url_for('main.upload_csv'))
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/products/performance')
+def api_products_performance():
+    """API endpoint for products page performance metrics"""
+    try:
+        # Test query performance
+        start_time = time.time()
+
+        # Test basic shop loading
+        shops = ProductData.get_all_shops()
+        shop_load_time = time.time() - start_time
+
+        # Test simple product query
+        start_time = time.time()
+        simple_filters = {'page': 1, 'per_page': 25}
+        result = ProductData.get_filtered_data(simple_filters)
+        query_time = time.time() - start_time
+
+        # Cache statistics
+        cache_stats = enhanced_cache.get_stats()
+
+        return jsonify({
+            'success': True,
+            'performance': {
+                'shop_load_time': round(shop_load_time, 3),
+                'simple_query_time': round(query_time, 3),
+                'total_products_cached': len(result['data']),
+                'cache_hit_ratio': cache_stats.get('hit_ratio', 0),
+                'cache_size': cache_stats.get('size', 0)
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@main.route('/analytics')
+def analytics():
+    """
+    Optimized analytics dashboard with progressive loading.
+    Loads basic metrics immediately, then progressively loads detailed data.
+    """
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+    show_by_shop = request.args.get('by_shop', False, type=bool)
+
+    # Start timing for performance monitoring
+    start_time = time.time()
+
+    # Initialize with fast-loading basic data only
+    basic_metrics = {}
+    shops = []
+    error_messages = []
+
+    try:
+        # Get basic metrics immediately (cached, very fast)
+        basic_metrics = ProductData.get_basic_metrics_fast(shop_ids if shop_ids else None)
+        current_app.logger.info(f"Basic metrics loaded in {time.time() - start_time:.2f}s")
+    except Exception as e:
+        current_app.logger.error(f"Error getting basic metrics: {str(e)}")
+        error_messages.append("Unable to load basic metrics")
+        basic_metrics = {}
+
+    try:
+        # Get shops for filter (should be fast)
+        shops = ProductData.get_all_shops()
+    except Exception as e:
+        current_app.logger.error(f"Error getting shops: {str(e)}")
+        shops = []
+        error_messages.append("Unable to load shop list")
+
+    # Determine if we have sufficient data to show analytics
+    has_data = bool(basic_metrics.get('total_variants', 0) > 0)
+
+    # Add error messages to flash if any occurred
+    for error in error_messages:
+        flash(error, 'warning')
+
+    # Trigger background cache warming for this shop combination
+    if has_data:
+        Thread(target=ProductData.warm_analytics_cache, args=(shop_ids if shop_ids else None,)).start()
+
+    # Log performance
+    total_time = time.time() - start_time
+    current_app.logger.info(f"Analytics page loaded in {total_time:.2f}s")
+
+    return render_template('analytics.html',
+                           basic_metrics=basic_metrics,
+                           shops=shops,
+                           selected_shops=shop_ids,
+                           show_by_shop=show_by_shop,
+                           has_data=has_data,
+                           error_messages=error_messages,
+                           loading_mode=True)  # Flag to indicate progressive loading
+
+@main.route('/api/analytics/core-metrics')
+def api_core_metrics():
+    """API endpoint for loading core quality metrics (SKU, barcode, images)"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+        core_metrics = ProductData.get_core_quality_metrics(shop_ids if shop_ids else None)
+
+        current_app.logger.info(f"Core metrics API loaded in {time.time() - start_time:.2f}s")
+
+        return jsonify({
+            'success': True,
+            'data': core_metrics,
+            'load_time': round(time.time() - start_time, 2)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in core metrics API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Core metrics failed: {str(e)}'
+        }), 500
+
+@main.route('/api/analytics/product-metrics')
+def api_product_metrics():
+    """API endpoint for loading product-level metrics (metafields, SEO)"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+        product_metrics = ProductData.get_product_level_metrics(shop_ids if shop_ids else None)
+
+        current_app.logger.info(f"Product metrics API loaded in {time.time() - start_time:.2f}s")
+
+        return jsonify({
+            'success': True,
+            'data': product_metrics,
+            'load_time': round(time.time() - start_time, 2)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in product metrics API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Product metrics failed: {str(e)}'
+        }), 500
+
+@main.route('/api/analytics/metafield-analysis')
+def api_metafield_analysis():
+    """API endpoint for loading comprehensive metafield analysis"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+        metafield_completeness = ProductData.get_comprehensive_metafield_analysis(shop_ids if shop_ids else None)
+
+        # Format metafield names for better display
+        formatted_metafields = {}
+        for field_name, data in metafield_completeness.items():
+            formatted_name = format_metafield_name(field_name)
+            formatted_metafields[field_name] = {
+                **data,
+                'formatted_name': formatted_name
+            }
+
+        current_app.logger.info(f"Metafield analysis API loaded in {time.time() - start_time:.2f}s")
+
+        return jsonify({
+            'success': True,
+            'data': formatted_metafields,
+            'load_time': round(time.time() - start_time, 2)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in metafield analysis API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Metafield analysis failed: {str(e)}'
+        }), 500
+
+@main.route('/api/analytics/quality-score')
+def api_quality_score():
+    """API endpoint for calculating comprehensive quality score"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+
+        # Get enhanced metrics (combines cached components)
+        enhanced_metrics = ProductData.get_enhanced_quality_metrics(shop_ids if shop_ids else None)
+
+        # Get metafield analysis
+        metafield_completeness = ProductData.get_comprehensive_metafield_analysis(shop_ids if shop_ids else None)
+
+        # Calculate quality score
+        quality_analysis = calculate_comprehensive_quality_score(enhanced_metrics, metafield_completeness)
+
+        current_app.logger.info(f"Quality score API loaded in {time.time() - start_time:.2f}s")
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'enhanced_metrics': enhanced_metrics,
+                'quality_analysis': quality_analysis
+            },
+            'load_time': round(time.time() - start_time, 2)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in quality score API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Quality score calculation failed: {str(e)}'
+        }), 500
+
+@main.route('/api/cache/warm', methods=['POST'])
+def api_warm_cache():
+    """API endpoint to warm up analytics cache"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+
+        # Start cache warming in background
+        def warm_cache_background():
+            return ProductData.warm_analytics_cache(shop_ids if shop_ids else None)
+
+        # For immediate response, start warming and return
+        Thread(target=warm_cache_background).start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Cache warming started in background',
+            'estimated_time': '30-60 seconds'
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error starting cache warm: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/cache/clear', methods=['POST'])
+def api_clear_cache():
+    """API endpoint to clear analytics cache"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        ProductData.clear_analytics_cache(shop_ids if shop_ids else None)
+
+        return jsonify({
+            'success': True,
+            'message': 'Analytics cache cleared successfully'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/cache/status')
+def api_cache_status():
+    """Get cache status and performance metrics"""
+    try:
+        cache_status = ProductData.get_cache_status()
+        return jsonify({
+            'success': True,
+            'data': cache_status
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add this new route for shop comparison
+@main.route('/analytics/shops')
+def analytics_by_shops():
+    """Analytics dashboard showing metafield completeness by individual shops"""
+    return redirect(url_for('main.analytics', by_shop=True))
+
+# Update the API endpoint for better error handling
+@main.route('/api/quality-analysis')
+def api_quality_analysis():
+    """Optimized API endpoint for fetching complete quality analysis data"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        start_time = time.time()
+
+        # Use the optimized enhanced metrics method
+        enhanced_metrics = ProductData.get_enhanced_quality_metrics(shop_ids if shop_ids else None)
+
+        if not enhanced_metrics:
+            return jsonify({
+                'success': False,
+                'error': 'No data found for selected shops'
+            }), 404
+
+        # Get metafield analysis (cached)
+        metafield_completeness = ProductData.get_comprehensive_metafield_analysis(shop_ids if shop_ids else None)
+
+        # Calculate quality score
+        quality_analysis = calculate_comprehensive_quality_score(enhanced_metrics, metafield_completeness)
+
+        load_time = time.time() - start_time
+        current_app.logger.info(f"Complete quality analysis loaded in {load_time:.2f}s")
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'enhanced_metrics': enhanced_metrics,
+                'metafield_completeness': metafield_completeness,
+                'quality_analysis': quality_analysis
+            },
+            'load_time': round(load_time, 2)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in optimized quality analysis API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
+
+@main.route('/api/background/warm-all-shops', methods=['POST'])
+def api_warm_all_shops():
+    """Background endpoint to warm cache for all shop combinations"""
+    try:
+        def warm_all_shops():
+            # Get all shops
+            shops = ProductData.get_all_shops()
+
+            # Warm cache for all shops combined
+            ProductData.warm_analytics_cache()
+
+            # Warm cache for individual shops
+            for shop in shops:
+                ProductData.warm_analytics_cache([shop['id']])
+                time.sleep(1)  # Small delay to prevent overwhelming the database
+
+        Thread(target=warm_all_shops).start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Background cache warming started for all shops'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/performance/metrics')
+def api_performance_metrics():
+    """Get performance metrics for analytics queries"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    performance_data = {}
+
+    # Test basic metrics performance
+    start_time = time.time()
+    try:
+        ProductData.get_basic_metrics_fast(shop_ids if shop_ids else None)
+        performance_data['basic_metrics_time'] = round(time.time() - start_time, 3)
+    except:
+        performance_data['basic_metrics_time'] = 'error'
+
+    # Test core metrics performance
+    start_time = time.time()
+    try:
+        ProductData.get_core_quality_metrics(shop_ids if shop_ids else None)
+        performance_data['core_metrics_time'] = round(time.time() - start_time, 3)
+    except:
+        performance_data['core_metrics_time'] = 'error'
+
+    # Test metafield analysis performance
+    start_time = time.time()
+    try:
+        ProductData.get_comprehensive_metafield_analysis(shop_ids if shop_ids else None)
+        performance_data['metafield_analysis_time'] = round(time.time() - start_time, 3)
+    except:
+        performance_data['metafield_analysis_time'] = 'error'
+
+    # Add cache statistics
+    performance_data['cache_stats'] = enhanced_cache.get_stats()
+
+    return jsonify({
+        'success': True,
+        'data': performance_data,
+        'timestamp': time.time()
+    })
+
+# Add debugging endpoint to test metafield queries
+@main.route('/api/debug/metafields')
+def debug_metafields():
+    """Debug endpoint to test metafield queries"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        # Test basic query first
+        where_clause = ""
+        params = {}
+
+        if shop_ids:
+            placeholders = ','.join([':shop_id_%d' % i for i in range(len(shop_ids))])
+            where_clause = f"WHERE shop_technical_id IN ({placeholders})"
+            for i, shop_id in enumerate(shop_ids):
+                params[f'shop_id_{i}'] = shop_id
+
+        # Test count query
+        count_query = f"""
+            SELECT 
+                COUNT(*) as total_variants,
+                COUNT(DISTINCT handle) as total_products,
+                COUNT(DISTINCT shop_technical_id) as total_shops
+            FROM catalogue.all_shops_product_data_extended
+            {where_clause}
+        """
+
+        result = db.session.execute(text(count_query), params)
+        debug_info = dict(zip(result.keys(), result.fetchone()))
+
+        # Test one metafield
+        test_metafield = '"Metafield: gender"'
+        metafield_query = f"""
+            SELECT COUNT(DISTINCT handle) as completed_products
+            FROM catalogue.all_shops_product_data_extended
+            {where_clause}
+            {"AND" if where_clause else "WHERE"} {test_metafield} IS NOT NULL 
+            AND TRIM(CAST({test_metafield} AS TEXT)) != ''
+        """
+
+        metafield_result = db.session.execute(text(metafield_query), params)
+        debug_info['gender_completed'] = metafield_result.scalar()
+
+        return jsonify({
+            'success': True,
+            'debug_info': debug_info,
+            'query_params': params
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'query_params': params
+        }), 500
+
+# Add this endpoint for exporting enhanced analytics
+@main.route('/api/export-quality-report')
+def export_quality_report():
+    """Export comprehensive quality report"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    try:
+        # Get all the data
+        enhanced_metrics = ProductData.get_enhanced_quality_metrics(shop_ids if shop_ids else None)
+        metafield_completeness = ProductData.get_comprehensive_metafield_analysis(shop_ids if shop_ids else None)
+        quality_analysis = calculate_comprehensive_quality_score(enhanced_metrics, metafield_completeness)
+
+        # Prepare report data
+        report_data = []
+
+        # Add summary row
+        total_variants = enhanced_metrics.get('total_variants', 0)
+        report_data.append({
+            'metric_category': 'Summary',
+            'metric_name': 'Total Variants',
+            'value': total_variants,
+            'percentage': 100.0,
+            'status': 'info'
+        })
+
+        # Add quality factors
+        for factor_name, factor_data in quality_analysis.get('breakdown', {}).items():
+            for component_name, component_score in factor_data.get('components', {}).items():
+                report_data.append({
+                    'metric_category': factor_name.replace('_', ' ').title(),
+                    'metric_name': component_name.replace('_', ' ').title(),
+                    'value': f"{component_score:.1f}%",
+                    'percentage': component_score,
+                    'status': 'good' if component_score >= 80 else 'fair' if component_score >= 60 else 'poor'
+                })
+
+        # Add metafield completeness
+        for field_name, field_data in metafield_completeness.items():
+            report_data.append({
+                'metric_category': 'Metafield Completeness',
+                'metric_name': field_data.get('formatted_name', field_name),
+                'value': f"{field_data['count']:,} ({field_data['percentage']:.1f}%)",
+                'percentage': field_data['percentage'],
+                'status': 'good' if field_data['percentage'] >= 80 else 'fair' if field_data['percentage'] >= 50 else 'poor'
+            })
+
+        # Generate filename
+        shop_suffix = f"_{len(shop_ids)}shops" if shop_ids else "_allshops"
+        filename = f"quality_report{shop_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        return export_to_csv(report_data, filename)
+
+    except Exception as e:
+        current_app.logger.error(f"Error exporting quality report: {str(e)}")
+        return jsonify({'error': 'Failed to export quality report'}), 500
+
+@main.route('/api/product-details/<int:product_id>')
+def api_product_details(product_id):
+    """Enhanced product details with caching"""
+    try:
+        # Try to get from cache first
+        cache_key = f"product_details_{product_id}"
+        cached_details = enhanced_cache.get(cache_key, ttl=600)
+
+        if cached_details is not None:
+            return jsonify(cached_details)
+
+        filters = {'search_term': str(product_id), 'per_page': 100}
+        result = ProductData.get_filtered_data(filters)
+        products = result['data']
+
+        # Filter exact matches
+        product_variants = [p for p in products if p['product_id'] == product_id]
+
+        if not product_variants:
+            return jsonify({'error': 'Product not found'}), 404
+
+        product_info = {
+            'product_id': product_id,
+            'title': product_variants[0]['title'],
+            'handle': product_variants[0]['handle'],
+            'vendor': product_variants[0]['vendor'],
+            'type': product_variants[0]['type'],
+            'status': product_variants[0]['status'],
+            'shop': product_variants[0]['shop_technical_name'],
+            'variants': product_variants,
+            'variant_count': len(product_variants)
+        }
+
+        # Cache the result
+        enhanced_cache.set(cache_key, product_info, ttl=600)
+
+        return jsonify(product_info)
+
+    except Exception as e:
+        current_app.logger.error(f"Error in product details API: {str(e)}")
+        return jsonify({'error': 'Failed to load product details'}), 500
+
+@main.route('/api/search-barcode')
+def api_search_barcode():
+    """Enhanced barcode search API endpoint with caching"""
+    barcode = request.args.get('barcode', '').strip()
+
+    if not barcode:
+        return jsonify({'error': 'Barcode parameter required'}), 400
+
+    if len(barcode) < 3:
+        return jsonify({'error': 'Barcode too short (minimum 3 characters)'}), 400
+
+    try:
+        variants = ProductData.search_variants_by_barcode(barcode)
+
+        return jsonify({
+            'barcode': barcode,
+            'found': len(variants),
+            'variants': variants,
+            'cached': True  # This will be cached by the decorator
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in barcode search: {str(e)}")
+        return jsonify({'error': 'Barcode search failed'}), 500
+
+@main.route('/api/variant-details/<int:variant_id>')
+def api_variant_details(variant_id):
+    """Enhanced variant details with caching"""
+    try:
+        variant = ProductData.get_variant_details(variant_id)
+
+        if not variant:
+            return jsonify({'error': 'Variant not found'}), 404
+
+        return jsonify({**variant, 'cached': True})
+
+    except Exception as e:
+        current_app.logger.error(f"Error in variant details: {str(e)}")
+        return jsonify({'error': 'Failed to load variant details'}), 500
+
+# API endpoints for dynamic filtering
+@main.route('/api/shops')
+def api_shops():
+    """Get all shops with caching"""
+    try:
+        shops = ProductData.get_all_shops()
+        return jsonify(shops)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/vendors')
+def api_vendors():
+    """Get vendors filtered by shops with caching"""
+    try:
+        shop_ids = request.args.getlist('shop_ids[]', type=int)
+        vendors = ProductData.get_vendors(shop_ids if shop_ids else None)
+        return jsonify(vendors)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/product-types')
+def api_product_types():
+    """Get product types filtered by shops with caching"""
+    try:
+        shop_ids = request.args.getlist('shop_ids[]', type=int)
+        types = ProductData.get_product_types(shop_ids if shop_ids else None)
+        return jsonify(types)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/consistency-check')
+def consistency_check():
+    """Data consistency checking page"""
+    shop_ids = request.args.getlist('shop_ids[]', type=int)
+
+    # Get data for analysis with reasonable limit
+    filters = {'per_page': 10000}
+    if shop_ids:
+        filters['shop_ids'] = shop_ids
+
+    result = ProductData.get_filtered_data(filters)
+    all_products = result['data']
+
+    # Analyze consistency issues
+    issues = analyze_product_consistency(all_products)
+    shops = ProductData.get_all_shops()
+
+    return render_template('consistency.html',
+                           issues=issues,
+                           shops=shops,
+                           selected_shops=shop_ids)
+
+def analyze_product_consistency(products):
+    """Analyze product data for consistency issues"""
+    issues = {
+        'missing_sku_products': [],
+        'missing_barcode_products': [],
+        'missing_images': [],
+        'inconsistent_inventory_tracking': [],
+        'zero_inventory_available': [],
+        'missing_seo_fields': [],
+        'duplicate_skus': [],
+        'size_inconsistencies': []
+    }
+
+    # Group products by product_id
+    products_by_id = {}
+    sku_counts = {}
+    barcode_counts = {}
+
+    for product in products:
+        product_id = product['product_id']
+
+        # Group variants by product
+        if product_id not in products_by_id:
+            products_by_id[product_id] = []
+        products_by_id[product_id].append(product)
+
+        # Count SKU occurrences
+        sku = product.get('variant_sku')
+        if sku:
+            sku_counts[sku] = sku_counts.get(sku, 0) + 1
+
+        # Count barcode occurrences
+        barcode = product.get('variant_barcode')
+        if barcode:
+            barcode_counts[barcode] = barcode_counts.get(barcode, 0) + 1
+
+    # Find duplicate SKUs
+    for sku, count in sku_counts.items():
+        if count > 1:
+            duplicate_products = [p for p in products if p.get('variant_sku') == sku]
+            issues['duplicate_skus'].append({
+                'sku': sku,
+                'count': count,
+                'products': duplicate_products[:5]
+            })
+
+    # Find duplicate barcodes
+    duplicate_barcodes = []
+    for barcode, count in barcode_counts.items():
+        if count > 1:
+            duplicate_products = [p for p in products if p.get('variant_barcode') == barcode]
+            duplicate_barcodes.append({
+                'barcode': barcode,
+                'count': count,
+                'products': duplicate_products[:5]
+            })
+
+    issues['duplicate_barcodes'] = duplicate_barcodes
+
+    # Analyze each product group
+    for product_id, variants in products_by_id.items():
+        first_variant = variants[0]
+
+        # Check for missing SKUs
+        missing_sku_variants = [v for v in variants if not v.get('variant_sku')]
+        if missing_sku_variants:
+            issues['missing_sku_products'].append({
+                'product': first_variant,
+                'missing_count': len(missing_sku_variants)
+            })
+
+        # Check for missing barcodes
+        missing_barcode_variants = [v for v in variants if not v.get('variant_barcode')]
+        if missing_barcode_variants:
+            issues['missing_barcode_products'].append({
+                'product': first_variant,
+                'missing_count': len(missing_barcode_variants)
+            })
+
+        # Check for missing images
+        if not first_variant.get('image_src') and not any(v.get('variant_image') for v in variants):
+            issues['missing_images'].append(first_variant)
+
+        # Check inventory tracking consistency
+        tracking_methods = set(v.get('variant_inventory_management') for v in variants if v.get('variant_inventory_management'))
+        if len(tracking_methods) > 1:
+            issues['inconsistent_inventory_tracking'].append({
+                'product': first_variant,
+                'tracking_methods': list(tracking_methods)
+            })
+
+        # Check for zero inventory but available
+        zero_inventory_available = [v for v in variants
+                                    if v.get('variant_inventory_quantity', 0) == 0
+                                    and v.get('variant_available_for_sale')]
+        if zero_inventory_available:
+            issues['zero_inventory_available'].append({
+                'product': first_variant,
+                'affected_variants': len(zero_inventory_available)
+            })
+
+        # Check SEO fields
+        if (not first_variant.get('Metafield: title_tag') or
+                not first_variant.get('Metafield: description_tag')):
+            issues['missing_seo_fields'].append(first_variant)
+
+    # Limit results to prevent UI overload
+    for key in issues:
+        if isinstance(issues[key], list) and len(issues[key]) > 50:
+            issues[key] = issues[key][:50]
+
+    return issues

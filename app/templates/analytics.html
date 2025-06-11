@@ -1,0 +1,984 @@
+<!-- app/templates/analytics.html - Fixed with caching and proper charts -->
+{% extends "base.html" %}
+
+{% block title %}Analytics - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        padding: 1.5rem 0;
+    }
+
+    .analytics-header {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.8);
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        min-height: 120px;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--card-accent, #667eea);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    .metric-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin-bottom: 1rem;
+    }
+
+    .metric-change {
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        position: relative;
+        min-height: 200px;
+    }
+
+    /* Loading States */
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .loading-card {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        backdrop-filter: blur(2px);
+        z-index: 10;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(102, 126, 234, 0.2);
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+        margin-left: 1rem;
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    /* Progressive loading indicators */
+    .stage-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        z-index: 1000;
+        display: none;
+        min-width: 200px;
+    }
+
+    .stage-indicator.show {
+        display: block;
+    }
+
+    .stage-progress {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+
+    .stage-progress-bar {
+        height: 100%;
+        background: #667eea;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    /* Performance indicators */
+    .performance-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .performance-badge.fast { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .performance-badge.medium { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .performance-badge.slow { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+
+    /* Error states */
+    .error-state {
+        text-align: center;
+        padding: 2rem;
+        color: #dc3545;
+    }
+
+    .retry-btn {
+        margin-top: 1rem;
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .retry-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-1px);
+    }
+
+    /* Color schemes for metrics */
+    .metric-card.primary { --card-accent: #667eea; }
+    .metric-card.success { --card-accent: #28a745; }
+    .metric-card.warning { --card-accent: #ffc107; }
+    .metric-card.danger { --card-accent: #dc3545; }
+    .metric-card.info { --card-accent: #17a2b8; }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .analytics-header {
+            padding: 1.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+        }
+
+        .stage-indicator {
+            bottom: 10px;
+            right: 10px;
+            left: 10px;
+            text-align: center;
+        }
+    }
+
+    .completion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.completion-item {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: relative;
+}
+
+.completion-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* Completion status color coding */
+.completion-item.excellent {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.completion-item.good {
+    border-left-color: #17a2b8;
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+}
+
+.completion-item.fair {
+    border-left-color: #ffc107;
+    background: linear-gradient(135deg, #fff3cd 0%, #fdeaa7 100%);
+}
+
+.completion-item.poor {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da 0%, #f1aeb5 100%);
+}
+
+/* Priority indicators */
+.completion-item.priority-high::before {
+    content: '🔥';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.completion-item.priority-medium::before {
+    content: '⚡';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.completion-item.priority-low::before {
+    content: '📋';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.completion-percentage {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+.completion-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    line-height: 1.2;
+}
+
+.completion-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .completion-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .completion-item {
+        padding: 1rem;
+    }
+
+    .completion-percentage {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <div class="container-fluid px-3 px-lg-4">
+        <!-- Analytics Header -->
+        <div class="analytics-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="h3 mb-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                        Data Analytics Dashboard
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Real-time insights with progressive loading for optimal performance
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="refreshAnalytics()" id="refreshBtn">
+                        <i data-lucide="refresh-cw" width="16" height="16"></i>
+                        <span class="d-none d-md-inline ms-1">Refresh</span>
+                    </button>
+                    <button class="btn btn-outline-info" onclick="warmCache()" id="warmCacheBtn">
+                        <i data-lucide="zap" width="16" height="16"></i>
+                        <span class="d-none d-md-inline ms-1">Warm Cache</span>
+                    </button>
+                    <button class="btn btn-success" onclick="exportQualityReport()">
+                        <i data-lucide="download" width="16" height="16"></i>
+                        <span class="d-none d-md-inline ms-1">Export</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Shop Filter -->
+            <div class="mt-3">
+                <form method="GET" class="row align-items-end" id="shopFilterForm">
+                    <div class="col-md-8">
+                        <label class="form-label">Filter by Shops</label>
+                        <select class="form-select" name="shop_ids[]" multiple id="shopSelect">
+                            {% for shop in shops %}
+                            <option value="{{ shop.id }}"
+                                    {% if shop.id in selected_shops %}selected{% endif %}>
+                                {{ shop.name|title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Select specific shops to analyze, or leave empty for all shops</small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary">
+                                <i data-lucide="filter" width="16" height="16"></i>
+                                Apply
+                            </button>
+                            <a href="{{ url_for('main.analytics') }}" class="btn btn-outline-secondary">
+                                <i data-lucide="x" width="16" height="16"></i>
+                                Clear
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if has_data %}
+        <!-- Basic Metrics (Load Immediately) -->
+        <div class="row mb-4" id="basicMetricsSection">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="metric-card primary">
+                    <div class="performance-badge fast">Cached</div>
+                    <div class="metric-value">{{ "{:,}".format(basic_metrics.total_variants or 0) }}</div>
+                    <div class="metric-label">Total Variants</div>
+                    <div class="metric-change text-info">
+                        <i data-lucide="database" width="14" height="14"></i>
+                        {{ "{:,}".format(basic_metrics.total_products or 0) }} products
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="metric-card info">
+                    <div class="performance-badge fast">Cached</div>
+                    <div class="metric-value">{{ basic_metrics.total_shops or 0 }}</div>
+                    <div class="metric-label">Shops Analyzed</div>
+                    <div class="metric-change text-info">
+                        <i data-lucide="building" width="14" height="14"></i>
+                        {% if selected_shops %}Selected: {{ selected_shops|length }}{% else %}All shops{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Core Metrics (Load Progressively) -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="metric-card danger" id="missingSkuCard">
+                    <div class="loading-overlay">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Loading...</div>
+                    </div>
+                    <div class="metric-value" id="missingSkuValue">-</div>
+                    <div class="metric-label">Missing SKUs</div>
+                    <div class="metric-change" id="missingSkuChange">
+                        <i data-lucide="alert-triangle" width="14" height="14"></i>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="metric-card warning" id="zeroInventoryCard">
+                    <div class="loading-overlay">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Loading...</div>
+                    </div>
+                    <div class="metric-value" id="zeroInventoryValue">-</div>
+                    <div class="metric-label">Zero Inventory</div>
+                    <div class="metric-change" id="zeroInventoryChange">
+                        <i data-lucide="package-x" width="14" height="14"></i>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Score Section (Load after core metrics) -->
+        <div class="row mb-4" id="qualityScoreSection">
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container" id="qualityScoreContainer">
+                    <div class="loading-overlay">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Calculating quality score...</div>
+                    </div>
+                    <h5 class="mb-3">
+                        <i data-lucide="award" width="20" height="20" class="me-2"></i>
+                        Comprehensive Quality Score
+                    </h5>
+                    <div class="text-center" id="qualityScoreContent">
+                        <!-- Content will be loaded progressively -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container" id="recommendationsContainer">
+                    <div class="loading-overlay">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Generating recommendations...</div>
+                    </div>
+                    <h5 class="mb-3">
+                        <i data-lucide="lightbulb" width="20" height="20" class="me-2"></i>
+                        Priority Recommendations
+                    </h5>
+                    <div id="recommendationsContent">
+                        <!-- Content will be loaded progressively -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metafield Analysis Section (Load last) -->
+        <div class="row mb-4" id="metafieldSection">
+            <div class="col-12">
+                <div class="chart-container" id="metafieldContainer">
+                    <div class="loading-overlay">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Analyzing metafield completeness...</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i data-lucide="database" width="20" height="20" class="me-2"></i>
+                            Metafield Completeness Analysis
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="sortMetafields('percentage')">
+                                <i data-lucide="bar-chart-3" width="14" height="14"></i>
+                                By Completion
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="sortMetafields('priority')">
+                                <i data-lucide="flag" width="14" height="14"></i>
+                                By Priority
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="completion-grid" id="metafieldGrid">
+                        <!-- Content will be loaded progressively -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i data-lucide="zap" width="20" height="20" class="me-2"></i>
+                        Quick Actions & Performance Tools
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button class="btn btn-outline-primary" onclick="showPerformanceMetrics()">
+                                    <i data-lucide="activity" width="16" height="16" class="me-2"></i>
+                                    Performance
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button class="btn btn-outline-warning" onclick="clearCache()">
+                                    <i data-lucide="trash-2" width="16" height="16" class="me-2"></i>
+                                    Clear Cache
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <a href="{{ url_for('main.products', missing_sku=1, missing_barcode=1, **{'shop_ids[]': selected_shops}) }}"
+                                   class="btn btn-outline-danger">
+                                    <i data-lucide="alert-triangle" width="16" height="16" class="me-2"></i>
+                                    Critical Issues
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button class="btn btn-outline-success" onclick="exportQualityReport()">
+                                    <i data-lucide="file-text" width="16" height="16" class="me-2"></i>
+                                    Full Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="chart-container">
+                    <div class="text-center py-5">
+                        <i data-lucide="database" width="64" height="64" class="mb-3 text-muted"></i>
+                        <h4>No Data Available</h4>
+                        <p class="text-muted">
+                            No product data found for the selected shops.
+                        </p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('main.analytics') }}" class="btn btn-primary me-2">
+                                <i data-lucide="refresh-cw" width="16" height="16" class="me-1"></i>
+                                Reset Filters
+                            </a>
+                            <button class="btn btn-outline-primary" onclick="refreshAnalytics()">
+                                <i data-lucide="database" width="16" height="16" class="me-1"></i>
+                                Reload Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stage Indicator -->
+<div class="stage-indicator" id="stageIndicator">
+    <div class="d-flex align-items-center">
+        <div class="loading-spinner me-2" style="width: 20px; height: 20px; border-width: 2px;"></div>
+        <span id="stageText">Loading analytics...</span>
+    </div>
+    <div class="stage-progress">
+        <div class="stage-progress-bar" id="stageProgressBar" style="width: 0%"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<script>
+    // Global variables for progressive loading
+    window.loadingStages = {
+        basic: { completed: true, progress: 25 },
+        core: { completed: false, progress: 50 },
+        quality: { completed: false, progress: 75 },
+        metafields: { completed: false, progress: 100 }
+    };
+
+    window.analyticsData = {
+        basicMetrics: {{ basic_metrics|tojson if basic_metrics else '{}' }},
+        coreMetrics: {},
+        qualityAnalysis: {},
+        metafieldData: {}
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        {% if has_data and loading_mode %}
+        // Start progressive loading
+        startProgressiveLoading();
+        {% endif %}
+    });
+
+    function startProgressiveLoading() {
+        showStageIndicator('Loading core metrics...', 25);
+
+        // Stage 1: Load core metrics
+        loadCoreMetrics()
+            .then(() => {
+                updateStage('core', 'Loading quality analysis...', 50);
+                return loadQualityAnalysis();
+            })
+            .then(() => {
+                updateStage('quality', 'Analyzing metafields...', 75);
+                return loadMetafieldAnalysis();
+            })
+            .then(() => {
+                updateStage('metafields', 'Complete!', 100);
+                setTimeout(hideStageIndicator, 2000);
+            })
+            .catch(error => {
+                console.error('Progressive loading error:', error);
+                showStageError('Loading failed. Click to retry.');
+            });
+    }
+
+    async function loadCoreMetrics() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/analytics/core-metrics?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                window.analyticsData.coreMetrics = result.data;
+                updateCoreMetricsUI(result.data);
+                addPerformanceBadge('missingSkuCard', result.load_time);
+                addPerformanceBadge('zeroInventoryCard', result.load_time);
+                window.loadingStages.core.completed = true;
+            } else {
+                throw new Error(result.error || 'Core metrics loading failed');
+            }
+        } catch (error) {
+            showErrorInCard('missingSkuCard', 'Failed to load', () => loadCoreMetrics());
+            showErrorInCard('zeroInventoryCard', 'Failed to load', () => loadCoreMetrics());
+            throw error;
+        }
+    }
+
+    async function loadQualityAnalysis() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/analytics/quality-score?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                window.analyticsData.qualityAnalysis = result.data.quality_analysis;
+                window.analyticsData.enhancedMetrics = result.data.enhanced_metrics;
+                updateQualityScoreUI(result.data.quality_analysis);
+                updateRecommendationsUI(result.data.quality_analysis.recommendations);
+                addPerformanceBadge('qualityScoreContainer', result.load_time);
+                addPerformanceBadge('recommendationsContainer', result.load_time);
+                window.loadingStages.quality.completed = true;
+            } else {
+                throw new Error(result.error || 'Quality analysis failed');
+            }
+        } catch (error) {
+            showErrorInContainer('qualityScoreContainer', 'Quality analysis failed', () => loadQualityAnalysis());
+            showErrorInContainer('recommendationsContainer', 'Recommendations failed', () => loadQualityAnalysis());
+            throw error;
+        }
+    }
+
+    async function loadMetafieldAnalysis() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/analytics/metafield-analysis?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                window.analyticsData.metafieldData = result.data;
+                updateMetafieldUI(result.data);
+                addPerformanceBadge('metafieldContainer', result.load_time);
+                window.loadingStages.metafields.completed = true;
+            } else {
+                throw new Error(result.error || 'Metafield analysis failed');
+            }
+        } catch (error) {
+            showErrorInContainer('metafieldContainer', 'Metafield analysis failed', () => loadMetafieldAnalysis());
+            throw error;
+        }
+    }
+
+    function updateCoreMetricsUI(data) {
+        const total = window.analyticsData.basicMetrics.total_variants || 1;
+
+        // Update missing SKUs
+        const missingSkuPct = (data.missing_sku / total * 100).toFixed(1);
+        document.getElementById('missingSkuValue').textContent = data.missing_sku.toLocaleString();
+        document.getElementById('missingSkuChange').innerHTML = `
+            <i data-lucide="alert-triangle" width="14" height="14"></i>
+            ${missingSkuPct}% of variants
+        `;
+        document.getElementById('missingSkuCard').querySelector('.loading-overlay').style.display = 'none';
+
+        // Update zero inventory
+        const zeroInvPct = (data.zero_inventory / total * 100).toFixed(1);
+        document.getElementById('zeroInventoryValue').textContent = data.zero_inventory.toLocaleString();
+        document.getElementById('zeroInventoryChange').innerHTML = `
+            <i data-lucide="package-x" width="14" height="14"></i>
+            ${zeroInvPct}% of variants
+        `;
+        document.getElementById('zeroInventoryCard').querySelector('.loading-overlay').style.display = 'none';
+
+        lucide.createIcons();
+    }
+
+    function updateQualityScoreUI(qualityData) {
+        const content = `
+            <div class="display-1 fw-bold mb-3 text-${qualityData.quality_grade.color}">
+                ${qualityData.overall_score}%
+            </div>
+            <div class="h5 mb-4">
+                Grade ${qualityData.quality_grade.letter} - ${qualityData.quality_grade.description}
+            </div>
+        `;
+
+        document.getElementById('qualityScoreContent').innerHTML = content;
+        document.getElementById('qualityScoreContainer').querySelector('.loading-overlay').style.display = 'none';
+    }
+
+    function updateRecommendationsUI(recommendations) {
+        const content = recommendations.map(rec => `
+            <div class="alert alert-info mb-2" style="border-left: 4px solid #667eea;">
+                ${rec}
+            </div>
+        `).join('');
+
+        document.getElementById('recommendationsContent').innerHTML = content || `
+            <div class="alert alert-success">
+                ✅ Excellent data quality! No critical issues detected.
+            </div>
+        `;
+        document.getElementById('recommendationsContainer').querySelector('.loading-overlay').style.display = 'none';
+    }
+
+    function updateMetafieldUI(metafieldData) {
+        const grid = document.getElementById('metafieldGrid');
+        const items = Object.entries(metafieldData).map(([field, data]) => {
+            const completionClass = data.percentage >= 80 ? 'excellent' :
+                                  data.percentage >= 60 ? 'good' :
+                                  data.percentage >= 40 ? 'fair' : 'poor';
+            const priorityClass = data.priority === 1 ? 'priority-high' :
+                                 data.priority === 2 ? 'priority-medium' : 'priority-low';
+
+            return `
+                <div class="completion-item ${completionClass} ${priorityClass}"
+                     data-percentage="${data.percentage}"
+                     data-priority="${data.priority}">
+                    <div class="completion-percentage text-${data.percentage >= 80 ? 'success' : data.percentage >= 60 ? 'info' : data.percentage >= 40 ? 'warning' : 'danger'}">
+                        ${data.percentage}%
+                    </div>
+                    <div class="completion-label">${data.formatted_name || data.display_name}</div>
+                    <div class="completion-count">${data.count.toLocaleString()} of ${data.total_products.toLocaleString()} products</div>
+                </div>
+            `;
+        }).join('');
+
+        grid.innerHTML = items;
+        document.getElementById('metafieldContainer').querySelector('.loading-overlay').style.display = 'none';
+    }
+
+    function showStageIndicator(text, progress) {
+        const indicator = document.getElementById('stageIndicator');
+        const progressBar = document.getElementById('stageProgressBar');
+        const stageText = document.getElementById('stageText');
+
+        stageText.textContent = text;
+        progressBar.style.width = progress + '%';
+        indicator.classList.add('show');
+    }
+
+    function updateStage(stage, text, progress) {
+        window.loadingStages[stage].completed = true;
+        showStageIndicator(text, progress);
+    }
+
+    function hideStageIndicator() {
+        document.getElementById('stageIndicator').classList.remove('show');
+    }
+
+    function showStageError(message) {
+        const indicator = document.getElementById('stageIndicator');
+        indicator.innerHTML = `
+            <div class="text-danger">
+                <i data-lucide="alert-circle" width="20" height="20" class="me-2"></i>
+                ${message}
+            </div>
+        `;
+        indicator.onclick = () => {
+            location.reload();
+        };
+        indicator.style.cursor = 'pointer';
+    }
+
+    function addPerformanceBadge(containerId, loadTime) {
+        const container = document.getElementById(containerId);
+        const badge = document.createElement('div');
+        badge.className = `performance-badge ${loadTime < 1 ? 'fast' : loadTime < 3 ? 'medium' : 'slow'}`;
+        badge.textContent = `${loadTime}s`;
+        container.appendChild(badge);
+    }
+
+    function showErrorInCard(cardId, message, retryFn) {
+        const card = document.getElementById(cardId);
+        const overlay = card.querySelector('.loading-overlay');
+        overlay.innerHTML = `
+            <div class="error-state">
+                <i data-lucide="alert-circle" width="24" height="24"></i>
+                <div>${message}</div>
+                <button class="retry-btn" onclick="(${retryFn.toString()})()">Retry</button>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+
+    function showErrorInContainer(containerId, message, retryFn) {
+        const container = document.getElementById(containerId);
+        const overlay = container.querySelector('.loading-overlay');
+        overlay.innerHTML = `
+            <div class="error-state">
+                <i data-lucide="alert-circle" width="48" height="48"></i>
+                <h6>${message}</h6>
+                <button class="retry-btn" onclick="(${retryFn.toString()})()">Retry</button>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+
+    // Cache management functions
+    async function warmCache() {
+        const btn = document.getElementById('warmCacheBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader" width="16" height="16"></i> Warming...';
+        btn.disabled = true;
+
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/cache/warm?${params.toString()}`, { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                showStageIndicator('Cache warming started...', 50);
+                setTimeout(() => {
+                    showStageIndicator('Cache ready!', 100);
+                    setTimeout(hideStageIndicator, 2000);
+                }, 3000);
+            }
+        } catch (error) {
+            alert('Cache warming failed: ' + error.message);
+        } finally {
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }, 3000);
+        }
+    }
+
+    async function clearCache() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/cache/clear?${params.toString()}`, { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                showStageIndicator('Cache cleared successfully', 100);
+                setTimeout(hideStageIndicator, 2000);
+            }
+        } catch (error) {
+            alert('Cache clearing failed: ' + error.message);
+        }
+    }
+
+    async function showPerformanceMetrics() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const response = await fetch(`/api/performance/metrics?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                const metrics = result.data;
+                alert(`Performance Metrics:
+Basic Metrics: ${metrics.basic_metrics_time}s
+Core Metrics: ${metrics.core_metrics_time}s
+Metafield Analysis: ${metrics.metafield_analysis_time}s
+Cache Entries: ${metrics.cache_stats.size}`);
+            }
+        } catch (error) {
+            alert('Performance metrics failed: ' + error.message);
+        }
+    }
+
+    function refreshAnalytics() {
+        showStageIndicator('Refreshing analytics...', 0);
+        location.reload();
+    }
+
+    function exportQualityReport() {
+        const params = new URLSearchParams(window.location.search);
+        window.open(`/api/export-quality-report?${params.toString()}`, '_blank');
+    }
+
+    function sortMetafields(criteria) {
+        const grid = document.getElementById('metafieldGrid');
+        if (!grid) return;
+
+        const items = Array.from(grid.children);
+
+        items.sort((a, b) => {
+            if (criteria === 'percentage') {
+                const aValue = parseFloat(a.dataset.percentage);
+                const bValue = parseFloat(b.dataset.percentage);
+                return bValue - aValue;
+            } else if (criteria === 'priority') {
+                const aValue = parseInt(a.dataset.priority);
+                const bValue = parseInt(b.dataset.priority);
+                if (aValue === bValue) {
+                    return parseFloat(b.dataset.percentage) - parseFloat(a.dataset.percentage);
+                }
+                return aValue - bValue;
+            }
+            return 0;
+        });
+
+        grid.innerHTML = '';
+        items.forEach(item => grid.appendChild(item));
+    }
+</script>
+{% endblock %}

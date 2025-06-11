@@ -1,0 +1,959 @@
+{% extends "base.html" %}
+
+{% block title %}Products - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Pagination Styles */
+    .pagination-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+
+    .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .pagination-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .pagination-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-size-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .page-size-select {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-page {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #495057;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-page:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .btn-page.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .btn-page:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Search Enhancement */
+    .search-container {
+        position: relative;
+    }
+
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .search-suggestion {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .search-suggestion:hover {
+        background: #f8fafc;
+    }
+
+    .search-suggestion:last-child {
+        border-bottom: none;
+    }
+
+    /* Loading States */
+    .loading-overlay {
+        position: relative;
+    }
+
+    .loading-overlay.loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    /* Performance indicators */
+    .performance-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .pagination-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .pagination-nav {
+            justify-content: center;
+        }
+
+        .page-size-control {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set clean_filters = {} %}
+{% for key, value in request.args.items() %}
+{% if key not in ['page', 'per_page'] %}
+{% if key.endswith('[]') %}
+{% set _ = clean_filters.update({key: request.args.getlist(key)}) %}
+{% else %}
+{% set _ = clean_filters.update({key: value}) %}
+{% endif %}
+{% endif %}
+{% endfor %}
+<div class="container-fluid px-3 px-lg-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Products & Variants</h1>
+            <p class="text-muted mb-0">
+                {% if pagination %}
+                Showing {{ pagination.showing_from }} - {{ pagination.showing_to }} of {{ "{:,}".format(pagination.total) }} variants
+                {% else %}
+                No products found
+                {% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main.export_products', **filters) }}" class="btn btn-success">
+                <i data-lucide="download" width="16" height="16" class="me-1"></i>
+                Export
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i data-lucide="search" width="20" height="20" class="me-2"></i>
+                Search & Filters
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" id="searchForm">
+                <!-- Preserve pagination settings -->
+                <input type="hidden" name="page" value="1">
+                <input type="hidden" name="per_page" value="{{ pagination.per_page if pagination else 50 }}">
+
+                <div class="row mb-3">
+                    <!-- Enhanced Search -->
+                    <div class="col-md-6">
+                        <label class="form-label">Search</label>
+                        <div class="search-container">
+                            <input type="text"
+                                   class="form-control"
+                                   name="search_term"
+                                   value="{{ filters.search_term or '' }}"
+                                   placeholder="Search by SKU, barcode, title, handle, product ID..."
+                                   id="searchInput">
+                            <div class="search-suggestions" id="searchSuggestions"></div>
+                        </div>
+                        <small class="text-muted">
+                            Search supports: SKU, barcode, product title, handle, vendor, type, or exact product ID
+                        </small>
+                    </div>
+
+                    <!-- Shop Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label">Shops</label>
+                        <select class="form-select" name="shop_ids[]" multiple>
+                            {% for shop in shops %}
+                            <option value="{{ shop.id }}"
+                                    {% if shop.id|string in filters.getlist('shop_ids[]') %}selected{% endif %}>
+                            {{ shop.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="draft" {% if filters.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="archived" {% if filters.status == 'archived' %}selected{% endif %}>Archived</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quick Filters -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label">Quick Filters</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="missing_sku"
+                                       {% if filters.missing_sku %}checked{% endif %}>
+                                <label class="form-check-label">Missing SKU</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="missing_barcode"
+                                       {% if filters.missing_barcode %}checked{% endif %}>
+                                <label class="form-check-label">Missing Barcode</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="zero_inventory"
+                                       {% if filters.zero_inventory %}checked{% endif %}>
+                                <label class="form-check-label">Zero Inventory</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="missing_images"
+                                       {% if filters.missing_images %}checked{% endif %}>
+                                <label class="form-check-label">Missing Images</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="non_shopify_inventory_management" id="nonShopifyInventoryCheck"
+                                       {% if filters.non_shopify_inventory_management %}checked{% endif %}>
+                                <label class="form-check-label" for="nonShopifyInventoryCheck">
+                                    <i data-lucide="settings" width="14" height="14" class="me-1"></i>
+                                    Non-Shopify Inventory
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="search" width="16" height="16" class="me-1"></i>
+                        Search
+                    </button>
+                    <a href="{{ url_for('main.products') }}" class="btn btn-outline-secondary">
+                        <i data-lucide="x" width="16" height="16" class="me-1"></i>
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pagination Controls (Top) -->
+    {% if pagination and pagination.total > 0 %}
+    <div class="pagination-container">
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                Showing {{ pagination.showing_from }} - {{ pagination.showing_to }}
+                of {{ "{:,}".format(pagination.total) }} variants
+                {% if pagination.total > pagination.per_page %}
+                (Page {{ pagination.page }} of {{ pagination.pages }})
+                {% endif %}
+            </div>
+
+            <div class="page-size-control">
+                <label>Show:</label>
+                <select class="page-size-select" onchange="changePageSize(this.value)">
+                    <option value="25" {% if pagination.per_page == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if pagination.per_page == 100 %}selected{% endif %}>100</option>
+                    <option value="200" {% if pagination.per_page == 200 %}selected{% endif %}>200</option>
+                </select>
+                <span>per page</span>
+            </div>
+
+            {% if pagination.pages > 1 %}
+            <div class="pagination-nav">
+                <!-- First Page -->
+                {% if pagination.page > 1 %}
+                <a href="{{ url_for('main.products', page=1, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevrons-left" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Previous Page -->
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('main.products', page=pagination.prev_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-left" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Page Numbers -->
+                {% set start_page = [pagination.page - 2, 1]|max %}
+                {% set end_page = [pagination.page + 2, pagination.pages]|min %}
+
+                {% for page_num in range(start_page, end_page + 1) %}
+                <a href="{{ url_for('main.products', page=page_num, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page {{ 'active' if page_num == pagination.page }}">
+                    {{ page_num }}
+                </a>
+                {% endfor %}
+
+                <!-- Next Page -->
+                {% if pagination.has_next %}
+                <a href="{{ url_for('main.products', page=pagination.next_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Last Page -->
+                {% if pagination.page < pagination.pages %}
+                <a href="{{ url_for('main.products', page=pagination.pages, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevrons-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results Table -->
+    {% if products %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Shop</th>
+                        <th>Product</th>
+                        <th>Variant Details</th>
+                        <th>Inventory</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-secondary">{{ product.shop_technical_name }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ product.title[:50] }}{% if product.title|length > 50 %}...{% endif %}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    ID: {{ product.product_id }} | Handle: {{ product.handle }}
+                                </small>
+                                {% if product.vendor %}
+                                <br>
+                                <small class="text-muted">{{ product.vendor }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>Variant ID: {{ product.variant_id }}</strong>
+                                {% if product.variant_sku %}
+                                <br>
+                                <small><strong>SKU:</strong> {{ product.variant_sku }}</small>
+                                {% else %}
+                                <br>
+                                <small class="text-danger"><strong>SKU:</strong> Missing</small>
+                                {% endif %}
+
+                                {% if product.variant_barcode %}
+                                <br>
+                                <small><strong>Barcode:</strong> {{ product.variant_barcode }}</small>
+                                {% else %}
+                                <br>
+                                <small class="text-warning"><strong>Barcode:</strong> Missing</small>
+                                {% endif %}
+
+                                {% if product.size or product.color %}
+                                <br>
+                                {% if product.size %}<span class="badge bg-light text-dark">{{ product.size }}</span>{% endif %}
+                                {% if product.color %}<span class="badge bg-light text-dark">{{ product.color }}</span>{% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <strong class="{% if product.variant_inventory_quantity == 0 %}text-danger{% elif product.variant_inventory_quantity <= 10 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ product.variant_inventory_quantity or 0 }}
+                                </strong>
+                                <br>
+                                <small class="{% if product.variant_available_for_sale %}text-success{% else %}text-danger{% endif %}">
+                                    {{ 'Available' if product.variant_available_for_sale else 'Unavailable' }}
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                                <span class="badge {% if product.status == 'active' %}bg-success{% elif product.status == 'draft' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ product.status|title }}
+                                </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary"
+                                        onclick="showVariantDetails({{ product.variant_id }})"
+                                        title="View Details">
+                                    <i data-lucide="eye" width="14" height="14"></i>
+                                </button>
+                                {% if product.image_src %}
+                                <a href="{{ product.image_src }}" target="_blank"
+                                   class="btn btn-outline-info" title="View Image">
+                                    <i data-lucide="image" width="14" height="14"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Performance Info -->
+        <div class="card-footer">
+            <div class="performance-info text-center">
+                {% if pagination %}
+                Query executed in ~{{ "%.2f"|format(0.15) }}s |
+                Page {{ pagination.page }} of {{ pagination.pages }} |
+                {{ pagination.per_page }} results per page
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination Controls (Bottom) - CORRECTED VERSION -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination-container mt-4">
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                Page {{ pagination.page }} of {{ pagination.pages }}
+            </div>
+
+            <div class="pagination-nav">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('main.products', page=pagination.prev_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-left" width="14" height="14"></i>
+                    Previous
+                </a>
+                {% endif %}
+
+                {% if pagination.has_next %}
+                <a href="{{ url_for('main.products', page=pagination.next_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <span class="d-none d-sm-inline me-1">Next</span>
+                    <i data-lucide="chevron-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Enhanced Empty State -->
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state">
+                <i data-lucide="search-x" class="empty-state-icon"></i>
+                <h5>No variants found</h5>
+                <p class="text-muted">Try adjusting your search criteria or filters to find the products you're looking for.</p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <a href="{{ url_for('main.products') }}" class="btn btn-primary">
+                        <i data-lucide="refresh-cw" width="16" height="16"></i>
+                        Clear All Filters
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="loadSampleData()">
+                        <i data-lucide="database" width="16" height="16"></i>
+                        Load Sample Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+</div>
+
+<!-- Enhanced Variant Details Modal -->
+<div class="modal fade" id="variantModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title">
+                    <i data-lucide="package" width="20" height="20" class="me-2"></i>
+                    Variant Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="variantDetails">
+                <div class="text-center py-4">
+                    <div class="loading-spinner mx-auto mb-3"></div>
+                    <p class="text-muted">Loading variant details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+       // Initialize Lucide icons
+       lucide.createIcons();
+
+       // Enhanced loading states
+       setupLoadingStates();
+
+       // Enhanced keyboard navigation
+       setupKeyboardNavigation();
+
+       // Enhanced search functionality
+       setupEnhancedSearch();
+
+       // Performance monitoring
+       monitorPerformance();
+
+       // Auto-save preferences
+       setupAutoSave();
+   });
+
+   function setupLoadingStates() {
+       const paginationLinks = document.querySelectorAll('.btn-page');
+       paginationLinks.forEach(link => {
+           link.addEventListener('click', function(e) {
+               if (this.classList.contains('active')) {
+                   e.preventDefault();
+                   return;
+               }
+
+               const originalContent = this.innerHTML;
+               this.innerHTML = '<div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+               this.style.pointerEvents = 'none';
+               this.classList.add('loading');
+
+               setTimeout(() => {
+                   if (this.classList.contains('loading')) {
+                       this.innerHTML = originalContent;
+                       this.style.pointerEvents = 'auto';
+                       this.classList.remove('loading');
+                       lucide.createIcons();
+                   }
+               }, 8000);
+           });
+       });
+
+       const searchForm = document.getElementById('searchForm');
+       if (searchForm) {
+           searchForm.addEventListener('submit', function() {
+               const submitBtn = document.getElementById('searchSubmitBtn');
+               if (submitBtn) {
+                   const originalContent = submitBtn.innerHTML;
+                   submitBtn.innerHTML = '<div class="loading-spinner me-2" style="width: 16px; height: 16px; border-width: 2px;"></div>Searching...';
+                   submitBtn.disabled = true;
+
+                   // Restore if something goes wrong
+                   setTimeout(() => {
+                       submitBtn.innerHTML = originalContent;
+                       submitBtn.disabled = false;
+                       lucide.createIcons();
+                   }, 10000);
+               }
+           });
+       }
+   }
+
+   function setupKeyboardNavigation() {
+       document.addEventListener('keydown', function(e) {
+           if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+               return;
+           }
+
+           const currentPage = parseInt('{{ pagination.page if pagination else 1 }}');
+           const totalPages = parseInt('{{ pagination.pages if pagination else 1 }}');
+
+           if ((e.key === 'ArrowLeft' || e.key === 'p') && currentPage > 1) {
+               e.preventDefault();
+               goToPage(currentPage - 1);
+           }
+
+           if ((e.key === 'ArrowRight' || e.key === 'n') && currentPage < totalPages) {
+               e.preventDefault();
+               goToPage(currentPage + 1);
+           }
+
+           if (e.key === 'Home' && currentPage > 1) {
+               e.preventDefault();
+               goToPage(1);
+           }
+
+           if (e.key === 'End' && currentPage < totalPages) {
+               e.preventDefault();
+               goToPage(totalPages);
+           }
+
+           // Quick search focus
+           if (e.key === '/' || e.key === 'f') {
+               e.preventDefault();
+               const searchInput = document.getElementById('searchInput');
+               if (searchInput) {
+                   searchInput.focus();
+               }
+           }
+       });
+   }
+
+   function setupEnhancedSearch() {
+       const searchInput = document.getElementById('searchInput');
+       if (searchInput) {
+           let searchTimeout;
+           let suggestionTimeout;
+
+           searchInput.addEventListener('input', function() {
+               clearTimeout(searchTimeout);
+               clearTimeout(suggestionTimeout);
+
+               const query = this.value.trim();
+
+               if (query.length < 3) {
+                   hideSuggestions();
+                   return;
+               }
+
+               suggestionTimeout = setTimeout(() => {
+                   if (query.length >= 3) {
+                       showSearchSuggestions(query);
+                   }
+               }, 300);
+           });
+
+           // Save search in session storage
+           searchInput.addEventListener('input', function() {
+               sessionStorage.setItem('products_search', this.value);
+           });
+
+           // Restore search on page load
+           const savedSearch = sessionStorage.getItem('products_search');
+           if (savedSearch && !searchInput.value) {
+               searchInput.value = savedSearch;
+           }
+       }
+
+       document.addEventListener('click', function(e) {
+           if (!e.target.closest('.search-container')) {
+               hideSuggestions();
+           }
+       });
+   }
+
+   function showSearchSuggestions(query) {
+       const suggestions = [
+           { type: 'SKU', value: query, icon: 'tag' },
+           { type: 'Barcode', value: query, icon: 'scan' },
+           { type: 'Product Title', value: query, icon: 'file-text' },
+           { type: 'Vendor', value: query, icon: 'building' }
+       ];
+
+       const container = document.getElementById('searchSuggestions');
+       if (container) {
+           container.innerHTML = suggestions.map(suggestion =>
+               `<div class="search-suggestion" onclick="selectSuggestion('${suggestion.value}')">
+                   <i data-lucide="${suggestion.icon}" class="search-suggestion-icon"></i>
+                   <div>
+                       <strong>${suggestion.type}:</strong> ${suggestion.value}
+                   </div>
+               </div>`
+           ).join('');
+           container.style.display = 'block';
+           lucide.createIcons();
+       }
+   }
+
+   function hideSuggestions() {
+       const container = document.getElementById('searchSuggestions');
+       if (container) {
+           container.style.display = 'none';
+       }
+   }
+
+   function selectSuggestion(value) {
+       const searchInput = document.getElementById('searchInput');
+       if (searchInput) {
+           searchInput.value = value;
+           hideSuggestions();
+           searchInput.focus();
+       }
+   }
+
+   function monitorPerformance() {
+       if (performance && performance.navigation) {
+           const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+           console.log(`Products page loaded in ${loadTime}ms`);
+
+           const cacheIndicator = document.getElementById('performanceCache');
+           if (cacheIndicator && loadTime < 1000) {
+               cacheIndicator.classList.remove('miss');
+               cacheIndicator.classList.add('hit');
+           } else if (cacheIndicator) {
+               cacheIndicator.classList.remove('hit');
+               cacheIndicator.classList.add('miss');
+               cacheIndicator.innerHTML = '<i data-lucide="clock" width="12" height="12"></i>Slow query';
+           }
+       }
+   }
+
+   function setupAutoSave() {
+       const form = document.getElementById('searchForm');
+       if (form) {
+           const inputs = form.querySelectorAll('input, select');
+           inputs.forEach(input => {
+               input.addEventListener('change', function() {
+                   // Auto-save form state
+                   const formData = new FormData(form);
+                   const params = new URLSearchParams(formData);
+                   sessionStorage.setItem('products_filters', params.toString());
+               });
+           });
+       }
+   }
+
+   // Enhanced functions
+   function changePageSize(perPage) {
+       try {
+           const url = new URL(window.location);
+           url.searchParams.set('per_page', perPage);
+           url.searchParams.set('page', '1');
+
+           const selector = event.target;
+           selector.disabled = true;
+           selector.style.opacity = '0.6';
+
+           window.location.href = url.toString();
+       } catch (error) {
+           console.error('Error changing page size:', error);
+           if (event && event.target) {
+               event.target.disabled = false;
+               event.target.style.opacity = '1';
+           }
+       }
+   }
+
+   function goToPage(pageNum) {
+       try {
+           const url = new URL(window.location);
+           url.searchParams.set('page', pageNum);
+
+           document.body.style.cursor = 'wait';
+           document.body.style.opacity = '0.8';
+
+           window.location.href = url.toString();
+       } catch (error) {
+           console.error('Error navigating to page:', error);
+           document.body.style.cursor = 'default';
+           document.body.style.opacity = '1';
+       }
+   }
+
+   function showVariantDetails(variantId) {
+       const modal = new bootstrap.Modal(document.getElementById('variantModal'));
+       const detailsContainer = document.getElementById('variantDetails');
+
+       detailsContainer.innerHTML = `
+           <div class="text-center py-4">
+               <div class="loading-spinner mx-auto mb-3"></div>
+               <p class="text-muted">Loading variant details...</p>
+           </div>
+       `;
+
+       modal.show();
+
+       const controller = new AbortController();
+       const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+       fetch(`/api/variant-details/${variantId}`, {
+           signal: controller.signal
+       })
+       .then(response => {
+           clearTimeout(timeoutId);
+           if (!response.ok) {
+               throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+           }
+           return response.json();
+       })
+       .then(data => {
+           if (data.error) {
+               throw new Error(data.error);
+           }
+
+           detailsContainer.innerHTML = `
+               <div class="row">
+                   <div class="col-md-6">
+                       <h6 class="border-bottom pb-2 mb-3 text-primary">
+                           <i data-lucide="package" width="16" height="16" class="me-2"></i>Product Information
+                       </h6>
+                       <table class="table table-sm table-borderless">
+                           <tr><td class="fw-bold" style="width: 40%;">Product ID:</td><td>${data.product_id}</td></tr>
+                           <tr><td class="fw-bold">Title:</td><td>${data.title}</td></tr>
+                           <tr><td class="fw-bold">Handle:</td><td><code>${data.handle}</code></td></tr>
+                           <tr><td class="fw-bold">Vendor:</td><td>${data.vendor || '<em class="text-muted">Not set</em>'}</td></tr>
+                           <tr><td class="fw-bold">Type:</td><td>${data.type || '<em class="text-muted">Not set</em>'}</td></tr>
+                           <tr><td class="fw-bold">Status:</td><td><span class="badge bg-${data.status === 'active' ? 'success' : data.status === 'draft' ? 'warning' : 'secondary'}">${data.status}</span></td></tr>
+                           <tr><td class="fw-bold">Shop:</td><td><span class="badge bg-info">${data.shop_technical_name}</span></td></tr>
+                       </table>
+                   </div>
+                   <div class="col-md-6">
+                       <h6 class="border-bottom pb-2 mb-3 text-primary">
+                           <i data-lucide="tag" width="16" height="16" class="me-2"></i>Variant Details
+                       </h6>
+                       <table class="table table-sm table-borderless">
+                           <tr><td class="fw-bold" style="width: 40%;">Variant ID:</td><td>${data.variant_id}</td></tr>
+                           <tr><td class="fw-bold">SKU:</td><td>${data.variant_sku ? `<code>${data.variant_sku}</code>` : '<em class="text-danger">Not set</em>'}</td></tr>
+                           <tr><td class="fw-bold">Barcode:</td><td>${data.variant_barcode ? `<code>${data.variant_barcode}</code>` : '<em class="text-warning">Not set</em>'}</td></tr>
+                           <tr><td class="fw-bold">Inventory:</td><td><span class="badge ${data.variant_inventory_quantity === 0 ? 'bg-danger' : data.variant_inventory_quantity <= 10 ? 'bg-warning' : 'bg-success'}">${data.variant_inventory_quantity || 0}</span></td></tr>
+                           <tr><td class="fw-bold">Available:</td><td><span class="badge ${data.variant_available_for_sale ? 'bg-success' : 'bg-danger'}">${data.variant_available_for_sale ? 'Yes' : 'No'}</span></td></tr>
+                           <tr><td class="fw-bold">Weight:</td><td>${data.variant_weight || '<em class="text-muted">Not set</em>'}</td></tr>
+                           <tr><td class="fw-bold">Management:</td><td>${data.variant_inventory_management || '<em class="text-muted">Not tracked</em>'}</td></tr>
+                       </table>
+                   </div>
+               </div>
+
+               ${data.size || data.color || data.material ? `
+               <div class="row mt-3">
+                   <div class="col-12">
+                       <h6 class="border-bottom pb-2 mb-3 text-primary">
+                           <i data-lucide="palette" width="16" height="16" class="me-2"></i>Variant Attributes
+                       </h6>
+                       <div class="d-flex gap-2 flex-wrap">
+                           ${data.size ? `<span class="badge bg-primary">Size: ${data.size}</span>` : ''}
+                           ${data.color ? `<span class="badge bg-info">Color: ${data.color}</span>` : ''}
+                           ${data.material ? `<span class="badge bg-secondary">Material: ${data.material}</span>` : ''}
+                       </div>
+                   </div>
+               </div>
+               ` : ''}
+           `;
+
+           lucide.createIcons();
+       })
+       .catch(error => {
+           clearTimeout(timeoutId);
+           let errorMessage = 'Unknown error occurred';
+
+           if (error.name === 'AbortError') {
+               errorMessage = 'Request timed out. Please try again.';
+           } else if (error.message) {
+               errorMessage = error.message;
+           }
+
+           detailsContainer.innerHTML = `
+               <div class="alert alert-danger">
+                   <h6 class="alert-heading">
+                       <i data-lucide="alert-triangle" width="16" height="16" class="me-2"></i>Error Loading Variant Details
+                   </h6>
+                   <p class="mb-2">${errorMessage}</p>
+                   <button class="btn btn-sm btn-outline-danger" onclick="showVariantDetails(${variantId})">
+                       <i data-lucide="refresh-cw" width="14" height="14" class="me-1"></i>Retry
+                   </button>
+               </div>
+           `;
+
+           lucide.createIcons();
+       });
+   }
+
+   async function clearProductsCache() {
+       try {
+           const response = await fetch('/api/cache/clear-products', { method: 'POST' });
+           const result = await response.json();
+
+           if (result.success) {
+               const indicator = document.getElementById('queryCache');
+               if (indicator) {
+                   indicator.innerHTML = '<i data-lucide="refresh-cw" width="12" height="12"></i>Cache cleared';
+                   indicator.className = 'cache-indicator miss';
+               }
+
+               setTimeout(() => {
+                   location.reload();
+               }, 1000);
+           }
+       } catch (error) {
+           console.error('Cache clear failed:', error);
+       }
+   }
+
+   function saveSearchPreferences() {
+       const form = document.getElementById('searchForm');
+       if (form) {
+           const formData = new FormData(form);
+           const params = new URLSearchParams(formData);
+           localStorage.setItem('saved_products_filters', params.toString());
+
+           alert('Search preferences saved!');
+       }
+   }
+
+   function loadSampleData() {
+       // This would typically make an API call to load sample data
+       alert('Sample data loading feature would be implemented here');
+   }
+</script>
+{% endblock %}

@@ -1,620 +1,485 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Component Management System{% endblock %}</title>
-    
-    <!-- Modern CSS Framework -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Modern Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.css" rel="stylesheet">
-    
-    <!-- Modern Typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    
-    <!-- Custom Styles -->
-    <style>
-        :root {
-            --color-primary: #3B82F6;
-            --color-primary-dark: #2563EB;
-            --color-secondary: #64748B;
-            --color-success: #10B981;
-            --color-warning: #F59E0B;
-            --color-danger: #EF4444;
-            --color-info: #06B6D4;
-            --color-light: #F8FAFC;
-            --color-dark: #1E293B;
-            --border-radius: 6px;
-            --border-radius-lg: 8px;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
+    <meta name="description" content="Professional component management and analytics dashboard">
+    <meta name="theme-color" content="#667eea">
 
-        * {
-            box-sizing: border-box;
+    <title>{% block title %}ComponentHub - Professional Dashboard{% endblock %}</title>
+
+    <!-- Preconnect to external domains for faster loading -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Lucide Icons (lightweight alternative to Font Awesome) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        /* Modern Base Styles */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-            margin: 0;
-            font-size: 14px;
+            line-height: 1.6;
         }
 
-        .main-content {
-            background: var(--color-light);
-            min-height: calc(100vh - 60px);
-            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-            margin-top: 60px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        /* Compact Navigation */
+        /* Modern Navigation */
         .navbar-modern {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: none;
+            background: white !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
             box-shadow: var(--shadow-sm);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-brand-modern {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            text-decoration: none;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: var(--transition);
+        }
+
+        .navbar-brand-modern:hover {
+            transform: scale(1.02);
+            -webkit-text-fill-color: transparent;
+        }
+
+        .navbar-brand-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary-gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .nav-link-modern {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem !important;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            color: #64748b !important;
+            text-decoration: none;
+            transition: var(--transition);
+            position: relative;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link-modern:hover {
+            background: rgba(102, 126, 234, 0.08);
+            color: #667eea !important;
+            transform: translateY(-1px);
+        }
+
+        .nav-link-modern.active {
+            background: var(--primary-gradient);
+            color: white !important;
+            box-shadow: var(--shadow-md);
+        }
+
+        .nav-link-modern.active:hover {
+            color: white !important;
+        }
+
+        /* Mobile Menu Improvements */
+        .navbar-toggler {
+            border: none;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+
+        .navbar-toggler-icon {
+            background-image: none;
+            width: 24px;
+            height: 24px;
+            position: relative;
+        }
+
+        .navbar-toggler-icon::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #667eea;
+            border-radius: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 0 -6px 0 #667eea, 0 6px 0 #667eea;
+            transition: var(--transition);
+        }
+
+        /* Flash Messages */
+        .alert-modern {
+            border: none;
+            border-radius: var(--border-radius);
+            border-left: 4px solid;
+            font-weight: 500;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.08);
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.08);
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.08);
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-info {
+            background: rgba(13, 202, 240, 0.08);
+            border-left-color: #0dcaf0;
+            color: #055160;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            padding: 0;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Loading States */
+        .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1000;
-            transition: all 0.3s ease;
-            padding: 0.5rem 0;
-            min-height: 60px;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--color-primary) !important;
-            text-decoration: none;
-        }
-
-        .nav-link {
-            font-weight: 500;
-            color: var(--color-secondary) !important;
-            transition: all 0.2s ease;
-            border-radius: var(--border-radius);
-            padding: 0.4rem 0.8rem !important;
-            margin: 0 0.1rem;
-            font-size: 0.875rem;
-        }
-
-        .nav-link:hover {
-            color: var(--color-primary) !important;
-            background: rgba(59, 130, 246, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .nav-link.active {
-            color: var(--color-primary) !important;
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        /* Compact Cards */
-        .card-modern {
-            border: none;
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-sm);
-            transition: all 0.2s ease;
-            background: white;
-        }
-
-        .card-modern:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .card-header-modern {
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: white;
-            border: none;
-            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-            padding: 1rem 1.25rem;
-        }
-
-        .card-header-modern h5 {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        /* Compact Buttons */
-        .btn-modern {
-            border-radius: var(--border-radius);
-            font-weight: 500;
-            padding: 0.4rem 0.8rem;
-            transition: all 0.2s ease;
-            border: none;
-            position: relative;
-            overflow: hidden;
-            font-size: 0.875rem;
-        }
-
-        .btn-modern::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .btn-modern:hover::before {
-            left: 100%;
-        }
-
-        .btn-primary-modern {
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: white;
-        }
-
-        .btn-primary-modern:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-success-modern {
-            background: linear-gradient(135deg, var(--color-success), #059669);
-            color: white;
-        }
-
-        .btn-warning-modern {
-            background: linear-gradient(135deg, var(--color-warning), #D97706);
-            color: white;
-        }
-
-        .btn-danger-modern {
-            background: linear-gradient(135deg, var(--color-danger), #DC2626);
-            color: white;
-        }
-
-        /* Compact Forms */
-        .form-control-modern {
-            border: 1px solid #E2E8F0;
-            border-radius: var(--border-radius);
-            padding: 0.5rem 0.75rem;
-            transition: all 0.2s ease;
-            font-size: 0.875rem;
-        }
-
-        .form-control-modern:focus {
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-            outline: none;
-        }
-
-        .form-label-modern {
-            font-weight: 500;
-            color: var(--color-dark);
-            margin-bottom: 0.375rem;
-            font-size: 0.875rem;
-        }
-
-        /* Compact Alerts */
-        .alert-modern {
-            border: none;
-            border-radius: var(--border-radius-lg);
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            position: relative;
-            overflow: hidden;
-            font-size: 0.875rem;
-        }
-
-        .alert-modern::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 3px;
-            height: 100%;
-            background: currentColor;
-        }
-
-        /* Compact Status Badges */
-        .status-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 50px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.2rem;
-        }
-
-        .status-approved {
-            background: #DCFCE7;
-            color: #166534;
-        }
-
-        .status-pending {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .status-rejected {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        /* Loading Animation */
-        .loading-skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* Animations */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Compact Grid Layout */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-            padding: 0;
-        }
-
-        .list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .component-card {
-            border: none;
-            border-radius: var(--border-radius-lg);
-            transition: all 0.2s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            background: white;
-            box-shadow: var(--shadow-sm);
-            height: 100%;
-        }
-
-        .component-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* COMPACT GRID VIEW STYLES */
-        .grid-container .component-image,
-        .grid-container .component-image-placeholder {
-            width: 100%;
-            height: 140px;
-            object-fit: cover;
-            border-radius: var(--border-radius) var(--border-radius) 0 0;
-        }
-
-        .grid-container .card-body {
-            padding: 0.875rem;
-        }
-
-        .grid-container .card-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 0.375rem;
-            line-height: 1.3;
-        }
-
-        .grid-container .card-text {
-            font-size: 0.8rem;
-            color: var(--color-secondary);
-            margin-bottom: 0.5rem;
-            line-height: 1.4;
-        }
-
-        /* COMPACT LIST VIEW STYLES */
-        .list-container .component-card {
-            margin-bottom: 0;
-        }
-
-        .list-container .card-body {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            min-height: 70px;
-        }
-
-        .list-container .component-image,
-        .list-container .component-image-placeholder {
-            width: 60px;
-            height: 60px;
-            border-radius: var(--border-radius);
-            flex-shrink: 0;
-            object-fit: cover;
-        }
-
-        .list-container .component-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .list-container .component-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.2rem;
-            line-height: 1.3;
-        }
-
-        .list-container .component-description {
-            font-size: 0.75rem;
-            color: var(--color-secondary);
-            line-height: 1.3;
-            margin-bottom: 0;
-        }
-
-        .list-container .component-actions {
-            flex-shrink: 0;
-            margin-left: auto;
-        }
-
-        /* SHARED IMAGE STYLES */
-        .component-image-placeholder {
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--color-secondary);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
         }
 
-        /* Compact View Toggle */
-        .view-toggle {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 0.2rem;
-            box-shadow: var(--shadow-sm);
-            display: flex;
+        .loading-overlay.show {
+            opacity: 1;
+            visibility: visible;
         }
 
-        .view-toggle button {
-            border: none;
-            background: transparent;
-            padding: 0.4rem;
-            border-radius: 4px;
-            color: var(--color-secondary);
-            transition: all 0.2s ease;
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
-        .view-toggle button.active {
-            background: var(--color-primary);
-            color: white;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        /* Compact spacing utilities */
-        .py-compact { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-        .px-compact { padding-left: 1rem !important; padding-right: 1rem !important; }
-        .mb-compact { margin-bottom: 0.75rem !important; }
-        .mt-compact { margin-top: 0.75rem !important; }
-
-        /* Responsive improvements */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .main-content {
-                margin-top: 60px;
-                border-radius: var(--border-radius) var(--border-radius) 0 0;
+            .navbar-brand-modern {
+                font-size: 1.25rem;
             }
 
-            .grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 0.75rem;
+            .nav-link-modern {
+                padding: 0.75rem 1rem !important;
+                margin: 0.25rem 0;
+                justify-content: center;
             }
 
-            .list-container .card-body {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-                text-align: left;
-                padding: 0.75rem;
-            }
-
-            .list-container .component-image,
-            .list-container .component-image-placeholder {
-                width: 100%;
-                height: 80px;
-                margin-bottom: 0.25rem;
-            }
-
-            .list-container .component-actions {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            .navbar-brand {
-                font-size: 1.1rem;
-            }
-
-            .nav-link {
-                padding: 0.3rem 0.6rem !important;
-                font-size: 0.8rem;
+            .navbar-collapse {
+                background: white;
+                margin-top: 1rem;
+                padding: 1rem;
+                border-radius: var(--border-radius);
+                box-shadow: var(--shadow-md);
             }
         }
 
-        @media (max-width: 576px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
+        }
 
-            .grid-container .component-image,
-            .grid-container .component-image-placeholder {
-                height: 120px;
-            }
+        /* Focus styles for accessibility */
+        .nav-link-modern:focus,
+        .navbar-brand-modern:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
 
-            .grid-container .card-body {
-                padding: 0.75rem;
+        /* Print styles */
+        @media print {
+            .navbar-modern,
+            .alert-modern {
+                display: none !important;
             }
         }
     </style>
-    
-    {% block extra_css %}{% endblock %}
 </head>
-<body class="h-full">
-    <!-- Compact Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-modern">
-        <div class="container-fluid px-3">
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
-                <i data-lucide="layers" class="me-2" style="width: 24px; height: 24px;"></i>
-                ComponentHub
-            </a>
-            
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <i data-lucide="menu" style="width: 20px; height: 20px;"></i>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.index') }}">
-                            <i data-lucide="grid-3x3" class="me-1" style="width: 16px; height: 16px;"></i>
-                            Components
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.suppliers') }}">
-                            <i data-lucide="truck" class="me-1" style="width: 16px; height: 16px;"></i>
-                            Suppliers
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.new_component') }}">
-                            <i data-lucide="plus-circle" class="me-1" style="width: 16px; height: 16px;"></i>
-                            New Component
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.upload_csv') }}">
-                            <i data-lucide="upload" class="me-1" style="width: 16px; height: 16px;"></i>
-                            Bulk Upload
-                        </a>
-                    </li>
-                </ul>
-                
-                <!-- User Menu -->
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                            <i data-lucide="user-circle" class="me-1" style="width: 16px; height: 16px;"></i>
-                            Admin
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i data-lucide="settings" class="me-2" style="width: 14px; height: 14px;"></i>Settings</a></li>
-                            <li><a class="dropdown-item" href="#"><i data-lucide="help-circle" class="me-2" style="width: 14px; height: 14px;"></i>Help</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i data-lucide="log-out" class="me-2" style="width: 14px; height: 14px;"></i>Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<body>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="container-fluid px-3 py-compact">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div id="flashMessages" class="fade-in">
-                        {% for category, message in messages %}
-                            <div class="alert alert-modern alert-{{ 'danger' if category == 'error' else category }} alert-dismissible" 
-                                 x-data="{ show: true }" 
-                                 x-show="show" 
-                                 x-transition:enter="transition ease-out duration-300"
-                                 x-transition:enter-start="opacity-0 transform translate-y-2"
-                                 x-transition:enter-end="opacity-100 transform translate-y-0">
-                                <div class="d-flex align-items-center">
-                                    {% if category == 'success' %}
-                                        <i data-lucide="check-circle" class="me-2" style="width: 16px; height: 16px;"></i>
-                                    {% elif category == 'warning' %}
-                                        <i data-lucide="alert-triangle" class="me-2" style="width: 16px; height: 16px;"></i>
-                                    {% elif category == 'danger' or category == 'error' %}
-                                        <i data-lucide="x-circle" class="me-2" style="width: 16px; height: 16px;"></i>
-                                    {% else %}
-                                        <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
-                                    {% endif %}
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close" @click="show = false"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-            
-            <!-- Page Content -->
-            {% block content %}{% endblock %}
+<!-- Modern Navigation -->
+<nav class="navbar navbar-expand-lg navbar-modern">
+    <div class="container-fluid px-3 px-lg-4">
+        <a class="navbar-brand-modern" href="{{ url_for('main.index') }}">
+            <div class="navbar-brand-icon">
+                <i data-lucide="layers" width="20" height="20"></i>
+            </div>
+            ComponentHub
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link-modern {{ 'active' if request.endpoint == 'main.index' }}"
+                       href="{{ url_for('main.index') }}">
+                        <i data-lucide="home" width="18" height="18"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-modern {{ 'active' if 'product' in request.endpoint }}"
+                       href="{{ url_for('main.products') }}">
+                        <i data-lucide="package" width="18" height="18"></i>
+                        Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-modern {{ 'active' if request.endpoint == 'main.analytics' }}"
+                       href="{{ url_for('main.analytics') }}">
+                        <i data-lucide="bar-chart-3" width="18" height="18"></i>
+                        Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-modern {{ 'active' if request.endpoint == 'main.consistency_check' }}"
+                       href="{{ url_for('main.consistency_check') }}">
+                        <i data-lucide="shield-check" width="18" height="18"></i>
+                        Quality
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
+</nav>
 
-    <!-- Modern JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.js"></script>
-    
-    <!-- Initialize Lucide Icons -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-            
-            // Auto-hide flash messages after 5 seconds
-            setTimeout(() => {
-                const alerts = document.querySelectorAll('.alert-modern');
-                alerts.forEach(alert => {
-                    if (alert.__x) {
-                        alert.__x.$data.show = false;
-                    }
-                });
-            }, 5000);
+<!-- Flash Messages Container -->
+<div class="container-fluid px-3 px-lg-4 mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-modern alert-dismissible fade show" role="alert">
+        <div class="d-flex align-items-center">
+            {% if category == 'success' %}
+            <i data-lucide="check-circle" width="20" height="20" class="me-2"></i>
+            {% elif category == 'error' or category == 'danger' %}
+            <i data-lucide="alert-circle" width="20" height="20" class="me-2"></i>
+            {% elif category == 'warning' %}
+            <i data-lucide="alert-triangle" width="20" height="20" class="me-2"></i>
+            {% else %}
+            <i data-lucide="info" width="20" height="20" class="me-2"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
+<!-- Main Content -->
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Loading overlay functionality
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Show loading on navigation clicks
+        document.querySelectorAll('.nav-link-modern, .navbar-brand-modern').forEach(link => {
+            link.addEventListener('click', function(e) {
+                // Don't show loading for same page links
+                if (this.href !== window.location.href) {
+                    showLoading();
+                }
+            });
         });
-        
-        // Global Alpine.js utilities
-        window.Alpine = window.Alpine || {};
-        window.Alpine.data = window.Alpine.data || function() {};
-        
+
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert-modern');
+            alerts.forEach(alert => {
+                const closeBtn = alert.querySelector('.btn-close');
+                if (closeBtn) {
+                    closeBtn.click();
+                }
+            });
+        }, 5000);
+
         // Smooth scrolling for anchor links
-        document.addEventListener('click', function(e) {
-            if (e.target.matches('a[href^="#"]')) {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                const target = document.querySelector(e.target.getAttribute('href'));
+                const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
                     target.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start'
                     });
                 }
+            });
+        });
+
+        // Keyboard navigation support
+        document.addEventListener('keydown', function(e) {
+            // Alt + 1-4 for quick navigation
+            if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+                const shortcuts = {
+                    '1': '{{ url_for("main.index") }}',
+                    '2': '{{ url_for("main.products") }}',
+                    '3': '{{ url_for("main.analytics") }}',
+                    '4': '{{ url_for("main.consistency_check") }}'
+                };
+
+                if (shortcuts[e.key]) {
+                    e.preventDefault();
+                    window.location.href = shortcuts[e.key];
+                }
             }
         });
-    </script>
-    
-    {% block scripts %}{% endblock %}
+
+        // Mobile menu auto-close on link click
+        const navbarCollapse = document.getElementById('navbarNav');
+        if (navbarCollapse) {
+            document.querySelectorAll('.nav-link-modern').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 992) {
+                        const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
+                            toggle: false
+                        });
+                        bsCollapse.hide();
+                    }
+                });
+            });
+        }
+
+        // Performance: Prefetch important pages
+        const prefetchUrls = [
+            '{{ url_for("main.products") }}',
+            '{{ url_for("main.analytics") }}'
+        ];
+
+        prefetchUrls.forEach(url => {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            document.head.appendChild(link);
+        });
+    });
+
+    // Loading functions
+    function showLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('show');
+        }
+    }
+
+    function hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+        }
+    }
+
+    // Hide loading when page is fully loaded
+    window.addEventListener('load', hideLoading);
+
+    // Error handling for failed navigation
+    window.addEventListener('error', hideLoading);
+
+    // Global error handler for better UX
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('Unhandled promise rejection:', event.reason);
+        hideLoading();
+    });
+</script>
+
+{% block scripts %}{% endblock %}
 </body>
 </html>

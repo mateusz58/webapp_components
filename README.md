@@ -1,108 +1,69 @@
-# Component Management System
+### Quick Setup for Production Database:
 
-A simple web application for managing component inventory with PostgreSQL database backend, containerized with Docker.
+1. **Configure Environment Variables:**
+   ```bash
+   cp .env.example .env
+   ```
 
-## Project Structure
+2. **Edit .env with your database credentials:**
+   ```bash
+   # Your production database
+   DATABASE_URL=postgresql://username:password@your-host:5432/database
+   DB_HOST=your-database-host.com
+   DB_PORT=5432
+   DB_USER=your_username
+   DB_PASSWORD=your_password
+   DB_NAME=your_database_name
+   ```
 
-```
-project-root/
-├── app/                      # Application code
-│   ├── static/               # Static files (CSS, JS)
-│   ├── templates/            # HTML templates
-│   ├── __init__.py           # App initialization
-│   ├── models.py             # Database models
-│   ├── routes.py             # Route handlers
-│   └── utils.py              # Utility functions
-├── docker/                   # Docker configuration
-│   └── app/
-│       └── Dockerfile        # Python app Dockerfile
-├── docker-compose.yml        # Docker Compose config
-├── requirements.txt          # Python dependencies
-├── config.py                 # App configuration
-└── run.py                    # Application entry point
-```
+3. **Test Database Connection:**
+   ```bash
+   ./scripts/check-db.sh
+   ```
 
-## Features
+4. **Start Application:**
+   ```bash
+   docker-compose up --build
+   ```
 
-* List, view, add, edit, and delete components
-* Filter components by various criteria
-* Upload and process CSV for bulk operations
-* Component pictures management (up to 5 per component)
-* Supplier management
+### Supported Database Providers:
 
-## Prerequisites
+✅ **AWS RDS PostgreSQL**
+✅ **Google Cloud SQL**
+✅ **Azure Database for PostgreSQL**
+✅ **DigitalOcean Managed Databases**
+✅ **Heroku Postgres**
+✅ **Self-hosted PostgreSQL**
 
-* Docker and Docker Compose installed on your system
-* No other dependencies required locally
+### Database Requirements:
 
-## Getting Started
+- PostgreSQL 12+
+- Network access from your Docker host
+- Materialized view `catalogue.all_shops_product_data_extended` exists
+- Read permissions for your application user
 
-1. Clone or download this repository to your local machine.
+### Security Notes:
 
-2. Create the required directory structure:
+- Use SSL/TLS connections in production
+- Restrict database access by IP if possible
+- Use strong passwords and consider rotating them
+- Monitor database access logs
 
-```
-mkdir -p app/static/css app/static/uploads app/templates docker/app
-```
+---
 
-3. Place all the files in their respective directories as shown in the project structure.
+# Quick Commands Summary:
 
-4. Build and start the application:
+# Test database connection
+./scripts/check-db.sh
 
-```bash
+# Start development with external DB
 docker-compose up --build
-```
 
-5. Once the services are running, access the application:
-   - Web interface: http://localhost:5000
-   - PostgreSQL database: localhost:5432 (user: postgres, password: postgres, database: components_db)
+# Start production with external DB
+docker-compose -f docker-compose.prod.yml up -d --build
 
-6. Initialize the database (first-time setup):
+# View logs
+docker-compose logs -f web
 
-```bash
-# In another terminal, run:
-docker-compose exec app flask db init
-docker-compose exec app flask db migrate -m "Initial migration"
-docker-compose exec app flask db upgrade
-```
-
-## CSV Bulk Upload Format
-
-The system supports bulk upload and updates via CSV files. The CSV should:
-
-- Use semicolon (;) as delimiter
-- Include headers in the first row
-- Follow this structure:
-
-```
-product_number;description;supplier_code;category_name;color_name;material_name;picture_1_name;picture_1_url;picture_1_order;picture_2_name;picture_2_url;picture_2_order;...
-```
-
-Example:
-```
-product_number;description;supplier_code;category_name;color_name;material_name;picture_1_name;picture_1_url;picture_1_order;picture_2_name;picture_2_url;picture_2_order;picture_3_name;picture_3_url;picture_3_order;picture_4_name;picture_4_url;picture_4_order;picture_5_name;picture_5_url;picture_5_order
-ABC123;High quality resistor;SUPP001;Electronics;Black;Silicon;front_view.jpg;http://example.com/images/front_view.jpg;1;side_view.jpg;http://example.com/images/side_view.jpg;2;diagram.jpg;http://example.com/images/diagram.jpg;3;;;;;;;
-XYZ456;Capacitor 1000uF;SUPP002;Electronic Parts;Blue;Ceramic;main.jpg;http://example.com/images/main.jpg;1;;;;;;;;;;;;;
-```
-
-## Stopping the Application
-
-To stop the application:
-
-```bash
-# If running in foreground (with logs showing)
-# Press Ctrl+C
-
-# Or to stop in background mode
+# Stop services
 docker-compose down
-```
-
-## Data Persistence
-
-The PostgreSQL data is stored in a named volume `postgres_data`. This ensures your data persists between container restarts.
-
-To completely remove all data and start fresh:
-
-```bash
-docker-compose down -v
-```

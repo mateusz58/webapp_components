@@ -1,0 +1,13 @@
+# requirements-dev.txt
+# Development and testing dependencies (in addition to requirements.txt)
+pytest==7.4.2
+pytest-cov==4.1.0
+pytest-flask==1.2.0
+pytest-mock==3.11.1
+factory-boy==3.3.0
+faker==19.6.2
+black==23.7.0
+flake8==6.0.0
+isort==5.12.0
+mypy==1.5.1
+pre-commit==3.3.3

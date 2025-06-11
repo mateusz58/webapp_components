@@ -1,0 +1,677 @@
+<!-- app/templates/consistency.html -->
+{% extends "base.html" %}
+
+{% block title %}Consistency Check - Shopify Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-gradient-primary">
+                <i class="fas fa-check-circle me-2"></i>Data Consistency Check
+            </h1>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-info" onclick="runConsistencyCheck()">
+                    <i class="fas fa-sync-alt me-2"></i>Re-run Check
+                </button>
+                <button class="btn btn-success" onclick="exportConsistencyReport()">
+                    <i class="fas fa-download me-2"></i>Export Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shop Filter Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card filter-panel">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-filter me-2"></i>Consistency Check Scope
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-8">
+                        <label for="shop_filter" class="form-label">
+                            <i class="fas fa-store me-1"></i>Filter by Shops
+                        </label>
+                        <select class="form-control" id="shop_filter" name="shop_ids[]" multiple size="4">
+                            {% for shop in shops %}
+                            <option value="{{ shop.id }}"
+                                    {% if shop.id in selected_shops %}selected{% endif %}>
+                                {{ shop.name|title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Select specific shops to analyze, or leave empty for all shops</small>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-2"></i>Run Check
+                        </button>
+                        <a href="{{ url_for('main.consistency_check') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-globe me-2"></i>All Shops
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issues Overview -->
+{% set total_issues = (issues.missing_sku_products|length) + (issues.missing_barcode_products|length) + (issues.duplicate_skus|length) + (issues.inconsistent_inventory_tracking|length) + (issues.zero_inventory_available|length) + (issues.missing_seo_fields|length) + (issues.size_inconsistencies|length) + (issues.missing_images|length) %}
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white {% if total_issues == 0 %}bg-success{% elif total_issues < 10 %}bg-warning{% else %}bg-danger{% endif %} dashboard-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ total_issues }}</h3>
+                        <p class="card-text mb-0">Total Issues</p>
+                        <small class="opacity-75">Found across all categories</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-{% if total_issues == 0 %}check-circle{% else %}exclamation-triangle{% endif %} fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-danger dashboard-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ issues.duplicate_skus|length }}</h3>
+                        <p class="card-text mb-0">Duplicate SKUs</p>
+                        <small class="opacity-75">Critical data issue</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-copy fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-warning dashboard-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ issues.missing_sku_products|length + issues.missing_barcode_products|length }}</h3>
+                        <p class="card-text mb-0">Missing Identifiers</p>
+                        <small class="opacity-75">SKUs and Barcodes</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-barcode fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-info dashboard-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ issues.inconsistent_inventory_tracking|length + issues.size_inconsistencies|length }}</h3>
+                        <p class="card-text mb-0">Data Inconsistencies</p>
+                        <small class="opacity-75">Tracking and naming</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-random fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issues Details -->
+{% if total_issues > 0 %}
+<div class="row">
+    <!-- Duplicate SKUs -->
+    {% if issues.duplicate_skus %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-copy me-2"></i>Duplicate SKUs
+                </h5>
+                <span class="badge bg-white text-danger">{{ issues.duplicate_skus|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for duplicate in issues.duplicate_skus %}
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-danger mb-1">
+                                <i class="fas fa-barcode me-2"></i>{{ duplicate.sku }}
+                            </h6>
+                            <span class="badge bg-danger">{{ duplicate.count }} duplicates</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showDuplicateDetails('{{ duplicate.sku }}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Found in products:</small>
+                        <ul class="list-unstyled ms-3 mt-1">
+                            {% for product in duplicate.products[:3] %}
+                            <li class="small">
+                                <i class="fas fa-angle-right text-muted me-1"></i>
+                                {{ product.title[:40] }}{% if product.title|length > 40 %}...{% endif %}
+                                <span class="text-muted">({{ product.shop_technical_name }})</span>
+                            </li>
+                            {% endfor %}
+                            {% if duplicate.products|length > 3 %}
+                            <li class="small text-muted">
+                                <i class="fas fa-ellipsis-h me-1"></i>
+                                And {{ duplicate.products|length - 3 }} more...
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Missing SKUs -->
+    {% if issues.missing_sku_products %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Missing SKUs
+                </h5>
+                <span class="badge bg-dark">{{ issues.missing_sku_products|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for item in issues.missing_sku_products %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ item.product.title[:45] }}{% if item.product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ item.product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ item.product.product_id }}
+                            </small>
+                            <span class="badge bg-warning text-dark">{{ item.missing_count }} variants missing SKU</span>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=item.product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Missing Barcodes -->
+    {% if issues.missing_barcode_products %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-qrcode me-2"></i>Missing Barcodes
+                </h5>
+                <span class="badge bg-dark">{{ issues.missing_barcode_products|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for item in issues.missing_barcode_products %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ item.product.title[:45] }}{% if item.product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ item.product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ item.product.product_id }}
+                            </small>
+                            <span class="badge bg-warning text-dark">{{ item.missing_count }} variants missing barcode</span>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=item.product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Missing Images -->
+    {% if issues.missing_images %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-image me-2"></i>Missing Images
+                </h5>
+                <span class="badge bg-white text-info">{{ issues.missing_images|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for product in issues.missing_images %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ product.title[:45] }}{% if product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ product.product_id }}
+                            </small>
+                            <span class="badge bg-info">No product or variant images</span>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Inconsistent Inventory Tracking -->
+    {% if issues.inconsistent_inventory_tracking %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-warehouse me-2"></i>Inconsistent Inventory Tracking
+                </h5>
+                <span class="badge bg-dark">{{ issues.inconsistent_inventory_tracking|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for item in issues.inconsistent_inventory_tracking %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ item.product.title[:45] }}{% if item.product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ item.product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ item.product.product_id }}
+                            </small>
+                            <div class="mt-1">
+                                <small class="text-warning">Mixed tracking methods:</small>
+                                {% for method in item.tracking_methods %}
+                                <span class="badge bg-warning text-dark me-1">{{ method }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=item.product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Zero Inventory but Available -->
+    {% if issues.zero_inventory_available %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-box-open me-2"></i>Zero Inventory but Available
+                </h5>
+                <span class="badge bg-white text-danger">{{ issues.zero_inventory_available|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for item in issues.zero_inventory_available %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ item.product.title[:45] }}{% if item.product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ item.product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ item.product.product_id }}
+                            </small>
+                            <span class="badge bg-danger">{{ item.affected_variants }} variants with zero inventory but marked available</span>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=item.product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Missing SEO Fields -->
+    {% if issues.missing_seo_fields %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-search me-2"></i>Missing SEO Fields
+                </h5>
+                <span class="badge bg-white text-info">{{ issues.missing_seo_fields|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for product in issues.missing_seo_fields %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ product.title[:45] }}{% if product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ product.product_id }}
+                            </small>
+                            <div class="mt-1">
+                                {% if not product['Metafield: title_tag'] %}
+                                <span class="badge bg-warning text-dark me-1">No Title Tag</span>
+                                {% endif %}
+                                {% if not product['Metafield: description_tag'] %}
+                                <span class="badge bg-warning text-dark">No Description Tag</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Size Inconsistencies -->
+    {% if issues.size_inconsistencies %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-custom border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-ruler me-2"></i>Size Inconsistencies
+                </h5>
+                <span class="badge bg-dark">{{ issues.size_inconsistencies|length }}</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for item in issues.size_inconsistencies %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ item.product.title[:45] }}{% if item.product.title|length > 45 %}...{% endif %}</h6>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-store me-1"></i>{{ item.product.shop_technical_name }}
+                                <i class="fas fa-key ms-2 me-1"></i>ID: {{ item.product.product_id }}
+                            </small>
+                            <div class="mt-1">
+                                <small class="text-warning">Inconsistent sizes:</small><br>
+                                {% for size in item.sizes %}
+                                <span class="badge bg-light text-dark me-1">{{ size }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('main.products', search_term=item.product.product_id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- No Issues Found -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-custom border-success">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-check-circle fa-5x text-success mb-4"></i>
+                <h3 class="text-success mb-3">Excellent! No consistency issues found!</h3>
+                <p class="text-muted mb-4">
+                    Your product data appears to be consistent and well-maintained across
+                    {% if selected_shops %}the selected shops{% else %}all shops{% endif %}.
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('main.analytics', **{'shop_ids[]': selected_shops}) }}"
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-chart-bar me-2"></i>View Analytics
+                    </a>
+                    <a href="{{ url_for('main.products', **{'shop_ids[]': selected_shops}) }}"
+                       class="btn btn-outline-success">
+                        <i class="fas fa-box me-2"></i>Browse Products
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Recommendations -->
+{% if total_issues > 0 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-custom">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recommended Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>High Priority
+                        </h6>
+                        <ul class="list-unstyled">
+                            {% if issues.duplicate_skus %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-danger me-2"></i>
+                                Resolve duplicate SKUs immediately - they can cause inventory and fulfillment issues
+                            </li>
+                            {% endif %}
+                            {% if issues.zero_inventory_available %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-danger me-2"></i>
+                                Update availability status for zero inventory items to prevent overselling
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-warning">
+                            <i class="fas fa-clock me-2"></i>Medium Priority
+                        </h6>
+                        <ul class="list-unstyled">
+                            {% if issues.missing_sku_products or issues.missing_barcode_products %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-warning me-2"></i>
+                                Add missing SKUs and barcodes for better inventory management
+                            </li>
+                            {% endif %}
+                            {% if issues.inconsistent_inventory_tracking %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-warning me-2"></i>
+                                Standardize inventory tracking methods across product variants
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-info">
+                            <i class="fas fa-info-circle me-2"></i>Low Priority
+                        </h6>
+                        <ul class="list-unstyled">
+                            {% if issues.missing_images %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-info me-2"></i>
+                                Add product images to improve customer experience and sales
+                            </li>
+                            {% endif %}
+                            {% if issues.missing_seo_fields %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-info me-2"></i>
+                                Complete SEO metadata for better search engine visibility
+                            </li>
+                            {% endif %}
+                            {% if issues.size_inconsistencies %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-info me-2"></i>
+                                Standardize size naming conventions for better filtering
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Tip:</strong> Schedule regular consistency checks to maintain data quality.
+                            Consider implementing data validation rules in your product management workflows.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Duplicate Details Modal -->
+<div class="modal fade" id="duplicateDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-copy me-2"></i>Duplicate SKU Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="duplicateDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading duplicate details...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Run consistency check function
+    function runConsistencyCheck() {
+        location.reload();
+    }
+
+    // Export consistency report function
+    function exportConsistencyReport() {
+        const params = new URLSearchParams(window.location.search);
+        params.set('export', 'consistency');
+        window.open(`/export?${params.toString()}`, '_blank');
+    }
+
+    // Show duplicate details modal
+    function showDuplicateDetails(sku) {
+        const modal = document.getElementById('duplicateDetailsModal');
+        const content = document.getElementById('duplicateDetailsContent');
+
+        if (modal && content) {
+            content.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading duplicate details for SKU: ${sku}...</p>
+                </div>
+            `;
+
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
+
+            // Simulate API call - you would implement this endpoint
+            setTimeout(() => {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6>Duplicate SKU: ${sku}</h6>
+                        <p>This SKU appears in multiple products. Each SKU should be unique across your entire catalog.</p>
+                    </div>
+                    <div class="text-center">
+                        <a href="/products?search_term=${sku}" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>View All Products with this SKU
+                        </a>
+                    </div>
+                `;
+            }, 1000);
+        }
+    }
+
+    // Add loading states to buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const actionButtons = document.querySelectorAll('a[href*="products"]');
+        actionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            });
+        });
+    });
+
+    // Animate issue counts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const counters = document.querySelectorAll('.card-title h3');
+        counters.forEach(counter => {
+            const target = parseInt(counter.textContent);
+            if (!isNaN(target)) {
+                animateCounter(counter, target);
+            }
+        });
+    });
+
+    function animateCounter(element, target, duration = 1500) {
+        const start = 0;
+        const increment = target / (duration / 16);
+        let current = start;
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(current);
+            }
+        }, 16);
+    }
+</script>
+{% endblock %}

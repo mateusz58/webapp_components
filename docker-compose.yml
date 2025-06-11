@@ -1,15 +1,30 @@
 version: '3.8'
 
 services:
-  app:
+  web:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-    container_name: component_app
     ports:
-      - "6002:6002"
+      - "5000:5000"
     environment:
-      - FLASK_APP=run.py
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database
-      - PORT=6002
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - shopify_network
+    # Removed depends_on since we're using external database
+
+networks:
+  shopify_network:
+    driver: bridge

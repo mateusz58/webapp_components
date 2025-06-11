@@ -1,10 +1,10 @@
-# Python bytecode
+# .gitignore
+# Files and directories to exclude from version control
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -17,72 +17,63 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual environments
-venv/
-ENV/
-env/
-.env
-.venv
-env.bak/
-venv.bak/
+# PyInstaller
+*.manifest
+*.spec
 
-# Flask stuff
-instance/
-.webassets-cache
-flask_session/
-
-# Database
-*.db
-*.sqlite3
-*.sqlite
-*.sql
-
-# Migrations
-# migrations/ 
-# Uncomment if you don't want to track migrations
-
-# Uploads
-app/static/uploads/*
-!app/static/uploads/.gitkeep
-
-# IDE specific files
-.idea/
-.vscode/
-*.swp
-*.swo
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Testing
-.coverage
+# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
-.hypothesis/
-.pytest_cache/
+.coverage
+.coverage.*
+.cache
 nosetests.xml
 coverage.xml
 *.cover
+*.py,cover
 .hypothesis/
+.pytest_cache/
+cover/
 
-# Environment variables
+# Environment files
 .env
-.flaskenv
-*.env
+.env.local
+.env.production
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Application specific
+logs/
+backups/
+instance/
+.webassets-cache
+
+# Docker
+.dockerignore

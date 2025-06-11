@@ -1,31 +1,40 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=run.py
+ENV FLASK_ENV=production
+
+# Set work directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    netcat-openbsd \
-    && apt-get clean \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+        libpq-dev \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy project
 COPY . .
 
-# Make the initialization script executable
+# Copy init script to root and make executable
 COPY docker/app/init.sh /init.sh
 RUN chmod +x /init.sh
 
-# Expose port 6002 instead of 5000
-EXPOSE 6002
+# Expose port
+EXPOSE 5000
 
-# Use the initialization script as entrypoint
+# Health check - updated to not depend on local database
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/ || exit 1
+
+# Run init script
 ENTRYPOINT ["/init.sh"]
-
-# Command to run the application
-CMD ["flask", "run", "--host=0.0.0.0", "--port=6002"]
