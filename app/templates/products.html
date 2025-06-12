@@ -4,12 +4,180 @@
 
 {% block extra_css %}
 <style>
+    /* Clean filter preservation */
+    {% set clean_filters = {} %}
+    {% for key, value in request.args.items() %}
+    {% if key not in ['page', 'per_page'] %}
+    {% if key.endswith('[]') %}
+    {% set _ = clean_filters.update({key: request.args.getlist(key)}) %}
+    {% else %}
+    {% set _ = clean_filters.update({key: value}) %}
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+
+    .quick-date-buttons {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.quick-date-btn {
+    padding: 0.3rem 0.6rem;
+    background: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    text-decoration: none;
+    color: #495057;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.quick-date-btn:hover {
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.date-filter-section {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+}
+
+.date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.date-input-group label {
+    min-width: 60px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0;
+    color: #495057;
+}
+
+.date-input-group input {
+    flex: 1;
+    max-width: 200px;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.date-input-group input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Icons in labels */
+.form-label i {
+    opacity: 0.7;
+}
+
+    /* Main Layout */
     .products-container {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         min-height: 100vh;
-        padding: 1.5rem 0;
+        padding: 1rem;
+        width: 100%;
     }
 
+    select[name="sort_by"] {
+    transition: background-color 0.3s ease;
+}
+
+.auto-sort-indicator {
+    font-size: 0.75rem;
+    color: #667eea;
+    font-weight: 500;
+}
+
+    /* Pagination Styles */
+    .pagination-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .pagination-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .pagination-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-size-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .page-size-select {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-page {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #495057;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-page:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+        text-decoration: none;
+    }
+
+    .btn-page.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .btn-page:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Search and Filter Card */
     .filter-card {
         background: white;
         border-radius: 16px;
@@ -17,25 +185,47 @@
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         margin-bottom: 2rem;
         border: 1px solid rgba(255,255,255,0.8);
+        width: 100%;
     }
 
-    .results-card {
+    .search-container {
+        position: relative;
+    }
+
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
         background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid rgba(255,255,255,0.8);
-        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
     }
 
-    .results-header {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid #f1f3f4;
-        background: #fafbfc;
+    .search-suggestion {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background 0.2s ease;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 0.5rem;
     }
 
+    .search-suggestion:hover {
+        background: #f8fafc;
+    }
+
+    .search-suggestion:last-child {
+        border-bottom: none;
+    }
+
+    /* Date Filters */
     .date-filter-section {
         border: 1px solid #e9ecef;
         border-radius: 8px;
@@ -63,92 +253,6 @@
         max-width: 200px;
     }
 
-    .sort-controls {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .table-container {
-        overflow-x: auto;
-        max-height: 70vh;
-    }
-
-    .products-table {
-        width: 100%;
-        margin: 0;
-    }
-
-    .products-table th {
-        background: #f8f9fa;
-        border-bottom: 2px solid #e9ecef;
-        font-weight: 600;
-        font-size: 0.9rem;
-        padding: 1rem 0.75rem;
-        white-space: nowrap;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .products-table td {
-        padding: 0.75rem;
-        border-bottom: 1px solid #f1f3f4;
-        font-size: 0.9rem;
-        vertical-align: middle;
-    }
-
-    .product-title {
-        max-width: 250px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 500;
-    }
-
-    .date-cell {
-        font-size: 0.85rem;
-        color: #6c757d;
-        white-space: nowrap;
-    }
-
-    .date-time {
-        display: block;
-    }
-
-    .date-ago {
-        font-size: 0.75rem;
-        color: #999;
-        font-style: italic;
-    }
-
-    .shop-badge {
-        background: #667eea;
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        white-space: nowrap;
-    }
-
-    .status-badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        text-transform: uppercase;
-    }
-
-    .status-active { background: #d4edda; color: #155724; }
-    .status-draft { background: #fff3cd; color: #856404; }
-    .status-archived { background: #f8d7da; color: #721c24; }
-
-    .pagination-container {
-        padding: 1.5rem 2rem;
-        border-top: 1px solid #f1f3f4;
-        background: #fafbfc;
-    }
-
     .quick-date-buttons {
         display: flex;
         gap: 0.5rem;
@@ -165,6 +269,7 @@
         text-decoration: none;
         color: #495057;
         transition: all 0.2s;
+        cursor: pointer;
     }
 
     .quick-date-btn:hover {
@@ -173,20 +278,269 @@
         text-decoration: none;
     }
 
-    .form-check-inline {
-        margin-right: 1rem;
-        margin-bottom: 0.5rem;
+    /* Results Table */
+    .results-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.8);
+        overflow: hidden;
+        width: 100%;
     }
 
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .products-table {
+        width: 100%;
+        margin: 0;
+        font-size: 0.85rem;
+    }
+
+    .products-table th {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e9ecef;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .products-table td {
+        padding: 0.5rem 0.4rem;
+        border-bottom: 1px solid #f1f3f4;
+        font-size: 0.8rem;
+        vertical-align: middle;
+    }
+
+    .product-title {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+    }
+
+    .date-cell {
+        font-size: 0.75rem;
+        color: #6c757d;
+        white-space: nowrap;
+        min-width: 120px;
+    }
+
+    .date-time {
+        display: block;
+        font-weight: 500;
+    }
+
+    .date-ago {
+        font-size: 0.65rem;
+        color: #999;
+        font-style: italic;
+    }
+
+    .shop-badge {
+        background: #667eea;
+        color: white;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    .status-badge {
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+
+    .status-active { background: #d4edda; color: #155724; }
+    .status-draft { background: #fff3cd; color: #856404; }
+    .status-archived { background: #f8d7da; color: #721c24; }
+
+    .sku-barcode-cell {
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+        max-width: 100px;
+        word-break: break-all;
+    }
+
+    .inventory-cell {
+        font-weight: bold;
+        text-align: center;
+    }
+
+    /* Product Image Preview */
+    .product-image-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        object-fit: cover;
+        cursor: pointer;
+        border: 1px solid #ddd;
+    }
+
+    .no-image-placeholder {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.25rem;
+        justify-content: center;
+    }
+
+    .btn-xs {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+        border-radius: 3px;
+    }
+
+    /* Loading States */
+    .loading-overlay {
+        position: relative;
+    }
+
+    .loading-overlay.loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Performance indicators */
+    .performance-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-align: center;
+        padding: 1rem;
+        border-top: 1px solid #f1f3f4;
+        background: #fafbfc;
+    }
+
+    /* Compact mode for high item counts */
+    .compact-mode .products-table th,
+    .compact-mode .products-table td {
+        padding: 0.3rem 0.2rem;
+        font-size: 0.75rem;
+    }
+
+    .compact-mode .product-title {
+        max-width: 150px;
+        font-size: 0.75rem;
+    }
+
+    .compact-mode .date-cell {
+        font-size: 0.65rem;
+        min-width: 100px;
+    }
+
+    .compact-mode .shop-badge,
+    .compact-mode .status-badge {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.3rem;
+    }
+
+    .compact-mode .product-image-preview,
+    .compact-mode .no-image-placeholder {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Modal Styles */
+    .product-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 1000;
+        padding: 2rem;
+        overflow-y: auto;
+    }
+
+    .product-modal-content {
+        background: white;
+        border-radius: 16px;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        position: relative;
+    }
+
+    .product-modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+    }
+
+    /* Mobile responsiveness */
     @media (max-width: 768px) {
-        .products-table th,
-        .products-table td {
-            padding: 0.5rem 0.25rem;
-            font-size: 0.8rem;
+        .products-container {
+            padding: 0.5rem;
         }
 
-        .product-title {
-            max-width: 150px;
+        .filter-card {
+            padding: 1rem;
+        }
+
+        .pagination-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .pagination-nav {
+            justify-content: center;
+        }
+
+        .page-size-control {
+            justify-content: center;
         }
 
         .date-input-group {
@@ -202,424 +556,1050 @@
 {% endblock %}
 
 {% block content %}
+{% set clean_filters = {} %}
+{% for key, value in request.args.items() %}
+{% if key not in ['page', 'per_page'] %}
+{% if key.endswith('[]') %}
+{% set _ = clean_filters.update({key: request.args.getlist(key)}) %}
+{% else %}
+{% set _ = clean_filters.update({key: value}) %}
+{% endif %}
+{% endif %}
+{% endfor %}
+
 <div class="products-container">
-    <div class="container-fluid">
-
-        <!-- Filters Section -->
-        <div class="filter-card">
-            <form method="GET" id="filterForm">
-                <div class="row">
-                    <!-- Basic Filters -->
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <label for="shop_filter" class="form-label">Shops</label>
-                        <select multiple class="form-select" name="shop_ids[]" id="shop_filter">
-                            {% for shop in shops %}
-                            <option value="{{ shop.id }}"
-                                    {% if shop.id|string in filters.getlist('shop_ids[]') %}selected{% endif %}>
-                            {{ shop.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <label for="search_term" class="form-label">Search</label>
-                        <input type="text" class="form-control" name="search_term" id="search_term"
-                               value="{{ filters.get('search_term', '') }}"
-                               placeholder="Title, SKU, Barcode, ID...">
-                    </div>
-
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <label for="status_filter" class="form-label">Status</label>
-                        <select class="form-select" name="status" id="status_filter">
-                            <option value="">All Statuses</option>
-                            <option value="active" {% if filters.get('status') == 'active' %}selected{% endif %}>Active</option>
-                            <option value="draft" {% if filters.get('status') == 'draft' %}selected{% endif %}>Draft</option>
-                            <option value="archived" {% if filters.get('status') == 'archived' %}selected{% endif %}>Archived</option>
-                        </select>
-                    </div>
-
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <label for="sort_by" class="form-label">Sort By</label>
-                        <select class="form-select" name="sort_by" id="sort_by">
-                            <option value="default" {% if filters.get('sort_by') == 'default' %}selected{% endif %}>Default (Shop, Title)</option>
-                            <option value="created_desc" {% if filters.get('sort_by') == 'created_desc' %}selected{% endif %}>Latest Created</option>
-                            <option value="created_asc" {% if filters.get('sort_by') == 'created_asc' %}selected{% endif %}>Oldest Created</option>
-                            <option value="updated_desc" {% if filters.get('sort_by') == 'updated_desc' %}selected{% endif %}>Latest Updated</option>
-                            <option value="updated_asc" {% if filters.get('sort_by') == 'updated_asc' %}selected{% endif %}>Oldest Updated</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Date Filters Section -->
-                <div class="date-filter-section">
-                    <h6 class="mb-3">Date Filters</h6>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label"><strong>Created Date</strong></label>
-                            <div class="date-input-group">
-                                <label for="created_after">After:</label>
-                                <input type="datetime-local" class="form-control" name="created_after" id="created_after"
-                                       value="{{ filters.get('created_after', '') }}">
-                            </div>
-                            <div class="date-input-group">
-                                <label for="created_before">Before:</label>
-                                <input type="datetime-local" class="form-control" name="created_before" id="created_before"
-                                       value="{{ filters.get('created_before', '') }}">
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label"><strong>Updated Date</strong></label>
-                            <div class="date-input-group">
-                                <label for="updated_after">After:</label>
-                                <input type="datetime-local" class="form-control" name="updated_after" id="updated_after"
-                                       value="{{ filters.get('updated_after', '') }}">
-                            </div>
-                            <div class="date-input-group">
-                                <label for="updated_before">Before:</label>
-                                <input type="datetime-local" class="form-control" name="updated_before" id="updated_before"
-                                       value="{{ filters.get('updated_before', '') }}">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Date Buttons -->
-                    <div class="quick-date-buttons">
-                        <a href="#" class="quick-date-btn" onclick="setQuickDate('today')">Today</a>
-                        <a href="#" class="quick-date-btn" onclick="setQuickDate('yesterday')">Yesterday</a>
-                        <a href="#" class="quick-date-btn" onclick="setQuickDate('week')">This Week</a>
-                        <a href="#" class="quick-date-btn" onclick="setQuickDate('month')">This Month</a>
-                        <a href="#" class="quick-date-btn" onclick="clearDates()">Clear Dates</a>
-                    </div>
-                </div>
-
-                <!-- Data Quality Filters -->
-                <div class="row">
-                    <div class="col-md-12">
-                        <h6>Data Quality Filters</h6>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="missing_sku" id="missing_sku" value="1"
-                                   {% if filters.get('missing_sku') %}checked{% endif %}>
-                            <label class="form-check-label" for="missing_sku">Missing SKU</label>
-                        </div>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="missing_barcode" id="missing_barcode" value="1"
-                                   {% if filters.get('missing_barcode') %}checked{% endif %}>
-                            <label class="form-check-label" for="missing_barcode">Missing Barcode</label>
-                        </div>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="missing_images" id="missing_images" value="1"
-                                   {% if filters.get('missing_images') %}checked{% endif %}>
-                            <label class="form-check-label" for="missing_images">Missing Images</label>
-                        </div>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="zero_inventory" id="zero_inventory" value="1"
-                                   {% if filters.get('zero_inventory') %}checked{% endif %}>
-                            <label class="form-check-label" for="zero_inventory">Zero Inventory</label>
-                        </div>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="missing_title_tag" id="missing_title_tag" value="1"
-                                   {% if filters.get('missing_title_tag') %}checked{% endif %}>
-                            <label class="form-check-label" for="missing_title_tag">Missing SEO Title</label>
-                        </div>
-                        <div class="form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="missing_description_tag" id="missing_description_tag" value="1"
-                                   {% if filters.get('missing_description_tag') %}checked{% endif %}>
-                            <label class="form-check-label" for="missing_description_tag">Missing SEO Description</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i data-lucide="search" width="16" height="16" class="me-1"></i>
-                            Apply Filters
-                        </button>
-                        <a href="{{ url_for('main.products') }}" class="btn btn-outline-secondary">
-                            <i data-lucide="x" width="16" height="16" class="me-1"></i>
-                            Clear All
-                        </a>
-                        {% if filters %}
-                        <a href="{{ url_for('main.export_products', **filters) }}" class="btn btn-success">
-                            <i data-lucide="download" width="16" height="16" class="me-1"></i>
-                            Export Results
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </form>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i data-lucide="package" width="24" height="24" class="me-2"></i>
+                Products & Variants
+            </h1>
+            <p class="text-muted mb-0">
+                {% if pagination %}
+                Showing {{ pagination.showing_from }} - {{ pagination.showing_to }} of {{ "{:,}".format(pagination.total) }} variants
+                {% else %}
+                No products found
+                {% endif %}
+            </p>
         </div>
+        <div class="d-flex gap-2">
+            {% if request.args %}
+            <a href="{{ url_for('main.export_products', **request.args.to_dict(flat=False)) }}" class="btn btn-success">
+                <i data-lucide="download" width="16" height="16" class="me-1"></i>
+                Export
+            </a>
+            {% endif %}
+        </div>
+    </div>
 
-        <!-- Results Section -->
-        <div class="results-card">
-            <div class="results-header">
-                <div>
-                    <h5 class="mb-1">
-                        <i data-lucide="package" width="20" height="20" class="me-2"></i>
-                        Products
-                    </h5>
+    <!-- Search and Filters -->
+    <div class="filter-card">
+        <form method="GET" id="searchForm" action="{{ url_for('main.products') }}">
+            <!-- Preserve pagination settings -->
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="per_page" value="{{ pagination.per_page if pagination else 50 }}">
+
+            <div class="row mb-3">
+                <!-- Enhanced Search -->
+                <div class="col-md-6">
+                    <label class="form-label">Search</label>
+                    <div class="search-container">
+                        <input type="text"
+                               class="form-control"
+                               name="search_term"
+                               value="{{ request.args.get('search_term', '') }}"
+                               placeholder="Search by SKU, barcode, title, handle, product ID..."
+                               id="searchInput">
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
                     <small class="text-muted">
-                        Showing {{ pagination.showing_from }}-{{ pagination.showing_to }} of {{ "{:,}".format(pagination.total) }} results
-                        {% if load_time %}(Loaded in {{ "%.2f"|format(load_time) }}s){% endif %}
+                        Search supports: SKU, barcode, product title, handle, vendor, type, or exact product ID
                     </small>
                 </div>
-                <div class="sort-controls">
-                    <label for="per_page" class="form-label mb-0">Per page:</label>
-                    <select class="form-select" name="per_page" id="per_page" style="width: auto;" onchange="updatePerPage()">
-                        <option value="25" {% if pagination.per_page == 25 %}selected{% endif %}>25</option>
-                        <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if pagination.per_page == 100 %}selected{% endif %}>100</option>
-                        <option value="200" {% if pagination.per_page == 200 %}selected{% endif %}>200</option>
+
+                <!-- Shop Filter -->
+                <div class="col-md-3">
+                    <label class="form-label">Shops</label>
+                    <select class="form-select" name="shop_ids[]" multiple>
+                        {% for shop in shops %}
+                        <option value="{{ shop.id }}"
+                                {% if shop.id in request.args.getlist('shop_ids[]', type=int) %}selected{% endif %}>
+                        {{ shop.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="sort_by" class="form-label">Sort By</label>
+                    <select class="form-select" name="sort_by" id="sort_by">
+                        <option value="default" {% if request.args.get('sort_by') == 'default' or not request.args.get('sort_by') %}selected{% endif %}>Default (Shop, Title)</option>
+                        <option value="created_desc" {% if request.args.get('sort_by') == 'created_desc' %}selected{% endif %}>Latest Created</option>
+                        <option value="created_asc" {% if request.args.get('sort_by') == 'created_asc' %}selected{% endif %}>Oldest Created</option>
+                        <option value="updated_desc" {% if request.args.get('sort_by') == 'updated_desc' %}selected{% endif %}>Latest Updated ⭐</option>
+                        <option value="updated_asc" {% if request.args.get('sort_by') == 'updated_asc' %}selected{% endif %}>Oldest Updated</option>
+                    </select>
+                    <small class="text-muted">⭐ Auto-selected when using quick filters</small>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                        <option value="draft" {% if request.args.get('status') == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="archived" {% if request.args.get('status') == 'archived' %}selected{% endif %}>Archived</option>
                     </select>
                 </div>
             </div>
 
-            {% if products %}
-            <div class="table-container">
-                <table class="table table-hover products-table">
-                    <thead>
-                    <tr>
-                        <th>Shop</th>
-                        <th>Product Title</th>
-                        <th>SKU</th>
-                        <th>Barcode</th>
-                        <th>Status</th>
-                        <th>Inventory</th>
-                        <th>Created</th>
-                        <th>Updated</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for product in products %}
-                    <tr>
-                        <td>
-                            <span class="shop-badge">{{ product.shop_technical_name }}</span>
-                        </td>
-                        <td>
-                            <div class="product-title" title="{{ product.title }}">
-                                {{ product.title }}
-                            </div>
-                            <small class="text-muted">{{ product.handle }}</small>
-                        </td>
-                        <td>
-                            {% if product.variant_sku %}
-                            <code>{{ product.variant_sku }}</code>
-                            {% else %}
-                            <span class="text-danger">
-                                        <i data-lucide="alert-triangle" width="14" height="14"></i>
-                                        Missing
-                                    </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if product.variant_barcode %}
-                            <code>{{ product.variant_barcode }}</code>
-                            {% else %}
-                            <span class="text-danger">
-                                        <i data-lucide="alert-triangle" width="14" height="14"></i>
-                                        Missing
-                                    </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                                <span class="status-badge status-{{ product.status|lower }}">
-                                    {{ product.status|title }}
-                                </span>
-                        </td>
-                        <td>
-                            {% if product.variant_inventory_quantity is not none %}
-                            {% if product.variant_inventory_quantity == 0 %}
-                            <span class="text-danger">{{ product.variant_inventory_quantity }}</span>
-                            {% else %}
-                            <span class="text-success">{{ product.variant_inventory_quantity }}</span>
-                            {% endif %}
-                            {% else %}
-                            <span class="text-muted">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td class="date-cell">
-                            {% if product.created_at %}
-                            <div class="date-time">{{ product.created_at.strftime('%Y-%m-%d %H:%M') if product.created_at else 'N/A' }}</div>
-                            <div class="date-ago" id="created-{{ loop.index }}"></div>
-                            {% else %}
-                            <span class="text-muted">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td class="date-cell">
-                            {% if product.updated_at %}
-                            <div class="date-time">{{ product.updated_at.strftime('%Y-%m-%d %H:%M') if product.updated_at else 'N/A' }}</div>
-                            <div class="date-ago" id="updated-{{ loop.index }}"></div>
-                            {% else %}
-                            <span class="text-muted">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                        onclick="showProductDetails({{ product.product_id }})"
-                                        title="View Product Details">
-                                    <i data-lucide="eye" width="14" height="14"></i>
-                                </button>
-                                {% if product.variant_barcode %}
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="searchBarcode('{{ product.variant_barcode }}')"
-                                        title="Find Similar Products">
-                                    <i data-lucide="search" width="14" height="14"></i>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <!-- Date Filters Section -->
+            <div class="date-filter-section">
+    <h6 class="mb-3">
+        <i data-lucide="calendar" width="16" height="16" class="me-1"></i>
+        Date Filters
+    </h6>
+
+    <div class="row">
+        <div class="col-md-6">
+            <label class="form-label">
+                <strong>
+                    <i data-lucide="plus-circle" width="14" height="14" class="me-1 text-success"></i>
+                    Created Date
+                </strong>
+            </label>
+            <div class="date-input-group">
+                <label for="created_after">After:</label>
+                <input type="datetime-local" class="form-control" name="created_after" id="created_after"
+                       value="{{ request.args.get('created_after', '') }}">
+            </div>
+            <div class="date-input-group">
+                <label for="created_before">Before:</label>
+                <input type="datetime-local" class="form-control" name="created_before" id="created_before"
+                       value="{{ request.args.get('created_before', '') }}">
             </div>
 
-            <!-- Pagination -->
-            <div class="pagination-container">
-                <nav>
-                    <ul class="pagination justify-content-center mb-0">
-                        {% if pagination.has_prev %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('main.products', page=pagination.prev_page, **filters) }}">
-                                <i data-lucide="chevron-left" width="16" height="16"></i>
-                                Previous
-                            </a>
-                        </li>
-                        {% endif %}
+            <!-- Quick Created Date Buttons -->
+            <div class="quick-date-buttons mt-2">
+                <button type="button" class="quick-date-btn" onclick="setCreatedDate('today')">
+                    <i data-lucide="calendar-days" width="12" height="12" class="me-1"></i>
+                    Created Today
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setCreatedDate('yesterday')">
+                    Created Yesterday
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setCreatedDate('week')">
+                    Created This Week
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setCreatedDate('month')">
+                    Created This Month
+                </button>
+                <button type="button" class="quick-date-btn" onclick="clearCreatedDates()" style="background: #f8d7da; color: #721c24;">
+                    <i data-lucide="x" width="12" height="12" class="me-1"></i>
+                    Clear
+                </button>
+            </div>
+        </div>
 
-                        {% for page_num in range(1, pagination.pages + 1) %}
-                        {% if page_num == pagination.page %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ page_num }}</span>
-                        </li>
-                        {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 2 and page_num <= pagination.page + 2) %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('main.products', page=page_num, **filters) }}">{{ page_num }}</a>
-                        </li>
-                        {% elif page_num == 4 or page_num == pagination.pages - 3 %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                        {% endif %}
-                        {% endfor %}
-
-                        {% if pagination.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('main.products', page=pagination.next_page, **filters) }}">
-                                Next
-                                <i data-lucide="chevron-right" width="16" height="16"></i>
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+        <div class="col-md-6">
+            <label class="form-label">
+                <strong>
+                    <i data-lucide="edit" width="14" height="14" class="me-1 text-info"></i>
+                    Updated Date
+                </strong>
+            </label>
+            <div class="date-input-group">
+                <label for="updated_after">After:</label>
+                <input type="datetime-local" class="form-control" name="updated_after" id="updated_after"
+                       value="{{ request.args.get('updated_after', '') }}">
+            </div>
+            <div class="date-input-group">
+                <label for="updated_before">Before:</label>
+                <input type="datetime-local" class="form-control" name="updated_before" id="updated_before"
+                       value="{{ request.args.get('updated_before', '') }}">
             </div>
 
-            {% else %}
-            <div class="text-center py-5">
-                <i data-lucide="package-x" width="64" height="64" class="text-muted mb-3"></i>
-                <h5>No products found</h5>
-                <p class="text-muted">Try adjusting your filters to see more results.</p>
-                <a href="{{ url_for('main.products') }}" class="btn btn-outline-primary">
-                    <i data-lucide="refresh-cw" width="16" height="16" class="me-1"></i>
-                    Clear All Filters
+            <!-- Quick Updated Date Buttons -->
+            <div class="quick-date-buttons mt-2">
+                <button type="button" class="quick-date-btn" onclick="setUpdatedDate('today')">
+                    <i data-lucide="clock" width="12" height="12" class="me-1"></i>
+                    Updated Today
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setUpdatedDate('yesterday')">
+                    Updated Yesterday
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setUpdatedDate('week')">
+                    Updated This Week
+                </button>
+                <button type="button" class="quick-date-btn" onclick="setUpdatedDate('month')">
+                    Updated This Month
+                </button>
+                <button type="button" class="quick-date-btn" onclick="clearUpdatedDates()" style="background: #f8d7da; color: #721c24;">
+                    <i data-lucide="x" width="12" height="12" class="me-1"></i>
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Clear Button -->
+    <div class="text-center mt-3">
+        <button type="button" class="quick-date-btn" onclick="clearAllDates()" style="background: #dc3545; color: white; font-weight: 500;">
+            <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>
+            Clear All Date Filters
+        </button>
+    </div>
+</div>
+
+            <!-- Quick Filters -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="form-label">
+                        <i data-lucide="shield-check" width="16" height="16" class="me-1"></i>
+                        Quick Filters
+                    </label>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="missing_sku" value="1"
+                                   {% if request.args.get('missing_sku') %}checked{% endif %}>
+                            <label class="form-check-label">Missing SKU</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="missing_barcode" value="1"
+                                   {% if request.args.get('missing_barcode') %}checked{% endif %}>
+                            <label class="form-check-label">Missing Barcode</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="zero_inventory" value="1"
+                                   {% if request.args.get('zero_inventory') %}checked{% endif %}>
+                            <label class="form-check-label">Zero Inventory</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="missing_images" value="1"
+                                   {% if request.args.get('missing_images') %}checked{% endif %}>
+                            <label class="form-check-label">Missing Images</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="missing_title_tag" value="1"
+                                   {% if request.args.get('missing_title_tag') %}checked{% endif %}>
+                            <label class="form-check-label">Missing SEO Title</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="missing_description_tag" value="1"
+                                   {% if request.args.get('missing_description_tag') %}checked{% endif %}>
+                            <label class="form-check-label">Missing SEO Description</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="non_shopify_inventory_management" value="1"
+                                   {% if request.args.get('non_shopify_inventory_management') %}checked{% endif %}>
+                            <label class="form-check-label">Non-Shopify Inventory</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" id="searchSubmitBtn">
+                    <i data-lucide="search" width="16" height="16" class="me-1"></i>
+                    Search
+                </button>
+                <a href="{{ url_for('main.products') }}" class="btn btn-outline-secondary">
+                    <i data-lucide="x" width="16" height="16" class="me-1"></i>
+                    Clear
                 </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Pagination Controls (Top) -->
+    {% if pagination and pagination.total > 0 %}
+    <div class="pagination-container">
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                Showing {{ pagination.showing_from }} - {{ pagination.showing_to }}
+                of {{ "{:,}".format(pagination.total) }} variants
+                {% if pagination.total > pagination.per_page %}
+                (Page {{ pagination.page }} of {{ pagination.pages }})
+                {% endif %}
+            </div>
+
+            <div class="page-size-control">
+                <label>Show:</label>
+                <select class="page-size-select" onchange="changePageSize(this.value)">
+                    <option value="25" {% if pagination.per_page == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if pagination.per_page == 100 %}selected{% endif %}>100</option>
+                    <option value="200" {% if pagination.per_page == 200 %}selected{% endif %}>200</option>
+                </select>
+                <span>per page</span>
+            </div>
+
+            {% if pagination.pages > 1 %}
+            <div class="pagination-nav">
+                <!-- First Page -->
+                {% if pagination.page > 1 %}
+                <a href="{{ url_for('main.products', page=1, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevrons-left" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Previous Page -->
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('main.products', page=pagination.prev_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-left" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Page Numbers -->
+                {% set start_page = [pagination.page - 2, 1]|max %}
+                {% set end_page = [pagination.page + 2, pagination.pages]|min %}
+
+                {% for page_num in range(start_page, end_page + 1) %}
+                <a href="{{ url_for('main.products', page=page_num, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page {{ 'active' if page_num == pagination.page }}">
+                    {{ page_num }}
+                </a>
+                {% endfor %}
+
+                <!-- Next Page -->
+                {% if pagination.has_next %}
+                <a href="{{ url_for('main.products', page=pagination.next_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
+
+                <!-- Last Page -->
+                {% if pagination.page < pagination.pages %}
+                <a href="{{ url_for('main.products', page=pagination.pages, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevrons-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
             </div>
             {% endif %}
         </div>
     </div>
+    {% endif %}
+
+    <!-- Results Table -->
+    {% if products %}
+    <div class="results-card">
+        <div class="table-container {% if pagination.per_page >= 100 %}compact-mode{% endif %}">
+            <table class="table table-hover products-table mb-0">
+                <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Shop</th>
+                    <th>Product</th>
+                    <th>Variant Details</th>
+                    <th>Inventory</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        {% if product.image_src or product.variant_image %}
+                        <img src="{{ product.image_src or product.variant_image }}"
+                             alt="{{ product.title }}"
+                             class="product-image-preview"
+                             onclick="showImageModal('{{ product.image_src or product.variant_image }}', '{{ product.title }}')"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <div class="no-image-placeholder" style="display:none;">
+                            <i data-lucide="image-off" width="16" height="16"></i>
+                        </div>
+                        {% else %}
+                        <div class="no-image-placeholder">
+                            <i data-lucide="image-off" width="16" height="16"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="shop-badge">{{ product.shop_technical_name }}</span>
+                    </td>
+                    <td>
+                        <div class="product-title" title="{{ product.title }}">
+                            <strong>{{ product.title[:50] }}{% if product.title|length > 50 %}...{% endif %}</strong>
+                        </div>
+                        <small class="text-muted">
+                            ID: {{ product.product_id }} | Handle: {{ product.handle }}
+                        </small>
+                        {% if product.vendor %}
+                        <br>
+                        <small class="text-muted">{{ product.vendor }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>
+                            <strong>Variant ID: {{ product.variant_id }}</strong>
+                            {% if product.variant_sku %}
+                            <br>
+                            <small class="sku-barcode-cell"><strong>SKU:</strong> {{ product.variant_sku }}</small>
+                            {% else %}
+                            <br>
+                            <small class="text-danger"><strong>SKU:</strong> Missing</small>
+                            {% endif %}
+
+                            {% if product.variant_barcode %}
+                            <br>
+                            <small class="sku-barcode-cell"><strong>Barcode:</strong> {{ product.variant_barcode }}</small>
+                            {% else %}
+                            <br>
+                            <small class="text-warning"><strong>Barcode:</strong> Missing</small>
+                            {% endif %}
+
+                            {% if product.size or product.color %}
+                            <br>
+                            {% if product.size %}<span class="badge bg-light text-dark">{{ product.size }}</span>{% endif %}
+                            {% if product.color %}<span class="badge bg-light text-dark">{{ product.color }}</span>{% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="inventory-cell">
+                        <div>
+                            <strong class="{% if product.variant_inventory_quantity == 0 %}text-danger{% elif product.variant_inventory_quantity <= 10 %}text-warning{% else %}text-success{% endif %}">
+                                {{ product.variant_inventory_quantity or 0 }}
+                            </strong>
+                            <br>
+                            <small class="{% if product.variant_available_for_sale %}text-success{% else %}text-danger{% endif %}">
+                                {{ 'Available' if product.variant_available_for_sale else 'Unavailable' }}
+                            </small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ product.status|lower }}">
+                            {{ product.status|title }}
+                        </span>
+                    </td>
+                    <td class="date-cell">
+                        {% if product.created_at %}
+                        <div class="date-time">{{ product.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <div class="date-ago" data-date="{{ product.created_at.isoformat() }}"></div>
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td class="date-cell">
+                        {% if product.updated_at %}
+                        <div class="date-time">{{ product.updated_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <div class="date-ago" data-date="{{ product.updated_at.isoformat() }}"></div>
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-xs btn-outline-primary"
+                                    onclick="showVariantDetails({{ product.variant_id }})"
+                                    title="View Details">
+                                <i data-lucide="eye" width="12" height="12"></i>
+                            </button>
+                            {% if product.variant_barcode %}
+                            <button class="btn btn-xs btn-outline-secondary"
+                                    onclick="searchBarcode('{{ product.variant_barcode }}')"
+                                    title="Find Similar">
+                                <i data-lucide="search" width="12" height="12"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-xs btn-outline-info"
+                                    onclick="copyToClipboard('{{ product.variant_sku or product.variant_barcode or product.handle }}')"
+                                    title="Copy SKU/Barcode">
+                                <i data-lucide="copy" width="12" height="12"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Performance Info -->
+        <div class="performance-info">
+            {% if pagination %}
+            Query executed in {% if load_time %}{{ "%.2f"|format(load_time) }}s{% else %}~0.15s{% endif %} |
+            Page {{ pagination.page }} of {{ pagination.pages }} |
+            {{ pagination.per_page }} results per page
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pagination Controls (Bottom) -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination-container mt-4">
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                Page {{ pagination.page }} of {{ pagination.pages }}
+            </div>
+
+            <div class="pagination-nav">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('main.products', page=pagination.prev_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    <i data-lucide="chevron-left" width="14" height="14"></i>
+                    Previous
+                </a>
+                {% endif %}
+
+                {% if pagination.has_next %}
+                <a href="{{ url_for('main.products', page=pagination.next_page, per_page=pagination.per_page, **clean_filters) }}"
+                   class="btn-page">
+                    Next
+                    <i data-lucide="chevron-right" width="14" height="14"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Enhanced Empty State -->
+    <div class="results-card">
+        <div class="text-center py-5">
+            <i data-lucide="search-x" width="64" height="64" class="text-muted mb-3"></i>
+            <h5>No variants found</h5>
+            <p class="text-muted">Try adjusting your search criteria or filters to find the products you're looking for.</p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <a href="{{ url_for('main.products') }}" class="btn btn-primary">
+                    <i data-lucide="refresh-cw" width="16" height="16" class="me-1"></i>
+                    Clear All Filters
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
-<!-- Hidden data for JavaScript -->
-<script type="application/json" id="product-dates">
-    {
-        "products": [
-            {% for product in products %}
-            {
-                "index": {{ loop.index }},
-            "created_at": "{{ product.created_at.isoformat() if product.created_at else '' }}",
-            "updated_at": "{{ product.updated_at.isoformat() if product.updated_at else '' }}"
-            }{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ]
-    }
-</script>
+<!-- Enhanced Variant Details Modal -->
+<div class="product-modal" id="variantModal">
+    <div class="product-modal-content">
+        <button class="product-modal-close" onclick="closeVariantModal()">&times;</button>
+        <div id="variantDetails">
+            <div class="text-center py-4">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <p class="text-muted">Loading variant details...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="product-modal" id="imageModal">
+    <div class="product-modal-content" style="max-width: 90%; text-align: center;">
+        <button class="product-modal-close" onclick="closeImageModal()">&times;</button>
+        <div id="imageModalBody">
+            <!-- Image will be loaded here -->
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    // Enhanced date functions with separate Created/Updated logic
+
+    function setCreatedDate(period) {
+        const now = new Date();
+        let startDate, endDate;
+
+        switch(period) {
+            case 'today':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                break;
+            case 'yesterday':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+                break;
+            case 'week':
+                // This week = from Monday to now (or Sunday, adjust based on your preference)
+                const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust so Monday = 0
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                break;
+        }
+
+        if (startDate) {
+            // Only set CREATED date fields
+            document.getElementById('created_after').value = formatDateTimeLocal(startDate);
+            if (endDate) {
+                document.getElementById('created_before').value = formatDateTimeLocal(endDate);
+            }
+
+            // Visual feedback
+            highlightFields(['created_after', 'created_before']);
+        }
+    }
+
+    function setUpdatedDate(period) {
+        const now = new Date();
+        let startDate, endDate;
+
+        switch(period) {
+            case 'today':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                break;
+            case 'yesterday':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+                break;
+            case 'week':
+                // This week = from Monday to now
+                const dayOfWeek = now.getDay();
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                break;
+        }
+
+        if (startDate) {
+            // Only set UPDATED date fields
+            document.getElementById('updated_after').value = formatDateTimeLocal(startDate);
+            if (endDate) {
+                document.getElementById('updated_before').value = formatDateTimeLocal(endDate);
+            }
+
+            // Visual feedback
+            highlightFields(['updated_after', 'updated_before']);
+        }
+    }
+
+    function clearCreatedDates() {
+        document.getElementById('created_after').value = '';
+        document.getElementById('created_before').value = '';
+        highlightFields(['created_after', 'created_before'], 'removed');
+    }
+
+    function clearUpdatedDates() {
+        document.getElementById('updated_after').value = '';
+        document.getElementById('updated_before').value = '';
+        highlightFields(['updated_after', 'updated_before'], 'removed');
+    }
+
+    function clearAllDates() {
+        clearCreatedDates();
+        clearUpdatedDates();
+    }
+
+    function highlightFields(fieldIds, action = 'set') {
+        fieldIds.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                if (action === 'set') {
+                    field.style.background = '#e3f2fd';
+                    field.style.borderColor = '#2196f3';
+                } else if (action === 'removed') {
+                    field.style.background = '#ffebee';
+                    field.style.borderColor = '#f44336';
+                }
+
+                // Reset after animation
+                setTimeout(() => {
+                    field.style.background = '';
+                    field.style.borderColor = '';
+                }, 1500);
+            }
+        });
+    }
+
+    function formatDateTimeLocal(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+</script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Lucide icons
         lucide.createIcons();
 
         // Initialize relative dates
         initializeRelativeDates();
+
+        setupDateAutoComplete();
+
+        // Enhanced loading states
+        setupLoadingStates();
+
+        // Enhanced keyboard navigation
+        setupKeyboardNavigation();
+
+        // Enhanced search functionality
+        setupEnhancedSearch();
+
+        // Auto-save preferences
+        setupAutoSave();
+
+         // ADD THIS LINE HERE
+        setupQuickFilterAutoSort();
+
+        // Close modals on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeVariantModal();
+                closeImageModal();
+            }
+        });
+
+        // Close modals on backdrop click
+        document.getElementById('variantModal').addEventListener('click', function(e) {
+            if (e.target === this) closeVariantModal();
+        });
+
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) closeImageModal();
+        });
     });
 
     function initializeRelativeDates() {
-        try {
-            const productDatesData = document.getElementById('product-dates');
-            if (productDatesData && window.moment) {
-                const data = JSON.parse(productDatesData.textContent);
-
-                data.products.forEach(product => {
-                    if (product.created_at) {
-                        const createdElement = document.getElementById(`created-${product.index}`);
-                        if (createdElement) {
-                            createdElement.textContent = moment(product.created_at).fromNow();
-                        }
-                    }
-
-                    if (product.updated_at) {
-                        const updatedElement = document.getElementById(`updated-${product.index}`);
-                        if (updatedElement) {
-                            updatedElement.textContent = moment(product.updated_at).fromNow();
-                        }
-                    }
-                });
-            }
-        } catch (e) {
-            console.warn('Could not initialize relative dates:', e);
+        if (typeof moment !== 'undefined') {
+            document.querySelectorAll('.date-ago[data-date]').forEach(function(element) {
+                const dateStr = element.getAttribute('data-date');
+                if (dateStr) {
+                    element.textContent = moment(dateStr).fromNow();
+                }
+            });
         }
     }
 
-    function updatePerPage() {
-        const perPage = document.getElementById('per_page').value;
-        const url = new URL(window.location);
-        url.searchParams.set('per_page', perPage);
-        url.searchParams.set('page', 1); // Reset to first page
-        window.location.href = url.toString();
+    function setupQuickFilterAutoSort() {
+    const quickFilterCheckboxes = document.querySelectorAll(`
+        input[name="missing_sku"],
+        input[name="missing_barcode"],
+        input[name="zero_inventory"],
+        input[name="missing_images"],
+        input[name="missing_title_tag"],
+        input[name="missing_description_tag"],
+        input[name="non_shopify_inventory_management"]
+    `);
+
+    quickFilterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Check if any quick filter is now checked
+            const anyQuickFilterChecked = Array.from(quickFilterCheckboxes).some(cb => cb.checked);
+
+            // If any quick filter is checked and no explicit sort is set, set to latest updated
+            const sortSelect = document.querySelector('select[name="sort_by"]');
+            if (anyQuickFilterChecked && sortSelect && sortSelect.value === 'default') {
+                sortSelect.value = 'updated_desc';
+
+                // Visual feedback
+                sortSelect.style.backgroundColor = '#e3f2fd';
+                setTimeout(() => {
+                    sortSelect.style.backgroundColor = '';
+                }, 1000);
+            } else if (!anyQuickFilterChecked && sortSelect && sortSelect.value === 'updated_desc') {
+                // Reset to default if no quick filters are checked
+                sortSelect.value = 'default';
+            }
+        });
+    });
+}
+
+    function setupLoadingStates() {
+        const paginationLinks = document.querySelectorAll('.btn-page');
+        paginationLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.classList.contains('active')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                const originalContent = this.innerHTML;
+                this.innerHTML = '<div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+                this.style.pointerEvents = 'none';
+                this.classList.add('loading');
+
+                setTimeout(() => {
+                    if (this.classList.contains('loading')) {
+                        this.innerHTML = originalContent;
+                        this.style.pointerEvents = 'auto';
+                        this.classList.remove('loading');
+                        lucide.createIcons();
+                    }
+                }, 8000);
+            });
+        });
+
+        const searchForm = document.getElementById('searchForm');
+        if (searchForm) {
+            searchForm.addEventListener('submit', function() {
+                const submitBtn = document.getElementById('searchSubmitBtn');
+                if (submitBtn) {
+                    const originalContent = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<div class="loading-spinner me-2" style="width: 16px; height: 16px; border-width: 2px;"></div>Searching...';
+                    submitBtn.disabled = true;
+
+                    setTimeout(() => {
+                        submitBtn.innerHTML = originalContent;
+                        submitBtn.disabled = false;
+                        lucide.createIcons();
+                    }, 10000);
+                }
+            });
+        }
+    }
+
+    function setupKeyboardNavigation() {
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            const currentPage = parseInt('{{ pagination.page if pagination else 1 }}');
+            const totalPages = parseInt('{{ pagination.pages if pagination else 1 }}');
+
+            if ((e.key === 'ArrowLeft' || e.key === 'p') && currentPage > 1) {
+                e.preventDefault();
+                goToPage(currentPage - 1);
+            }
+
+            if ((e.key === 'ArrowRight' || e.key === 'n') && currentPage < totalPages) {
+                e.preventDefault();
+                goToPage(currentPage + 1);
+            }
+
+            if (e.key === 'Home' && currentPage > 1) {
+                e.preventDefault();
+                goToPage(1);
+            }
+
+            if (e.key === 'End' && currentPage < totalPages) {
+                e.preventDefault();
+                goToPage(totalPages);
+            }
+
+            // Quick search focus
+            if (e.key === '/' || e.key === 'f') {
+                e.preventDefault();
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+        });
+    }
+
+    function setupEnhancedSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            let searchTimeout;
+            let suggestionTimeout;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                clearTimeout(suggestionTimeout);
+
+                const query = this.value.trim();
+
+                if (query.length < 3) {
+                    hideSuggestions();
+                    return;
+                }
+
+                suggestionTimeout = setTimeout(() => {
+                    if (query.length >= 3) {
+                        showSearchSuggestions(query);
+                    }
+                }, 300);
+            });
+
+            searchInput.addEventListener('input', function() {
+                sessionStorage.setItem('products_search', this.value);
+            });
+
+            const savedSearch = sessionStorage.getItem('products_search');
+            if (savedSearch && !searchInput.value) {
+                searchInput.value = savedSearch;
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                hideSuggestions();
+            }
+        });
+    }
+
+    function showSearchSuggestions(query) {
+        const suggestions = [
+            { type: 'SKU', value: query, icon: 'tag' },
+            { type: 'Barcode', value: query, icon: 'scan' },
+            { type: 'Product Title', value: query, icon: 'file-text' },
+            { type: 'Vendor', value: query, icon: 'building' }
+        ];
+
+        const container = document.getElementById('searchSuggestions');
+        if (container) {
+            container.innerHTML = suggestions.map(suggestion =>
+                `<div class="search-suggestion" onclick="selectSuggestion('${suggestion.value}')">
+                    <i data-lucide="${suggestion.icon}" width="16" height="16"></i>
+                    <div>
+                        <strong>${suggestion.type}:</strong> ${suggestion.value}
+                    </div>
+                </div>`
+            ).join('');
+            container.style.display = 'block';
+            lucide.createIcons();
+        }
+    }
+
+    function hideSuggestions() {
+        const container = document.getElementById('searchSuggestions');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    function selectSuggestion(value) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = value;
+            hideSuggestions();
+            searchInput.focus();
+        }
+    }
+
+    function setupAutoSave() {
+        const form = document.getElementById('searchForm');
+        if (form) {
+            const inputs = form.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData);
+                    sessionStorage.setItem('products_filters', params.toString());
+                });
+            });
+        }
+    }
+
+    function changePageSize(perPage) {
+        try {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', perPage);
+            url.searchParams.set('page', '1');
+
+            const selector = event.target;
+            selector.disabled = true;
+            selector.style.opacity = '0.6';
+
+            window.location.href = url.toString();
+        } catch (error) {
+            console.error('Error changing page size:', error);
+            if (event && event.target) {
+                event.target.disabled = false;
+                event.target.style.opacity = '1';
+            }
+        }
+    }
+
+    function goToPage(pageNum) {
+        try {
+            const url = new URL(window.location);
+            url.searchParams.set('page', pageNum);
+            window.location.href = url.toString();
+        } catch (error) {
+            console.error('Error navigating to page:', error);
+        }
+    }
+
+    // Auto-complete time when user enters just date
+    function setupDateAutoComplete() {
+        const dateInputs = document.querySelectorAll('input[type="datetime-local"]');
+
+        dateInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                const value = this.value;
+                const isAfterField = this.name.includes('after');
+                const isBeforeField = this.name.includes('before');
+
+                // If user entered just date (length 10: YYYY-MM-DD), auto-complete time
+                if (value && value.length === 10) {
+                    if (isAfterField) {
+                        // For "after" fields, set to start of day (00:00)
+                        this.value = value + 'T00:00';
+                    } else if (isBeforeField) {
+                        // For "before" fields, set to end of day (23:59)
+                        this.value = value + 'T23:59';
+                    }
+                }
+            });
+
+            // Also handle when user loses focus
+            input.addEventListener('blur', function() {
+                const value = this.value;
+                const isAfterField = this.name.includes('after');
+                const isBeforeField = this.name.includes('before');
+
+                if (value && value.length === 10) {
+                    if (isAfterField) {
+                        this.value = value + 'T00:00';
+                    } else if (isBeforeField) {
+                        this.value = value + 'T23:59';
+                    }
+                }
+            });
+        });
     }
 
     function setQuickDate(period) {
         const now = new Date();
-        let startDate;
+        let startDate, endDate;
 
         switch(period) {
             case 'today':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
                 break;
             case 'yesterday':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
                 break;
             case 'week':
                 const dayOfWeek = now.getDay();
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
                 break;
             case 'month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
                 break;
         }
 
         if (startDate) {
             document.getElementById('created_after').value = formatDateTimeLocal(startDate);
             document.getElementById('updated_after').value = formatDateTimeLocal(startDate);
+
+            if (endDate) {
+                document.getElementById('created_before').value = formatDateTimeLocal(endDate);
+                document.getElementById('updated_before').value = formatDateTimeLocal(endDate);
+            }
         }
     }
 
@@ -634,13 +1614,137 @@
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}T00:00`;
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
-    function showProductDetails(productId) {
-        // You can implement a modal or redirect to product details
-        console.log('Show details for product:', productId);
-        // Example: window.open(`/product/${productId}`, '_blank');
+    function showVariantDetails(variantId) {
+        const modal = document.getElementById('variantModal');
+        const detailsContainer = document.getElementById('variantDetails');
+
+        detailsContainer.innerHTML = `
+            <div class="text-center py-4">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <p class="text-muted">Loading variant details...</p>
+            </div>
+        `;
+
+        modal.style.display = 'block';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        fetch(`/api/variant-details/${variantId}`, {
+            signal: controller.signal
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            detailsContainer.innerHTML = `
+                <h5 class="mb-4">
+                    <i data-lucide="package" width="20" height="20" class="me-2"></i>
+                    Variant Details
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3 text-primary">
+                            <i data-lucide="package" width="16" height="16" class="me-2"></i>Product Information
+                        </h6>
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold" style="width: 40%;">Product ID:</td><td>${data.product_id}</td></tr>
+                            <tr><td class="fw-bold">Title:</td><td>${data.title}</td></tr>
+                            <tr><td class="fw-bold">Handle:</td><td><code>${data.handle}</code></td></tr>
+                            <tr><td class="fw-bold">Vendor:</td><td>${data.vendor || '<em class="text-muted">Not set</em>'}</td></tr>
+                            <tr><td class="fw-bold">Type:</td><td>${data.type || '<em class="text-muted">Not set</em>'}</td></tr>
+                            <tr><td class="fw-bold">Status:</td><td><span class="badge bg-${data.status === 'active' ? 'success' : data.status === 'draft' ? 'warning' : 'secondary'}">${data.status}</span></td></tr>
+                            <tr><td class="fw-bold">Shop:</td><td><span class="badge bg-info">${data.shop_technical_name}</span></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3 text-primary">
+                            <i data-lucide="tag" width="16" height="16" class="me-2"></i>Variant Details
+                        </h6>
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold" style="width: 40%;">Variant ID:</td><td>${data.variant_id}</td></tr>
+                            <tr><td class="fw-bold">SKU:</td><td>${data.variant_sku ? `<code>${data.variant_sku}</code>` : '<em class="text-danger">Not set</em>'}</td></tr>
+                            <tr><td class="fw-bold">Barcode:</td><td>${data.variant_barcode ? `<code>${data.variant_barcode}</code>` : '<em class="text-warning">Not set</em>'}</td></tr>
+                            <tr><td class="fw-bold">Inventory:</td><td><span class="badge ${data.variant_inventory_quantity === 0 ? 'bg-danger' : data.variant_inventory_quantity <= 10 ? 'bg-warning' : 'bg-success'}">${data.variant_inventory_quantity || 0}</span></td></tr>
+                            <tr><td class="fw-bold">Available:</td><td><span class="badge ${data.variant_available_for_sale ? 'bg-success' : 'bg-danger'}">${data.variant_available_for_sale ? 'Yes' : 'No'}</span></td></tr>
+                            <tr><td class="fw-bold">Weight:</td><td>${data.variant_weight || '<em class="text-muted">Not set</em>'}</td></tr>
+                            <tr><td class="fw-bold">Management:</td><td>${data.variant_inventory_management || '<em class="text-muted">Not tracked</em>'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                ${data.size || data.color || data.material ? `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3 text-primary">
+                            <i data-lucide="palette" width="16" height="16" class="me-2"></i>Variant Attributes
+                        </h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            ${data.size ? `<span class="badge bg-primary">Size: ${data.size}</span>` : ''}
+                            ${data.color ? `<span class="badge bg-info">Color: ${data.color}</span>` : ''}
+                            ${data.material ? `<span class="badge bg-secondary">Material: ${data.material}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            lucide.createIcons();
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            let errorMessage = 'Unknown error occurred';
+
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. Please try again.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            detailsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i data-lucide="alert-triangle" width="16" height="16" class="me-2"></i>Error Loading Variant Details
+                    </h6>
+                    <p class="mb-2">${errorMessage}</p>
+                    <button class="btn btn-sm btn-outline-danger" onclick="showVariantDetails(${variantId})">
+                        <i data-lucide="refresh-cw" width="14" height="14" class="me-1"></i>Retry
+                    </button>
+                </div>
+            `;
+
+            lucide.createIcons();
+        });
+    }
+
+    function closeVariantModal() {
+        document.getElementById('variantModal').style.display = 'none';
+    }
+
+    function showImageModal(imageUrl, title) {
+        const modalBody = document.getElementById('imageModalBody');
+        modalBody.innerHTML = `
+            <h5>${title}</h5>
+            <img src="${imageUrl}" alt="${title}" style="max-width: 100%; max-height: 80vh; border-radius: 8px;">
+        `;
+        document.getElementById('imageModal').style.display = 'block';
+    }
+
+    function closeImageModal() {
+        document.getElementById('imageModal').style.display = 'none';
     }
 
     function searchBarcode(barcode) {
@@ -650,27 +1754,18 @@
         window.location.href = url.toString();
     }
 
-    // Auto-submit form on Enter key in search field
-    document.getElementById('search_term').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('filterForm').submit();
-        }
-    });
-
-    // Update pagination info in real-time
-    function updatePaginationInfo() {
-        const params = new URLSearchParams(window.location.search);
-        const page = params.get('page') || 1;
-        const perPage = params.get('per_page') || 50;
-
-        // Update per_page selector if not already set
-        const perPageSelect = document.getElementById('per_page');
-        if (perPageSelect && perPageSelect.value != perPage) {
-            perPageSelect.value = perPage;
-        }
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div class="alert alert-success alert-dismissible" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    Copied: ${text}
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        });
     }
-
-    // Initialize pagination info
-    updatePaginationInfo();
 </script>
 {% endblock %}

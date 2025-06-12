@@ -275,6 +275,7 @@ class ProductData:
         if filters.get('non_shopify_inventory_management'):
             where_conditions.append("variant_inventory_management != 'SHOPIFY'")
 
+
         # MISSING DATA FILTERS
         if filters.get('missing_sku'):
             where_conditions.append("(variant_sku IS NULL OR variant_sku = '')")

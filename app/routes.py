@@ -193,6 +193,10 @@ def products():
     if request.args.get('non_shopify_inventory_management'):
         filters['non_shopify_inventory_management'] = True
 
+    # ADD THIS NEW FILTER
+    if request.args.get('non_shopify_inventory_management'):
+        filters['non_shopify_inventory_management'] = True
+
     # MISSING DATA FILTERS
     if request.args.get('missing_sku'):
         filters['missing_sku'] = True
@@ -204,6 +208,21 @@ def products():
         filters['missing_title_tag'] = True
     if request.args.get('missing_description_tag'):
         filters['missing_description_tag'] = True
+
+    quick_filters_applied = any([
+        request.args.get('missing_sku'),
+        request.args.get('missing_barcode'),
+        request.args.get('zero_inventory'),
+        request.args.get('missing_images'),
+        request.args.get('missing_title_tag'),
+        request.args.get('missing_description_tag'),
+        request.args.get('non_shopify_inventory_management')
+    ])
+
+    if request.args.get('sort_by'):
+        filters['sort_by'] = request.args.get('sort_by')
+    elif quick_filters_applied and not request.args.get('sort_by'):
+        filters['sort_by'] = 'updated_desc'
 
     # DATE FILTERS
     if request.args.get('created_after'):
@@ -249,7 +268,8 @@ def products():
                                shops=shops,
                                vendors=all_vendors,
                                product_types=all_types,
-                               filters=request.args,
+                               filters=request.args,  # Pass the original request.args
+                               current_filters=filters,  # Pass processed filters separately
                                total_results=pagination['total'],
                                load_time=load_time)
 
