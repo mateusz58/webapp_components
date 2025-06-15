@@ -6,7 +6,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
 from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, \
     ComponentVariant, Brand, ComponentBrand, keyword_component
-from app.utils import process_csv_file
+from app.utils_legacy import process_csv_file
 from sqlalchemy import or_, text, func
 from datetime import datetime, timedelta
 import uuid

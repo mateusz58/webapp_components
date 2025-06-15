@@ -49,14 +49,26 @@ def create_app(config_class=Config):
     if uploads_dir:
         os.makedirs(uploads_dir, exist_ok=True)
 
+    # Register new modular blueprints
+    try:
+        from app.web.supplier_routes import supplier_bp
+        app.register_blueprint(supplier_bp)
+    except ImportError as e:
+        app.logger.warning(f"Supplier routes not available: {e}")
+    
+    try:
+        from app.api.supplier_api import supplier_api_bp
+        app.register_blueprint(supplier_api_bp)
+    except ImportError as e:
+        app.logger.warning(f"Supplier API routes not available: {e}")
+    
     try:
         from app.brand_routes import brand_bp
         app.register_blueprint(brand_bp)
     except ImportError as e:
         app.logger.warning(f"Brand routes not available: {e}")
-        # Brand management will be unavailable until brand_routes.py is created
     
-    # Register blueprints
+    # Register main routes (legacy)
     from app.routes import main
     app.register_blueprint(main)
 
