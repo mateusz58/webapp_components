@@ -722,18 +722,43 @@
 }
 
 /* Keyword expansion styles */
+.keyword-expand-trigger {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
 .keyword-expand-trigger:hover {
     background-color: #cbd5e1 !important;
     transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.keyword-collapse-trigger {
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 .keyword-collapse-trigger:hover {
     background-color: #dc2626 !important;
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .all-keywords-container .keyword-tag {
     margin-right: 0.25rem;
     margin-bottom: 0.25rem;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Fix Alpine.js x-show interference with grid */
@@ -1392,6 +1417,7 @@
                         {% if component.keywords|length > 2 %}
                         <span class="keyword-tag keyword-expand-trigger" 
                               data-component-id="{{ component.id }}"
+                              @click.stop
                               style="cursor: pointer; background-color: #e2e8f0; color: #64748b;">
                             +{{ component.keywords|length - 2 }}
                         </span>

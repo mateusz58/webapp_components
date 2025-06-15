@@ -283,11 +283,16 @@ window.enableKeywordExpansion = function enableKeywordExpansion() {
         if (e.target.matches('.keyword-expand-trigger')) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             const componentId = e.target.dataset.componentId;
             const keywordsContainer = e.target.parentElement;
             const allKeywordsContainer = document.getElementById(`all-keywords-${componentId}`);
             
-            if (!allKeywordsContainer) return;
+            if (!allKeywordsContainer) {
+                console.warn('All keywords container not found for component:', componentId);
+                return;
+            }
             
             // Store original content if not already stored
             if (!keywordsContainer.dataset.originalContent) {
@@ -298,19 +303,32 @@ window.enableKeywordExpansion = function enableKeywordExpansion() {
             keywordsContainer.innerHTML = allKeywordsContainer.innerHTML + 
                 `<span class="keyword-tag keyword-collapse-trigger" 
                        data-component-id="${componentId}"
-                       style="cursor: pointer; background-color: #ef4444; color: white; margin-left: 0.25rem;">
+                       style="cursor: pointer; background-color: #ef4444; color: white; margin-left: 0.25rem; font-size: 0.75rem;">
+                    <i data-lucide="chevron-up" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i>
                     Collapse
                 </span>`;
+            
+            // Reinitialize Lucide icons for the new collapse button
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
                 
         } else if (e.target.matches('.keyword-collapse-trigger')) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             // Collapse: restore original view
             const keywordsContainer = e.target.parentElement;
             
             if (keywordsContainer.dataset.originalContent) {
                 keywordsContainer.innerHTML = keywordsContainer.dataset.originalContent;
+                
+                // Reinitialize Lucide icons for the restored content
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
             }
         }
-    });
+    }, true); // Use capture phase to ensure our handler runs first
 };
