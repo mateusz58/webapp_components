@@ -1989,6 +1989,7 @@ function componentDashboard() {
 
         selectAllOptions(filterType) {
             console.log(`selectAllOptions called for ${filterType}`);
+            console.log(`Current filters before select all:`, this.filters);
             
             // Get all available values based on the filter type
             let allValues = [];
@@ -2000,6 +2001,7 @@ function componentDashboard() {
                         '{{ component_type.id }}'{% if not loop.last %},{% endif %}
                         {% endfor %}
                     ];
+                    console.log(`Available component types from template:`, allValues);
                     break;
                 case 'suppliers':
                     allValues = [
@@ -2007,6 +2009,7 @@ function componentDashboard() {
                         '{{ supplier.id }}'{% if not loop.last %},{% endif %}
                         {% endfor %}
                     ];
+                    console.log(`Available suppliers from template:`, allValues);
                     break;
                 case 'brands':
                     allValues = [
@@ -2016,15 +2019,17 @@ function componentDashboard() {
                         {% endfor %}
                         {% endif %}
                     ];
+                    console.log(`Available brands from template:`, allValues);
                     break;
             }
             
             console.log(`Setting all values for ${filterType}:`, allValues);
-            this.filters[filterType] = allValues;
+            this.filters[filterType] = [...allValues]; // Use spread operator to ensure it's a new array
             
             // Force UI update
             this.$nextTick(() => {
                 console.log(`${filterType} after select all:`, this.filters[filterType]);
+                console.log(`All filters after select all:`, this.filters);
             });
         },
 
