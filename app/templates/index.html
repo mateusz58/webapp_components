@@ -1884,6 +1884,8 @@ function componentDashboard() {
         },
 
         selectOption(filterType, optionValue, optionText) {
+            console.log(`selectOption called: ${filterType}, ${optionValue}, ${optionText}`);
+            
             if (!this.filters[filterType]) {
                 this.filters[filterType] = [];
             }
@@ -1892,11 +1894,15 @@ function componentDashboard() {
             if (index > -1) {
                 // Remove if already selected
                 this.filters[filterType].splice(index, 1);
+                console.log(`Removed ${optionValue} from ${filterType}`);
             } else {
                 // Add if not selected
                 this.filters[filterType].push(optionValue.toString());
+                console.log(`Added ${optionValue} to ${filterType}`);
             }
 
+            console.log(`Updated ${filterType} filters:`, this.filters[filterType]);
+            
             // Auto-submit after selection
             //this.performSearch();
         },

@@ -109,15 +109,20 @@ def index():
 
         # Multi-select parameters - get lists of IDs
         component_type_ids = request.args.getlist('component_type_id')
+        current_app.logger.info(f"Raw component_type_ids from request: {component_type_ids}")
         component_type_ids = [int(id) for id in component_type_ids if id.isdigit()]
+        current_app.logger.info(f"Processed component_type_ids: {component_type_ids}")
 
         category_ids = request.args.getlist('category_id')
+        current_app.logger.info(f"Raw category_ids from request: {category_ids}")
         category_ids = [int(id) for id in category_ids if id.isdigit()]
 
         supplier_ids = request.args.getlist('supplier_id')
+        current_app.logger.info(f"Raw supplier_ids from request: {supplier_ids}")
         supplier_ids = [int(id) for id in supplier_ids if id.isdigit()]
 
         brand_ids = request.args.getlist('brand_id')
+        current_app.logger.info(f"Raw brand_ids from request: {brand_ids}")
         brand_ids = [int(id) for id in brand_ids if id.isdigit()]
 
         # Single-select parameters (for status and recent)
