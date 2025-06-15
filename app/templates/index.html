@@ -1988,18 +1988,50 @@ function componentDashboard() {
         },
 
         selectAllOptions(filterType) {
-            const selectElement = document.querySelector(`select[name="${this.getSelectName(filterType)}"]`);
-            if (selectElement) {
-                const allValues = Array.from(selectElement.options)
-                    .map(option => option.value)
-                    .filter(value => value !== '');
-                this.filters[filterType] = allValues;
-                //this.performSearch();
+            console.log(`selectAllOptions called for ${filterType}`);
+            
+            // Get all available values based on the filter type
+            let allValues = [];
+            
+            switch(filterType) {
+                case 'componentTypes':
+                    allValues = [
+                        {% for component_type in component_types %}
+                        '{{ component_type.id }}'{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+                    break;
+                case 'suppliers':
+                    allValues = [
+                        {% for supplier in suppliers %}
+                        '{{ supplier.id }}'{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+                    break;
+                case 'brands':
+                    allValues = [
+                        {% if brands %}
+                        {% for brand in brands %}
+                        '{{ brand.id }}'{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    ];
+                    break;
             }
+            
+            console.log(`Setting all values for ${filterType}:`, allValues);
+            this.filters[filterType] = allValues;
+            
+            // Force UI update
+            this.$nextTick(() => {
+                console.log(`${filterType} after select all:`, this.filters[filterType]);
+            });
         },
 
         deselectAllOptions(filterType) {
+            console.log(`deselectAllOptions called for ${filterType}`);
             this.filters[filterType] = [];
+            console.log(`${filterType} after deselect all:`, this.filters[filterType]);
             //this.performSearch();
         },
 
