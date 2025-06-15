@@ -903,7 +903,7 @@
     <!-- Compact Filter Panel -->
     <!-- Multi-Select Filter Panel with Enhanced Dropdowns -->
 <div class="filter-panel">
-    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm">
+    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm" @submit="updateFormInputs()">
         <!-- Search Bar -->
         <div class="row mb-2">
             <div class="col-md-8">
@@ -962,15 +962,11 @@
             <div class="col-md-3 mb-2">
                 <div class="multi-select-wrapper">
                     <!-- Hidden select for form submission -->
-                    <!-- Hidden select for form submission -->
                     <select multiple name="component_type_id" style="display: none;">
-        {% for component_type in component_types %}
-        <option value="{{ component_type.id }}"
-                {% if current_filters and component_type.id|string in current_filters.component_type_ids|map('string')|list %}selected{% endif %}>
-            {{ component_type.name }}
-        </option>
-        {% endfor %}
-    </select>
+                        <template x-for="typeId in filters.componentTypes" :key="typeId">
+                            <option :value="typeId" selected></option>
+                        </template>
+                    </select>
 
                     <!-- Custom Multi-Select Display -->
                     <div class="multi-select-placeholder" @click="toggleMultiSelect('componentTypes')">
@@ -1902,7 +1898,7 @@ function componentDashboard() {
             }
 
             // Auto-submit after selection
-            this.performSearch();
+            //this.performSearch();
         },
 
         isOptionSelected(filterType, optionValue) {
@@ -1992,13 +1988,13 @@ function componentDashboard() {
                     .map(option => option.value)
                     .filter(value => value !== '');
                 this.filters[filterType] = allValues;
-                this.performSearch();
+                //this.performSearch();
             }
         },
 
         deselectAllOptions(filterType) {
             this.filters[filterType] = [];
-            this.performSearch();
+            //this.performSearch();
         },
 
         filterDropdownOptions(filterType, options) {
@@ -2021,26 +2017,60 @@ function componentDashboard() {
         },
 
         updateFormInputs() {
-            // Update hidden inputs or actual select elements
-            Object.keys(this.filters).forEach(filterType => {
-                const selectName = this.getSelectName(filterType);
-                const select = document.querySelector(`select[name="${selectName}"]`);
-
-                if (select) {
-                    // Clear all selections
-                    Array.from(select.options).forEach(option => {
-                        option.selected = false;
-                    });
-
-                    // Set selected options
-                    this.filters[filterType].forEach(value => {
-                        const option = select.querySelector(`option[value="${value}"]`);
-                        if (option) {
-                            option.selected = true;
-                        }
-                    });
+            // Update hidden select for component types
+            const typeSelect = document.querySelector('select[name="component_type_id"]');
+            if (typeSelect) {
+                // Remove all options
+                while (typeSelect.options.length > 0) {
+                    typeSelect.remove(0);
                 }
-            });
+                // Add selected options
+                this.filters.componentTypes.forEach(id => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.selected = true;
+                    typeSelect.appendChild(opt);
+                });
+            }
+            // Repeat for suppliers
+            const supplierSelect = document.querySelector('select[name="supplier_id"]');
+            if (supplierSelect) {
+                while (supplierSelect.options.length > 0) {
+                    supplierSelect.remove(0);
+                }
+                this.filters.suppliers.forEach(id => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.selected = true;
+                    supplierSelect.appendChild(opt);
+                });
+            }
+            // Repeat for brands
+            const brandSelect = document.querySelector('select[name="brand_id"]');
+            if (brandSelect) {
+                while (brandSelect.options.length > 0) {
+                    brandSelect.remove(0);
+                }
+                this.filters.brands.forEach(id => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.selected = true;
+                    brandSelect.appendChild(opt);
+                });
+            }
+            // Repeat for categories if you have a multi-select for categories
+            const categorySelect = document.querySelector('select[name="category_id"]');
+            if (categorySelect) {
+                while (categorySelect.options.length > 0) {
+                    categorySelect.remove(0);
+                }
+                this.filters.categories.forEach(id => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.selected = true;
+                    categorySelect.appendChild(opt);
+                });
+            }
         },
 
         quickFilter(type) {
