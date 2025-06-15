@@ -1,0 +1,237 @@
+/* Supplier Management Page Styles */
+
+.supplier-card {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    background: white;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px; /* Ensure consistent height */
+}
+
+.supplier-card .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+}
+
+.supplier-card .card-body > div:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+.supplier-card .card-body > div:last-child {
+    margin-top: auto; /* Push action buttons to bottom */
+    margin-bottom: 0;
+}
+
+/* Ensure component types and recent components don't collapse when empty */
+.supplier-card .mb-3 {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+}
+
+.supplier-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.supplier-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.supplier-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(30px, -30px);
+}
+
+.supplier-content {
+    position: relative;
+    z-index: 2;
+}
+
+.supplier-stats {
+    background: #f8fafc;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.supplier-form-modal .modal-content {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.supplier-form-modal .modal-header {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.quick-add-form {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #0ea5e9;
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.supplier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--color-secondary);
+}
+
+.search-filter-bar {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+.action-menu {
+    position: relative;
+}
+
+.action-menu-content {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid #e2e8f0;
+    min-width: 150px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+}
+
+.action-menu.show .action-menu-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--color-dark);
+    text-decoration: none;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s ease;
+}
+
+.action-menu-item:hover {
+    background: #f8fafc;
+    color: var(--color-primary);
+}
+
+.action-menu-item:last-child {
+    border-bottom: none;
+}
+
+.bulk-actions {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+    display: none;
+}
+
+.bulk-actions.show {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideDown 0.3s ease;
+}
+
+.component-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    background: white;
+    flex: 1;
+    min-height: 80px; /* Prevent collapse */
+}
+
+.component-list:empty::before {
+    content: "No components yet";
+    color: #94a3b8;
+    font-size: 0.75rem;
+    padding: 1rem;
+    display: block;
+    text-align: center;
+}
+
+.component-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+}
+
+.component-item:last-child {
+    border-bottom: none;
+}
+
+/* Responsive Design for Supplier Management */
+@media (max-width: 768px) {
+    .supplier-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-filter-bar {
+        padding: 1rem;
+    }
+
+    .quick-add-form {
+        padding: 1rem;
+    }
+}

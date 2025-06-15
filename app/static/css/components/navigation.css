@@ -1,0 +1,68 @@
+/* Navigation Components */
+
+/* Modern Navbar */
+.navbar-modern {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: none;
+    box-shadow: var(--shadow-sm);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    padding: 0.5rem 0;
+    min-height: var(--navbar-height);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--color-primary) !important;
+    text-decoration: none;
+}
+
+.nav-link {
+    font-weight: 500;
+    color: var(--color-secondary) !important;
+    transition: all 0.2s ease;
+    border-radius: var(--border-radius);
+    padding: 0.4rem 0.8rem !important;
+    margin: 0 0.1rem;
+    font-size: var(--font-size-sm);
+}
+
+.nav-link:hover {
+    color: var(--color-primary) !important;
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.nav-link.active {
+    color: var(--color-primary) !important;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* View Toggle Component */
+.view-toggle {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 0.2rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+}
+
+.view-toggle button {
+    border: none;
+    background: transparent;
+    padding: 0.4rem;
+    border-radius: 4px;
+    color: var(--color-secondary);
+    transition: all 0.2s ease;
+}
+
+.view-toggle button.active {
+    background: var(--color-primary);
+    color: white;
+}

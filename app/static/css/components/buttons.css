@@ -1,0 +1,38 @@
+/* Button Components */
+
+/* Modern Buttons */
+.btn-modern {
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    transition: all 0.2s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+}
+
+.btn-primary-modern {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+}
+
+.btn-primary-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-success-modern {
+    background: linear-gradient(135deg, var(--color-success), #059669);
+    color: white;
+}
+
+.btn-warning-modern {
+    background: linear-gradient(135deg, var(--color-warning), #D97706);
+    color: white;
+}
+
+.btn-danger-modern {
+    background: linear-gradient(135deg, var(--color-danger), #DC2626);
+    color: white;
+}

@@ -1,0 +1,82 @@
+/* Alert Components */
+
+/* Modern Alerts */
+.alert-modern {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    position: relative;
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+}
+
+.alert-modern::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: currentColor;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.status-approved {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.status-pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-rejected {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Flash Messages */
+.flash-message {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-lg);
+    position: relative;
+}
+
+.flash-message.success {
+    background-color: #D1FAE5;
+    color: #065F46;
+    border-left: 4px solid var(--color-success);
+}
+
+.flash-message.error {
+    background-color: #FEE2E2;
+    color: #991B1B;
+    border-left: 4px solid var(--color-danger);
+}
+
+.flash-message.warning {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border-left: 4px solid var(--color-warning);
+}
+
+.flash-message.info {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+    border-left: 4px solid var(--color-info);
+}

@@ -1,0 +1,76 @@
+/* Utility Classes */
+
+/* Spacing utilities */
+.py-compact { 
+    padding-top: var(--spacing-lg) !important; 
+    padding-bottom: var(--spacing-lg) !important; 
+}
+
+.px-compact { 
+    padding-left: var(--spacing-lg) !important; 
+    padding-right: var(--spacing-lg) !important; 
+}
+
+.mb-compact { 
+    margin-bottom: var(--spacing-md) !important; 
+}
+
+.mt-compact { 
+    margin-top: var(--spacing-md) !important; 
+}
+
+/* Display utilities */
+.d-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.d-flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Text utilities */
+.text-gradient {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Border utilities */
+.border-modern {
+    border: 1px solid #E2E8F0;
+    border-radius: var(--border-radius);
+}
+
+/* Shadow utilities */
+.shadow-hover {
+    transition: box-shadow 0.2s ease;
+}
+
+.shadow-hover:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* Responsive utilities */
+.responsive-text {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+/* Loading states */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    z-index: 10;
+}

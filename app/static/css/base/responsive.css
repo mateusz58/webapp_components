@@ -1,0 +1,121 @@
+/* Responsive Design */
+
+/* Mobile First Responsive Breakpoints */
+@media (max-width: 768px) {
+    .main-content {
+        margin-top: var(--navbar-height);
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+
+    .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+    }
+
+    .list-container .card-body {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        text-align: left;
+        padding: var(--spacing-md);
+    }
+
+    .list-container .component-image,
+    .list-container .component-image-placeholder {
+        width: 100%;
+        height: 80px;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .list-container .component-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .nav-link {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.8rem;
+    }
+
+    /* Mobile-specific utilities */
+    .mobile-stack {
+        flex-direction: column !important;
+    }
+
+    .mobile-full-width {
+        width: 100% !important;
+    }
+
+    .mobile-hide {
+        display: none !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .grid-container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .grid-container .component-image,
+    .grid-container .component-image-placeholder {
+        height: 120px;
+    }
+
+    .grid-container .card-body {
+        padding: var(--spacing-md);
+    }
+
+    /* Small mobile adjustments */
+    .btn-modern {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .form-control-modern {
+        padding: 0.45rem 0.65rem;
+    }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+/* Large screens */
+@media (min-width: 1200px) {
+    .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+
+    .container-wide {
+        max-width: 1400px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar-modern,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-top: 0;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .component-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

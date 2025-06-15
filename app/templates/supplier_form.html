@@ -46,42 +46,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    const supplierCodeInput = document.getElementById('supplier_code');
-
-    // Add validation classes on input
-    supplierCodeInput.addEventListener('input', function() {
-        if (this.value.trim() === '') {
-            this.classList.add('is-invalid');
-            this.classList.remove('is-valid');
-        } else {
-            this.classList.add('is-valid');
-            this.classList.remove('is-invalid');
-        }
-    });
-
-    // Initial validation state
-    if (supplierCodeInput.value.trim() !== '') {
-        supplierCodeInput.classList.add('is-valid');
-    }
-
-    // Form submission validation
-    form.addEventListener('submit', function(event) {
-        if (supplierCodeInput.value.trim() === '') {
-            supplierCodeInput.classList.add('is-invalid');
-            event.preventDefault();
-
-            // Show validation message
-            if (!document.querySelector('.alert-danger')) {
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-danger mt-3';
-                alertDiv.textContent = 'Please provide a supplier code.';
-                form.prepend(alertDiv);
-            }
-        }
-    });
-});
-</script>
+<!-- Form validation is handled by the external form-validation.js module -->
 {% endblock %}
