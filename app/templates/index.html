@@ -182,15 +182,26 @@
         box-shadow: var(--shadow-md);
     }
 
-    /* GRID VIEW - MUCH MORE COMPACT */
+    /* GRID VIEW - CONSISTENT CARD SIZING */
+    .grid-container .component-card {
+        height: 350px; /* Fixed height for all cards */
+        display: flex;
+        flex-direction: column;
+    }
+    
     .grid-container .component-card .card-img-top {
-    height: 80px;  /* Changed from 120px */
-    object-fit: cover;
-}
+        height: 120px;  /* Fixed height for images */
+        object-fit: cover;
+        flex-shrink: 0; /* Prevent image from shrinking */
+    }
 
-.grid-container .component-card .card-body {
-    padding: 0.5rem;  /* Changed from 0.75rem */
-}
+    .grid-container .component-card .card-body {
+        padding: 0.5rem;
+        flex-grow: 1; /* Allow card body to fill remaining space */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Prevent content overflow */
+    }
 
 .grid-container .component-card .card-title {
     font-size: 0.8rem;  /* Changed from 0.875rem */
@@ -412,6 +423,10 @@
             padding: 0.75rem;
         }
 
+        .grid-container .component-card {
+            height: 300px; /* Smaller height for mobile */
+        }
+        
         .grid-container .component-card .card-img-top {
             height: 100px;
         }
@@ -431,6 +446,10 @@
     }
 
     @media (max-width: 576px) {
+        .grid-container .component-card {
+            height: 280px; /* Even smaller for very small screens */
+        }
+        
         .grid-container .component-card .card-img-top {
             height: 80px;
         }
@@ -762,7 +781,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h4 mb-0 text-dark fw-bold">Component Dashboard</h1>
-            <p class="text-muted mb-0 small">Manage and organize your component library</p>
+            <p class="text-muted mb-0 small">Manage and organize your component library  TEST1</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
@@ -1369,6 +1388,24 @@
                     </div>
                     {% endif %}
 
+                    <!-- Variant Colors Preview -->
+                    {% if component._cached_variants %}
+                    <div class="variant-colors">
+                        {% for variant in component._cached_variants[:5] %}
+                        <div class="variant-color-dot"
+                             data-variant-name="{{ variant.name }}"
+                             {% if variant.picture_url %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                             title="{{ variant.name }}">
+                        </div>
+                        {% endfor %}
+                        {% if component._cached_variants|length > 5 %}
+                        <div class="variant-color-dot" style="background-color: #f0f0f0; border-color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666;" title="More variants available">
+                            +{{ component._cached_variants|length - 5 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
                     <!-- Properties Count -->
                     {% if component.properties %}
                     <div class="properties-count">
@@ -1378,7 +1415,7 @@
                     {% endif %}
 
                     <!-- Action Buttons -->
-                    <div class="btn-group w-100" role="group">
+                    <div class="btn-group w-100 mt-auto" role="group">
                         <a href="{{ url_for('main.component_detail', id=component.id) }}"
                            class="btn btn-outline-primary btn-sm"
                            @click.stop>
@@ -1465,6 +1502,23 @@
                                     {% endif %}
                                     {% endif %}
 
+                                    <!-- NEW: Variant Colors Preview for List View -->
+                                    {% if component._cached_variants %}
+                                    <div class="variant-colors">
+                                        {% for variant in component._cached_variants[:4] %}
+                                        <div class="variant-color-dot"
+                                             data-variant-name="{{ variant.name }}"
+                                             {% if variant.picture_url %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                                             title="{{ variant.name }}">
+                                        </div>
+                                        {% endfor %}
+                                        {% if component._cached_variants|length > 4 %}
+                                        <div class="variant-color-dot" style="background-color: #f0f0f0; border-color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #666;" title="More variants available">
+                                            +{{ component._cached_variants|length - 4 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
 
                                 </div>
                             </div>
@@ -1735,7 +1789,7 @@ function componentDashboard() {
             }
 
             // Auto-submit after selection
-           // this.performSearch();
+            this.performSearch();
         },
 
         isOptionSelected(filterType, optionValue) {
@@ -1825,7 +1879,7 @@ function componentDashboard() {
                     .map(option => option.value)
                     .filter(value => value !== '');
                 this.filters[filterType] = allValues;
-             //   this.performSearch();
+                this.performSearch();
             }
         },
 
