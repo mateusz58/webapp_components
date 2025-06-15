@@ -1223,7 +1223,8 @@
         </div>
     </form>
 
-    <!-- Quick Filters (Single Select) -->
+    <!-- Quick Filters (Single Select) - HIDDEN FOR NOW -->
+    <!-- 
     <div class="quick-filters">
         <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
             All
@@ -1238,6 +1239,7 @@
             Recent
         </div>
     </div>
+    -->
 </div>
 
 <!-- Add rotation class for chevron -->
@@ -1414,10 +1416,14 @@
             <small>{{ component.supplier.supplier_code }}</small>
         {% endif %}
     </div>
-    <div class="d-flex align-items-center">
+    <div class="d-flex align-items-center mb-1">
         {% if component.category %}
             <small>{{ component.category.name }}</small>
         {% endif %}
+    </div>
+    <div class="d-flex align-items-center">
+        <i data-lucide="calendar-plus" class="me-1" style="width: 10px; height: 10px; color: #6b7280;"></i>
+        <small class="text-muted">{{ component.created_at.strftime('%b %d, %Y') if component.created_at else 'Unknown' }}</small>
     </div>
 </div>
 
@@ -1581,6 +1587,12 @@
                                     <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
                                     <small class="me-2">{{ component.supplier.supplier_code }}</small>
                                     <small class="me-2">{{ component.category.name }}</small>
+                                    
+                                    <!-- Creation Date -->
+                                    <small class="me-2">
+                                        <i data-lucide="calendar-plus" class="me-1" style="width: 10px; height: 10px; color: #6b7280;"></i>
+                                        {{ component.created_at.strftime('%b %d, %Y') if component.created_at else 'Unknown' }}
+                                    </small>
 
                                     <!-- NEW: Brand display for list view -->
                                     {% if component._cached_brands %}
@@ -1814,7 +1826,7 @@ function componentDashboard() {
         viewMode: localStorage.getItem('componentViewMode') || 'grid',
         searchQuery: '{{ search }}',
         selectedComponents: [],
-        activeQuickFilter: '{{ request.args.get("status", "all") }}',
+        activeQuickFilter: {% if request.args.get('recent') %}'recent'{% elif request.args.get('status') %}'{{ request.args.get("status") }}'{% else %}'all'{% endif %},
 
         // UPDATED: Multi-select filters
         filters: {
