@@ -651,8 +651,22 @@
     100% { transform: rotate(360deg); }
 }
 
+/* Temporarily disable this rule for debugging */
+/*
 .component-card:not(:has(.card-title)) {
     display: none !important;
+}
+*/
+
+/* Debug styles for missing components */
+.grid-item[data-component-id="89"] {
+    border: 3px solid red !important;
+    background: rgba(255, 0, 0, 0.1) !important;
+}
+
+.grid-item[data-component-id="98"] {
+    border: 3px solid blue !important;
+    background: rgba(0, 0, 255, 0.1) !important;
 }
 
 /* Variant Color Previews */
