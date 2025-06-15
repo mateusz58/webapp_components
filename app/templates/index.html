@@ -903,7 +903,7 @@
     <!-- Compact Filter Panel -->
     <!-- Multi-Select Filter Panel with Enhanced Dropdowns -->
 <div class="filter-panel">
-    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm" @submit="updateFormInputs()">
+    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm" @submit.prevent="handleFormSubmit($event)">
         <!-- Search Bar -->
         <div class="row mb-2">
             <div class="col-md-8">
@@ -2016,61 +2016,33 @@ function componentDashboard() {
             }, 300);
         },
 
+        async handleFormSubmit(event) {
+            console.log('Form submission started');
+            console.log('Current filters:', this.filters);
+            
+            // Wait for Alpine.js to update the DOM
+            await this.$nextTick();
+            
+            // Additional wait to ensure DOM is updated
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Log the actual form data that will be sent
+            const formData = new FormData(event.target);
+            console.log('Form data being submitted:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            
+            // Now submit the form
+            event.target.submit();
+        },
+
         updateFormInputs() {
-            // Update hidden select for component types
-            const typeSelect = document.querySelector('select[name="component_type_id"]');
-            if (typeSelect) {
-                // Remove all options
-                while (typeSelect.options.length > 0) {
-                    typeSelect.remove(0);
-                }
-                // Add selected options
-                this.filters.componentTypes.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.selected = true;
-                    typeSelect.appendChild(opt);
-                });
-            }
-            // Repeat for suppliers
-            const supplierSelect = document.querySelector('select[name="supplier_id"]');
-            if (supplierSelect) {
-                while (supplierSelect.options.length > 0) {
-                    supplierSelect.remove(0);
-                }
-                this.filters.suppliers.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.selected = true;
-                    supplierSelect.appendChild(opt);
-                });
-            }
-            // Repeat for brands
-            const brandSelect = document.querySelector('select[name="brand_id"]');
-            if (brandSelect) {
-                while (brandSelect.options.length > 0) {
-                    brandSelect.remove(0);
-                }
-                this.filters.brands.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.selected = true;
-                    brandSelect.appendChild(opt);
-                });
-            }
-            // Repeat for categories if you have a multi-select for categories
-            const categorySelect = document.querySelector('select[name="category_id"]');
-            if (categorySelect) {
-                while (categorySelect.options.length > 0) {
-                    categorySelect.remove(0);
-                }
-                this.filters.categories.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.selected = true;
-                    categorySelect.appendChild(opt);
-                });
-            }
+            // This method is now mainly for debugging
+            console.log('updateFormInputs called');
+            console.log('Component types:', this.filters.componentTypes);
+            console.log('Suppliers:', this.filters.suppliers);
+            console.log('Brands:', this.filters.brands);
         },
 
         quickFilter(type) {
