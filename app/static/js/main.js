@@ -278,23 +278,26 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
         const mainImg = card.querySelector('.card-img-top') || card.querySelector('.component-image');
         if (!mainImg) return;
         
-        // Add error handling to main images
-        mainImg.onerror = function() {
-            console.warn('Main component image failed to load');
-            // Create a placeholder div instead of broken image
-            const placeholder = document.createElement('div');
-            placeholder.className = 'd-flex align-items-center justify-content-center bg-light';
-            placeholder.style.height = this.style.height || '140px';
-            placeholder.innerHTML = '<i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>';
-            
-            // Replace the broken image with placeholder
-            this.parentNode.replaceChild(placeholder, this);
-            
-            // Reinitialize icons for the new placeholder
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        };
+        // Skip adding onerror handler if template already has one
+        if (!mainImg.hasAttribute('onerror')) {
+            // Add error handling to main images
+            mainImg.onerror = function() {
+                console.warn('Main component image failed to load');
+                // Create a placeholder div instead of broken image
+                const placeholder = document.createElement('div');
+                placeholder.className = 'd-flex align-items-center justify-content-center bg-light';
+                placeholder.style.height = this.style.height || '140px';
+                placeholder.innerHTML = '<i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>';
+                
+                // Replace the broken image with placeholder
+                this.parentNode.replaceChild(placeholder, this);
+                
+                // Reinitialize icons for the new placeholder
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            };
+        }
         
         const variantDots = card.querySelectorAll('.variant-color-dot');
         variantDots.forEach(dot => {

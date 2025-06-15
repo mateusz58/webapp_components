@@ -651,6 +651,14 @@
     100% { transform: rotate(360deg); }
 }
 
+/* Show placeholder for empty card titles */
+.grid-container .card-title:empty::before {
+    content: "[No Product Number]";
+    color: #999;
+    font-style: italic;
+    font-weight: normal;
+}
+
 /* Temporarily disable this rule for debugging */
 /*
 .component-card:not(:has(.card-title)) {
@@ -776,15 +784,15 @@
 }
 
 /* Fix Alpine.js x-show interference with grid */
-.grid-container [x-show] {
-    display: flex !important;
+.grid-container [x-show]:not([style*="display: none"]) {
+    display: block !important;
 }
 
 .grid-container [x-show][style*="display: none"] {
     display: none !important;
 }
 
-.list-container [x-show] {
+.list-container [x-show]:not([style*="display: none"]) {
     display: block !important;
 }
 
@@ -1366,7 +1374,7 @@
                 <img src="{{ primary_picture.url }}"
                      alt="{{ primary_picture.picture_name }}"
                      class="card-img-top"
-                     onerror="this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center bg-light\' style=\'height: 120px;\'><i data-lucide=\'image\' style=\'width: 32px; height: 32px; color: #9ca3af;\'></i></div>'">
+                     onerror="this.outerHTML='<div class=\'d-flex align-items-center justify-content-center bg-light card-img-top\' style=\'height: 120px;\'><i data-lucide=\'image\' style=\'width: 32px; height: 32px; color: #9ca3af;\'></i></div>'; lucide.createIcons();">
                 {% else %}
                 <div class="d-flex align-items-center justify-content-center bg-light" style="height: 120px;">
                     <i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>
