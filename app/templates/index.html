@@ -791,6 +791,50 @@
 }
 */
 
+/* Variant color dots styling */
+.variant-color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.variant-color-dot:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* Style for variants without images */
+.variant-color-dot[data-has-image="false"] {
+    border-style: dashed;
+    border-color: #adb5bd;
+    background-color: #f8f9fa !important;
+    position: relative;
+}
+
+.variant-color-dot[data-has-image="false"]:hover {
+    border-color: #6c757d;
+    background-color: #e9ecef !important;
+}
+
+/* Add a subtle indicator for no-image variants */
+.variant-color-dot[data-has-image="false"]::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    background-color: #adb5bd;
+    border-radius: 50%;
+    opacity: 0.7;
+}
 
 </style>
 {% endblock %}
@@ -801,7 +845,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h4 mb-0 text-dark fw-bold">Component Dashboard</h1>
-            <p class="text-muted mb-0 small">Manage and organize your component library  TEST1</p>
+            <p class="text-muted mb-0 small">Manage and organize your component library  TEST2</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
@@ -1440,7 +1484,7 @@
                         <div class="variant-color-dot"
                              data-variant-name="{{ variant.name }}"
                              data-variant-id="{{ variant.id }}"
-                             data-has-image="{{ 'true' if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' else 'false' }}"
+                             data-has-image="{% if variant.picture_url and variant.picture_url|trim and variant.picture_url|lower != 'null' and variant.picture_url|trim != '' %}true{% else %}false{% endif %}"
                              {% if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
                              title="{{ variant.name }}{{ ' (No image available)' if not variant.picture_url or variant.picture_url.strip() == '' or variant.picture_url == 'null' else '' }}">
                         </div>
@@ -1556,8 +1600,10 @@
                                         {% for variant in component._cached_variants[:4] %}
                                         <div class="variant-color-dot"
                                              data-variant-name="{{ variant.name }}"
-                                             {% if variant.picture_url %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
-                                             title="{{ variant.name }}">
+                                             data-variant-id="{{ variant.id }}"
+                                             data-has-image="{% if variant.picture_url and variant.picture_url|trim and variant.picture_url|lower != 'null' and variant.picture_url|trim != '' %}true{% else %}false{% endif %}"
+                                             {% if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                                             title="{{ variant.name }}{{ ' (No image available)' if not variant.picture_url or variant.picture_url.strip() == '' or variant.picture_url == 'null' else '' }}">
                                         </div>
                                         {% endfor %}
                                         {% if component._cached_variants|length > 4 %}

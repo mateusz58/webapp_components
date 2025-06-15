@@ -97,97 +97,142 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
     
     // Helper function to show no-image placeholder
     function showNoImagePlaceholder(mainImg, variantName) {
-        // Create SVG placeholder as data URL
+        if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+            console.log('[DEBUG] Setting placeholder for:', variantName, mainImg);
+        }
+        // Create a more visually appealing SVG placeholder
         const placeholderSvg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140">
-                <rect width="200" height="140" fill="#f8f9fa" stroke="#e9ecef" stroke-width="2"/>
-                <g transform="translate(100, 50)">
-                    <circle cx="0" cy="0" r="15" fill="#dee2e6"/>
-                    <path d="M-8 -5 L8 -5 L8 5 L-8 5 Z" fill="#6c757d"/>
-                    <circle cx="-3" cy="-2" r="2" fill="#adb5bd"/>
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f8f9fa;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#e9ecef;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="200" height="140" fill="url(#grad1)" stroke="#dee2e6" stroke-width="2"/>
+                <g transform="translate(100, 45)">
+                    <!-- Camera icon -->
+                    <rect x="-12" y="-8" width="24" height="16" rx="2" fill="#adb5bd" opacity="0.3"/>
+                    <circle cx="0" cy="-2" r="3" fill="#adb5bd" opacity="0.5"/>
+                    <rect x="-8" y="2" width="16" height="10" rx="1" fill="#adb5bd" opacity="0.3"/>
+                    <circle cx="0" cy="7" r="2" fill="#adb5bd" opacity="0.4"/>
                 </g>
-                <text x="100" y="85" text-anchor="middle" fill="#6c757d" font-family="Arial, sans-serif" font-size="12">
-                    No image available
+                <text x="100" y="85" text-anchor="middle" fill="#6c757d" font-family="Arial, sans-serif" font-size="12" font-weight="500">
+                    No Image Available
                 </text>
                 <text x="100" y="100" text-anchor="middle" fill="#adb5bd" font-family="Arial, sans-serif" font-size="10">
                     ${variantName}
                 </text>
+                <text x="100" y="115" text-anchor="middle" fill="#ced4da" font-family="Arial, sans-serif" font-size="8">
+                    Hover to preview
+                </text>
             </svg>
         `;
         
-        const encodedSvg = 'data:image/svg+xml;base64,' + btoa(placeholderSvg);
+        const encodedSvg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(placeholderSvg)));
         mainImg.src = encodedSvg;
         mainImg.style.transition = 'opacity 0.3s ease';
         mainImg.style.opacity = '1';
+        
+        // Add a subtle border to indicate it's a placeholder
+        mainImg.style.border = '2px dashed #dee2e6';
+        mainImg.style.borderRadius = '8px';
     }
 
     // Use a more universal approach that works with dynamic content
     document.addEventListener('mouseenter', function(e) {
+        if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+            console.log('[DEBUG] mouseenter event:', e.target);
+        }
         if (e.target.matches('.variant-color-dot[data-has-image="true"]')) {
             const dot = e.target;
             const card = dot.closest('.component-card');
-            if (!card) return;
-            
-            // Find the main image in both grid and list views
+            if (!card) {
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] No card found for dot:', dot);
+                }
+                return;
+            }
             const mainImg = card.querySelector('.card-img-top') || card.querySelector('.component-image');
-            if (!mainImg) return;
-            
+            if (!mainImg) {
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] No mainImg found in card:', card);
+                }
+                return;
+            }
             const bgImgMatch = dot.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
             if (!bgImgMatch || !bgImgMatch[1]) {
-                console.warn('No valid background image URL found');
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] No valid background image URL found for dot:', dot);
+                }
                 return;
             }
-            
             const variantImgUrl = bgImgMatch[1];
-            
-            // Validate the image URL
+            if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                console.log('[DEBUG] Variant image URL:', variantImgUrl);
+            }
             if (!isValidImageUrl(variantImgUrl)) {
-                console.warn('Invalid variant image URL:', variantImgUrl);
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] Invalid variant image URL:', variantImgUrl);
+                }
                 return;
             }
-            
-            // Store original src if not already stored
             if (!mainImg.dataset.originalSrc) {
                 mainImg.dataset.originalSrc = mainImg.src;
             }
-            
-            // Create a new image to test if the variant image loads
+            if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                console.log('[DEBUG] Setting mainImg.src to variantImgUrl:', variantImgUrl);
+            }
             const testImg = new Image();
-            
             testImg.onload = function() {
-                // Image loaded successfully, now change the main image
                 mainImg.src = variantImgUrl;
                 mainImg.style.transition = 'opacity 0.3s ease';
-                
-                // Clear any error state
                 mainImg.style.opacity = '1';
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.log('[DEBUG] Variant image loaded successfully:', variantImgUrl);
+                }
             };
-            
             testImg.onerror = function() {
-                // Image failed to load, handle error gracefully
-                handleImageError(mainImg, mainImg.dataset.originalSrc, `Failed to load variant image: ${variantImgUrl}`);
+                // Show the placeholder if the image fails to load (404, etc)
+                showNoImagePlaceholder(mainImg, dot.dataset.variantName || 'Variant');
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.error('[DEBUG] Failed to load variant image (404 or error):', variantImgUrl, 'Showing placeholder.');
+                }
             };
-            
-            // Start loading the test image
             testImg.src = variantImgUrl;
         }
-        // Handle variants without images - show placeholder
         else if (e.target.matches('.variant-color-dot[data-has-image="false"]')) {
             const dot = e.target;
             const card = dot.closest('.component-card');
-            if (!card) return;
-            
-            // Find the main image in both grid and list views
+            if (!card) {
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] No card found for dot:', dot);
+                }
+                return;
+            }
             const mainImg = card.querySelector('.card-img-top') || card.querySelector('.component-image');
-            if (!mainImg) return;
-            
-            // Store original src if not already stored
+            if (!mainImg) {
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.warn('[DEBUG] No mainImg found in card:', card);
+                }
+                return;
+            }
             if (!mainImg.dataset.originalSrc) {
                 mainImg.dataset.originalSrc = mainImg.src;
             }
-            
-            // Create a no-image placeholder
-            showNoImagePlaceholder(mainImg, dot.dataset.variantName || 'Variant');
+            if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                console.log('[DEBUG] No image variant hovered:', dot, 'Main image:', mainImg);
+            }
+            try {
+                showNoImagePlaceholder(mainImg, dot.dataset.variantName || 'Variant');
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.log('[DEBUG] Called showNoImagePlaceholder for:', dot.dataset.variantName || 'Variant');
+                }
+            } catch (err) {
+                if (window.APP_INFO && window.APP_INFO.environment === 'development') {
+                    console.error('[DEBUG] Error in showNoImagePlaceholder:', err);
+                }
+            }
         }
     }, true);
     
@@ -205,8 +250,10 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
                 // Restore original image with error handling
                 mainImg.src = mainImg.dataset.originalSrc;
                 
-                // Clear any opacity effects
+                // Clear any opacity effects and placeholder styling
                 mainImg.style.opacity = '1';
+                mainImg.style.border = '';
+                mainImg.style.borderRadius = '';
                 
                 // Add error handler for original image too
                 mainImg.onerror = function() {
@@ -220,6 +267,8 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
                 // Ensure image remains visible even if there's an error
                 mainImg.style.display = 'block';
                 mainImg.style.opacity = '1';
+                mainImg.style.border = '';
+                mainImg.style.borderRadius = '';
             }
         }
     }, true);
