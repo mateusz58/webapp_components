@@ -182,50 +182,14 @@
         box-shadow: var(--shadow-md);
     }
 
-    /* GRID VIEW - CONSISTENT CARD SIZING */
-    .grid-container .component-card {
-        height: 350px; /* Fixed height for all cards */
-        display: flex;
-        flex-direction: column;
+    /* Additional layout fixes - main styles are now in cards.css */
+
+    /* Component meta styles */
+    .component-meta {
+        font-size: 0.65rem;
+        color: var(--color-secondary);
+        margin-bottom: 0.375rem;
     }
-    
-    .grid-container .component-card .card-img-top {
-        height: 120px;  /* Fixed height for images */
-        object-fit: cover;
-        flex-shrink: 0; /* Prevent image from shrinking */
-    }
-
-    .grid-container .component-card .card-body {
-        padding: 0.5rem;
-        flex-grow: 1; /* Allow card body to fill remaining space */
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* Prevent content overflow */
-    }
-
-.grid-container .component-card .card-title {
-    font-size: 0.8rem;  /* Changed from 0.875rem */
-    font-weight: 600;
-    margin-bottom: 0.25rem;  /* Changed from 0.375rem */
-    line-height: 1.2;
-}
-
-.grid-container .component-card .card-text {
-    font-size: 0.7rem;  /* Changed from 0.75rem */
-    color: var(--color-secondary);
-    margin-bottom: 0.375rem;  /* Changed from 0.5rem */
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;  /* Changed from 2 to show only 1 line */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.component-meta {
-    font-size: 0.65rem;  /* Changed from 0.7rem */
-    color: var(--color-secondary);
-    margin-bottom: 0.375rem;  /* Changed from 0.5rem */
-}
 
     .component-meta .badge {
         font-size: 0.65rem;
@@ -423,17 +387,7 @@
             padding: 0.75rem;
         }
 
-        .grid-container .component-card {
-            height: 300px; /* Smaller height for mobile */
-        }
-        
-        .grid-container .component-card .card-img-top {
-            height: 100px;
-        }
-
-        .grid-container .component-card .card-body {
-            padding: 0.5rem;
-        }
+        /* Mobile responsive styles moved to responsive.css */
 
         .list-container .component-card .card-body {
             padding: 0.5rem;
@@ -446,13 +400,7 @@
     }
 
     @media (max-width: 576px) {
-        .grid-container .component-card {
-            height: 280px; /* Even smaller for very small screens */
-        }
-        
-        .grid-container .component-card .card-img-top {
-            height: 80px;
-        }
+        /* Very small screen styles moved to responsive.css */
 
         .component-meta {
             font-size: 0.65rem;
@@ -730,7 +678,9 @@
 .variant-color-dot:hover {
     transform: scale(1.2);
     border-color: var(--color-primary);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+    position: relative;
 }
 
 .variant-color-dot.active {
@@ -770,6 +720,51 @@
     width: 16px;
     height: 16px;
 }
+
+/* Keyword expansion styles */
+.keyword-expand-trigger:hover {
+    background-color: #cbd5e1 !important;
+    transform: scale(1.05);
+}
+
+.keyword-collapse-trigger:hover {
+    background-color: #dc2626 !important;
+}
+
+.all-keywords-container .keyword-tag {
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Fix Alpine.js x-show interference with grid */
+.grid-container [x-show] {
+    display: flex !important;
+}
+
+.grid-container [x-show][style*="display: none"] {
+    display: none !important;
+}
+
+.list-container [x-show] {
+    display: block !important;
+}
+
+.list-container [x-show][style*="display: none"] {
+    display: none !important;
+}
+
+/* Debug styles temporarily disabled - issue should be fixed with margin removal */
+/*
+.grid-container .grid-item {
+    border: 1px solid red !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+}
+
+.grid-container .component-card {
+    border: 2px solid blue !important;
+}
+*/
 
 
 </style>
@@ -1262,12 +1257,19 @@
 
     <!-- Components Container -->
     {% if components and components.items %}
-    <div :class="viewMode === 'grid' ? 'row' : 'list-container'">
+    <div :class="viewMode === 'grid' ? 'grid-container' : 'list-container'">
         {% for component in components.items %}
         <!-- GRID VIEW -->
-        <div class="col-lg-2 col-md-3 col-sm-4 mb-2"
-             x-show="viewMode === 'grid'">
-            <div class="card component-card h-100"
+        <div class="grid-item" 
+             x-show="viewMode === 'grid'"
+             data-debug-id="Item-{{ loop.index }}-ID{{ component.id }}"
+             data-component-id="{{ component.id }}"
+             data-component-type="{{ component.component_type.name if component.component_type else 'None' }}"
+             data-supplier="{{ component.supplier.supplier_code if component.supplier else 'None' }}"
+             data-keywords-count="{{ component.keywords|length if component.keywords else 0 }}"
+             data-brands-count="{{ component._cached_brands|length if component._cached_brands else 0 }}"
+             data-variants-count="{{ component._cached_variants|length if component._cached_variants else 0 }}">
+            <div class="card component-card"
                  @click="navigateToComponent({{ component.id }})"
                  style="cursor: pointer;">
 
@@ -1308,11 +1310,12 @@
 
                 <!-- Component Info -->
                 <div class="card-body">
-                    <h6 class="card-title fw-bold mb-2">{{ component.product_number }}</h6>
+                    <div class="card-body-content">
+                        <h6 class="card-title fw-bold mb-2">{{ component.product_number }}</h6>
 
-                    <p class="card-text text-muted mb-2">
-                        {{ component.description|truncate(40) if component.description else 'No description' }}
-                    </p>
+                        <p class="card-text text-muted mb-2">
+                            {{ component.description|truncate(40) if component.description else 'No description' }}
+                        </p>
 
                     <!-- Component Meta -->
 <div class="component-meta mb-2">
@@ -1374,7 +1377,12 @@
 
                         <!-- Show count of remaining -->
                         {% if component.keywords|length > 2 %}
-                        <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
+                        <span class="keyword-tag keyword-expand-trigger" 
+                              data-component-id="{{ component.id }}"
+                              @click.stop
+                              style="cursor: pointer; background-color: #e2e8f0; color: #64748b;">
+                            +{{ component.keywords|length - 2 }}
+                        </span>
                         {% endif %}
                         {% else %}
                         <!-- Normal display when not searching -->
@@ -1382,9 +1390,20 @@
                         <span class="keyword-tag">{{ keyword.name }}</span>
                         {% endfor %}
                         {% if component.keywords|length > 2 %}
-                        <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
+                        <span class="keyword-tag keyword-expand-trigger" 
+                              data-component-id="{{ component.id }}"
+                              style="cursor: pointer; background-color: #e2e8f0; color: #64748b;">
+                            +{{ component.keywords|length - 2 }}
+                        </span>
                         {% endif %}
                         {% endif %}
+                        
+                        <!-- Hidden div with all keywords for expansion -->
+                        <div id="all-keywords-{{ component.id }}" class="all-keywords-container" style="display: none;">
+                            {% for keyword in component.keywords %}
+                            <span class="keyword-tag">{{ keyword.name }}</span>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endif %}
 
@@ -1394,8 +1413,10 @@
                         {% for variant in component._cached_variants[:5] %}
                         <div class="variant-color-dot"
                              data-variant-name="{{ variant.name }}"
-                             {% if variant.picture_url %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
-                             title="{{ variant.name }}">
+                             data-variant-id="{{ variant.id }}"
+                             data-has-image="{{ 'true' if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' else 'false' }}"
+                             {% if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                             title="{{ variant.name }}{{ ' (No image available)' if not variant.picture_url or variant.picture_url.strip() == '' or variant.picture_url == 'null' else '' }}">
                         </div>
                         {% endfor %}
                         {% if component._cached_variants|length > 5 %}
@@ -1413,6 +1434,7 @@
                         {{ component.properties|length }} properties
                     </div>
                     {% endif %}
+                    </div>
 
                     <!-- Action Buttons -->
                     <div class="btn-group w-100 mt-auto" role="group">
@@ -1733,7 +1755,16 @@ function componentDashboard() {
         init() {
             this.$watch('viewMode', (value) => {
                 localStorage.setItem('componentViewMode', value);
-                setTimeout(() => lucide.createIcons(), 100);
+                setTimeout(() => {
+                    lucide.createIcons();
+                    // Re-initialize variant preview and keyword expansion after view mode change
+                    if (window.enableVariantImagePreview) {
+                        window.enableVariantImagePreview();
+                    }
+                    if (window.enableKeywordExpansion) {
+                        window.enableKeywordExpansion();
+                    }
+                }, 100);
             });
 
             // Close dropdowns when clicking outside
@@ -1745,6 +1776,16 @@ function componentDashboard() {
 
             // Initialize filters from URL parameters
             this.initializeFiltersFromUrl();
+            
+            // Initialize variant image preview and keyword expansion
+            setTimeout(() => {
+                if (window.enableVariantImagePreview) {
+                    window.enableVariantImagePreview();
+                }
+                if (window.enableKeywordExpansion) {
+                    window.enableKeywordExpansion();
+                }
+            }, 100);
         },
 
         initializeFiltersFromUrl() {
@@ -2066,6 +2107,57 @@ document.addEventListener('DOMContentLoaded', function() {
             if (closeBtn) closeBtn.click();
         });
     }, 5000);
+
+    // DEBUG: Grid layout analysis
+    setTimeout(() => {
+        console.log('=== GRID DEBUG INFORMATION ===');
+        const gridContainer = document.querySelector('.grid-container');
+        if (gridContainer) {
+            console.log('Grid container found:', gridContainer);
+            const computedStyle = window.getComputedStyle(gridContainer);
+            console.log('Grid container computed style:', {
+                display: computedStyle.display,
+                gridTemplateColumns: computedStyle.gridTemplateColumns,
+                gap: computedStyle.gap,
+                alignItems: computedStyle.alignItems,
+                justifyItems: computedStyle.justifyItems,
+                gridAutoRows: computedStyle.gridAutoRows,
+                gridAutoFlow: computedStyle.gridAutoFlow
+            });
+            
+            const gridItems = gridContainer.querySelectorAll('.grid-item');
+            console.log('Total grid items:', gridItems.length);
+            
+            gridItems.forEach((item, index) => {
+                const rect = item.getBoundingClientRect();
+                const itemStyle = window.getComputedStyle(item);
+                console.log(`Item ${index + 1}:`, {
+                    debugId: item.dataset.debugId,
+                    componentId: item.dataset.componentId,
+                    componentType: item.dataset.componentType,
+                    supplier: item.dataset.supplier,
+                    keywordsCount: item.dataset.keywordsCount,
+                    brandsCount: item.dataset.brandsCount,
+                    variantsCount: item.dataset.variantsCount,
+                    visible: item.style.display !== 'none',
+                    dimensions: { 
+                        width: rect.width, 
+                        height: rect.height, 
+                        x: rect.x, 
+                        y: rect.y 
+                    },
+                    computedStyle: {
+                        display: itemStyle.display,
+                        gridColumn: itemStyle.gridColumn,
+                        gridRow: itemStyle.gridRow,
+                        flexDirection: itemStyle.flexDirection,
+                        height: itemStyle.height
+                    }
+                });
+            });
+        }
+        console.log('=== END GRID DEBUG ===');
+    }, 2000);
 });
 </script>
 {% endblock %}

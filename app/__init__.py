@@ -23,6 +23,16 @@ def register_template_filters(app):
     """Register custom template filters"""
     app.jinja_env.filters['pluralize'] = pluralize
 
+def register_context_processors(app):
+    """Register template context processors"""
+    import time
+    
+    @app.context_processor
+    def inject_cache_bust():
+        return {
+            'cache_bust_version': int(time.time())
+        }
+
 
 def create_app(config_class=Config):
     # Initialize the app
@@ -43,6 +53,9 @@ def create_app(config_class=Config):
 
     # Register custom template filters
     register_template_filters(app)
+    
+    # Register context processors
+    register_context_processors(app)
 
     # Create upload directory if it doesn't exist
     uploads_dir = app.config.get('UPLOAD_FOLDER')

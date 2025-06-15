@@ -209,6 +209,13 @@ def index():
         if filters:
             query = query.filter(and_(*filters))
 
+        # Filter out components with missing required relationships BEFORE pagination
+        query = query.filter(
+            Component.component_type_id.isnot(None),
+            Component.supplier_id.isnot(None),
+            Component.category_id.isnot(None)
+        )
+
         # Apply sorting
         sort_column = getattr(Component, sort_by, None)
         if sort_column:
@@ -247,17 +254,10 @@ def index():
                 max_per_page=MAX_PER_PAGE
             )
 
-        # Load components with proper filtering
-        component_items = components_pagination.items
-
-        # Filter out components with missing required relationships
-        valid_components = []
-        for component in component_items:
-            if component.component_type and component.supplier and component.category:
-                valid_components.append(component)
-
-        # Update pagination items with valid components only
-        components_pagination.items = valid_components
+        # Load components (already filtered for required relationships)
+        valid_components = components_pagination.items
+        
+        # DEBUG: Backend logging temporarily disabled
 
         # Batch load brands for all components
         component_ids = [c.id for c in valid_components]
