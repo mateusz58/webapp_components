@@ -444,6 +444,315 @@
             font-size: 0.7rem;
         }
     }
+
+    /* Multi-Select Dropdown Styles */
+.multi-select-wrapper {
+    position: relative;
+}
+
+.multi-select {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1;
+}
+
+.multi-select-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 38px;
+    font-size: 0.875rem;
+}
+
+.multi-select-placeholder:hover {
+    border-color: var(--color-primary);
+    background: #f8fafc;
+}
+
+.multi-select-placeholder:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Multi-Select Dropdown */
+.multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 2px;
+}
+
+.multi-select-option {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+}
+
+.multi-select-option:last-child {
+    border-bottom: none;
+}
+
+.multi-select-option:hover {
+    background: #f8fafc;
+}
+
+.multi-select-option.selected {
+    background: #e0f2fe;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.multi-select-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    margin-right: 0.5rem;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.multi-select-checkbox.checked {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.multi-select-checkbox.checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Filter Tags */
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--color-primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+}
+
+.filter-tag-remove {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.filter-tag-remove:hover {
+    opacity: 1;
+}
+
+/* Enhanced Multi-Select with Search */
+.multi-select-search {
+    position: sticky;
+    top: 0;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.5rem;
+}
+
+.multi-select-search input {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.multi-select-search input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* Select All / Deselect All */
+.multi-select-actions {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 1;
+}
+
+.multi-select-action-btn {
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    transition: background 0.2s ease;
+}
+
+.multi-select-action-btn:hover {
+    background: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .multi-select-placeholder {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .multi-select-option {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .filter-tag {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+/* Animation for dropdown */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.multi-select-dropdown {
+    animation: slideDown 0.2s ease;
+}
+
+/* Loading state */
+.multi-select-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: var(--color-secondary);
+}
+
+.multi-select-loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e2e8f0;
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.component-card:not(:has(.card-title)) {
+    display: none !important;
+}
+
+/* Variant Color Previews */
+.variant-colors {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.variant-color-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    background-size: cover;
+    background-position: center;
+}
+
+.variant-color-dot:hover {
+    transform: scale(1.2);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.variant-color-dot.active {
+    border-color: var(--color-primary);
+    border-width: 3px;
+}
+
+/* Tooltip for variant names */
+.variant-color-dot::after {
+    content: attr(data-variant-name);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-bottom: 0.25rem;
+}
+
+.variant-color-dot:hover::after {
+    opacity: 1;
+}
+
+/* Variant preview in list view */
+.list-container .variant-colors {
+    margin-top: 0.25rem;
+}
+
+.list-container .variant-color-dot {
+    width: 16px;
+    height: 16px;
+}
+
+
 </style>
 {% endblock %}
 
@@ -499,17 +808,6 @@
             <div class="stats-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-0">{{ categories|length }}</h4>
-                        <p class="mb-0 opacity-75 small">Categories</p>
-                    </div>
-                    <i data-lucide="grid-3x3" style="width: 24px; height: 24px; opacity: 0.7;"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6 mb-2">
-            <div class="stats-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
                         <h4 class="mb-0">{{ brands_count if brands_count is defined else 0 }}</h4>
                         <p class="mb-0 opacity-75 small">Active Brands</p>
                     </div>
@@ -520,132 +818,334 @@
     </div>
 
     <!-- Compact Filter Panel -->
-    <div class="filter-panel">
-        <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm">
-            <!-- Search Bar -->
-            <div class="row mb-2">
-                <div class="col-md-6">
-                    <div class="search-box">
-                        <input type="text"
-                               class="form-control form-control-modern"
-                               name="search"
-                               value="{{ search }}"
-                               placeholder="Search components..."
-                               x-model="searchQuery"
-                               @input.debounce.300ms="performSearch()">
-                        <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-control-modern"
-                                name="component_type_id"
-                                x-model="filters.componentType"
-                                @change="performSearch()">
-                            <option value="">All Types</option>
-                            {% for component_type in component_types %}
-                            <option value="{{ component_type.id }}"
-                                    {% if request.args.get('component_type_id')|int == component_type.id %}selected{% endif %}>
-                            {{ component_type.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-
-                        <!-- View Toggle -->
-                        <div class="view-toggle d-flex">
-                            <button type="button"
-                                    @click="viewMode = 'grid'"
-                                    :class="{ 'active': viewMode === 'grid' }"
-                                    title="Grid View">
-                                <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
-                            </button>
-                            <button type="button"
-                                    @click="viewMode = 'list'"
-                                    :class="{ 'active': viewMode === 'list' }"
-                                    title="List View">
-                                <i data-lucide="list" style="width: 16px; height: 16px;"></i>
-                            </button>
-                        </div>
-                    </div>
+    <!-- Multi-Select Filter Panel with Enhanced Dropdowns -->
+<div class="filter-panel">
+    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm">
+        <!-- Search Bar -->
+        <div class="row mb-2">
+            <div class="col-md-8">
+                <div class="search-box">
+                    <input type="text"
+                           class="form-control form-control-modern"
+                           name="search"
+                           value="{{ search }}"
+                           placeholder="Search by product number, description, keyword..."
+                           x-model="searchQuery"
+                           @keyup.enter="$refs.filterForm.submit()">
+                    <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
                 </div>
             </div>
-
-            <!-- Compact Advanced Filters -->
-            <div class="row">
-                <div class="col-md-2">
-                    <select class="form-select form-control-modern"
-                            name="category_id"
-                            x-model="filters.category"
-                            @change="performSearch()">
-                        <option value="">All Categories</option>
-                        {% for category in categories %}
-                        <option value="{{ category.id }}"
-                                {% if request.args.get('category_id')|int == category.id %}selected{% endif %}>
-                        {{ category.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+            <div class="col-md-4">
+                <!-- View Toggle -->
+                <div class="view-toggle d-flex ms-auto">
+                    <button type="button"
+                            @click="viewMode = 'grid'"
+                            :class="{ 'active': viewMode === 'grid' }"
+                            title="Grid View">
+                        <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    <button type="button"
+                            @click="viewMode = 'list'"
+                            :class="{ 'active': viewMode === 'list' }"
+                            title="List View">
+                        <i data-lucide="list" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
-                <div class="col-md-2">
-                    <select class="form-select form-control-modern"
-                            name="supplier_id"
-                            x-model="filters.supplier"
-                            @change="performSearch()">
-                        <option value="">All Suppliers</option>
-                        {% for supplier in suppliers %}
-                        <option value="{{ supplier.id }}"
-                                {% if request.args.get('supplier_id')|int == supplier.id %}selected{% endif %}>
-                        {{ supplier.supplier_code }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select form-control-modern"
-                            name="brand_id"
-                            x-model="filters.brand"
-                            @change="performSearch()">
-                        <option value="">All Brands</option>
-                        {% if brands %}
-                        {% for brand in brands %}
-                        <option value="{{ brand.id }}"
-                                {% if request.args.get('brand_id')|int == brand.id %}selected{% endif %}>
-                        {{ brand.name }}
-                        </option>
-                        {% endfor %}
-                        {% endif %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary-modern btn-modern btn-sm flex-grow-1">
-                            <i data-lucide="filter" class="me-1" style="width: 14px; height: 14px;"></i>
-                            Apply
-                        </button>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">
-                            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </form>
-
-        <!-- Quick Filters -->
-        <div class="quick-filters">
-            <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
-                All
-            </div>
-            <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
-                Approved
-            </div>
-            <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
-                Pending
-            </div>
-            <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
-                Recent
             </div>
         </div>
+
+        <!-- Add Sort Options Row -->
+        <div class="row mb-2">
+    <div class="col-md-4">
+        <label class="form-label small text-muted mb-1">Sort By</label>
+        <select name="sort_by" class="form-select form-select-sm">
+            <option value="created_at" {% if current_filters.sort_by == 'created_at' %}selected{% endif %}>Date Created</option>
+            <option value="updated_at" {% if current_filters.sort_by == 'updated_at' %}selected{% endif %}>Last Updated</option>
+            <option value="product_number" {% if current_filters.sort_by == 'product_number' %}selected{% endif %}>Product Number</option>
+        </select>
     </div>
+    <div class="col-md-4">
+        <label class="form-label small text-muted mb-1">Order</label>
+        <select name="sort_order" class="form-select form-select-sm">
+            <option value="desc" {% if current_filters.sort_order == 'desc' %}selected{% endif %}>Newest First</option>
+            <option value="asc" {% if current_filters.sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
+        </select>
+    </div>
+</div>
+
+        <!-- Multi-Select Filter Row -->
+        <div class="row mb-3">
+            <!-- Component Types Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <!-- Hidden select for form submission -->
+                    <!-- Hidden select for form submission -->
+                    <select multiple name="component_type_id" style="display: none;">
+        {% for component_type in component_types %}
+        <option value="{{ component_type.id }}"
+                {% if current_filters and component_type.id|string in current_filters.component_type_ids|map('string')|list %}selected{% endif %}>
+            {{ component_type.name }}
+        </option>
+        {% endfor %}
+    </select>
+
+                    <!-- Custom Multi-Select Display -->
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('componentTypes')">
+                        <span x-show="filters.componentTypes.length === 0">All Types</span>
+                        <span x-show="filters.componentTypes.length === 1" x-text="getSelectedText('componentTypes')"></span>
+                        <span x-show="filters.componentTypes.length > 1" x-text="filters.componentTypes.length + ' types'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.componentTypes }"></i>
+                    </div>
+
+                    <!-- Dropdown -->
+                    <div x-show="dropdownStates.componentTypes"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <!-- Search within dropdown -->
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search types..."
+                                   x-model="dropdownSearch.componentTypes"
+                                   @click.stop>
+                        </div>
+
+                        <!-- Select All / Deselect All -->
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('componentTypes')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('componentTypes')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        <!-- Options -->
+                        {% for component_type in component_types %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('componentTypes', '{{ component_type.id }}') }"
+                             @click="selectOption('componentTypes', '{{ component_type.id }}', '{{ component_type.name }}')"
+                             x-show="!dropdownSearch.componentTypes || '{{ component_type.name }}'.toLowerCase().includes(dropdownSearch.componentTypes.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('componentTypes', '{{ component_type.id }}') }"></div>
+                            <span>{{ component_type.name }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suppliers Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <select multiple name="supplier_id" style="display: none;">
+                        <template x-for="supId in filters.suppliers" :key="supId">
+                            <option :value="supId" selected></option>
+                        </template>
+                    </select>
+
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('suppliers')">
+                        <span x-show="filters.suppliers.length === 0">All Suppliers</span>
+                        <span x-show="filters.suppliers.length === 1" x-text="getSelectedText('suppliers')"></span>
+                        <span x-show="filters.suppliers.length > 1" x-text="filters.suppliers.length + ' suppliers'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.suppliers }"></i>
+                    </div>
+
+                    <div x-show="dropdownStates.suppliers"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search suppliers..."
+                                   x-model="dropdownSearch.suppliers"
+                                   @click.stop>
+                        </div>
+
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('suppliers')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('suppliers')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        {% for supplier in suppliers %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('suppliers', '{{ supplier.id }}') }"
+                             @click="selectOption('suppliers', '{{ supplier.id }}', '{{ supplier.supplier_code }}')"
+                             x-show="!dropdownSearch.suppliers || '{{ supplier.supplier_code }}'.toLowerCase().includes(dropdownSearch.suppliers.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('suppliers', '{{ supplier.id }}') }"></div>
+                            <span>{{ supplier.supplier_code }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brands Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <select multiple name="brand_id" style="display: none;">
+                        <template x-for="brandId in filters.brands" :key="brandId">
+                            <option :value="brandId" selected></option>
+                        </template>
+                    </select>
+
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('brands')">
+                        <span x-show="filters.brands.length === 0">All Brands</span>
+                        <span x-show="filters.brands.length === 1" x-text="getSelectedText('brands')"></span>
+                        <span x-show="filters.brands.length > 1" x-text="filters.brands.length + ' brands'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.brands }"></i>
+                    </div>
+
+                    <div x-show="dropdownStates.brands"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search brands..."
+                                   x-model="dropdownSearch.brands"
+                                   @click.stop>
+                        </div>
+
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('brands')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('brands')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        {% if brands %}
+                        {% for brand in brands %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('brands', '{{ brand.id }}') }"
+                             @click="selectOption('brands', '{{ brand.id }}', '{{ brand.name }}')"
+                             x-show="!dropdownSearch.brands || '{{ brand.name }}'.toLowerCase().includes(dropdownSearch.brands.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('brands', '{{ brand.id }}') }"></div>
+                            <span>{{ brand.name }}</span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Actions Row -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <!-- Active Filters Display -->
+                <div x-show="hasActiveFilters()" class="d-flex flex-wrap gap-1 align-items-center">
+                    <small class="text-muted fw-bold me-2">Filters:</small>
+
+                    <!-- Component Type Tags -->
+                    <template x-for="(typeId, index) in filters.componentTypes" :key="'type-' + typeId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('component_type_id', typeId)"></span>
+                            <button type="button" @click="removeFilter('componentTypes', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Category Tags -->
+                    <template x-for="(categoryId, index) in filters.categories" :key="'cat-' + categoryId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('category_id', categoryId)"></span>
+                            <button type="button" @click="removeFilter('categories', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Supplier Tags -->
+                    <template x-for="(supplierId, index) in filters.suppliers" :key="'sup-' + supplierId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('supplier_id', supplierId)"></span>
+                            <button type="button" @click="removeFilter('suppliers', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Brand Tags -->
+                    <template x-for="(brandId, index) in filters.brands" :key="'brand-' + brandId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('brand_id', brandId)"></span>
+                            <button type="button" @click="removeFilter('brands', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Clear All Button -->
+                    <button type="button" @click="clearAllFilters()" class="btn btn-outline-danger btn-sm">
+                        <i data-lucide="x-circle" class="me-1" style="width: 12px; height: 12px;"></i>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-primary-modern btn-modern btn-sm">
+                        <i data-lucide="filter" class="me-1" style="width: 14px; height: 14px;"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Quick Filters (Single Select) -->
+    <div class="quick-filters">
+        <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
+            All
+        </div>
+        <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
+            Approved
+        </div>
+        <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
+            Pending
+        </div>
+        <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
+            Recent
+        </div>
+    </div>
+</div>
+
+<!-- Add rotation class for chevron -->
+<style>
+.rotate-180 {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+</style>
 
     <!-- Pagination Controls -->
     {% if components and components.items %}
@@ -796,15 +1296,21 @@
                     </p>
 
                     <!-- Component Meta -->
-                    <div class="component-meta mb-2">
-                        <div class="d-flex align-items-center mb-1">
-                            <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
-                            <small>{{ component.supplier.supplier_code }}</small>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <small>{{ component.category.name }}</small>
-                        </div>
-                    </div>
+<div class="component-meta mb-2">
+    <div class="d-flex align-items-center mb-1">
+        {% if component.component_type %}
+            <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
+        {% endif %}
+        {% if component.supplier %}
+            <small>{{ component.supplier.supplier_code }}</small>
+        {% endif %}
+    </div>
+    <div class="d-flex align-items-center">
+        {% if component.category %}
+            <small>{{ component.category.name }}</small>
+        {% endif %}
+    </div>
+</div>
 
                     <!-- Brand Display -->
                     {% if component._cached_brands %}
@@ -821,11 +1327,44 @@
                     <!-- Keywords -->
                     {% if component.keywords %}
                     <div class="mb-2">
+                        {% if search %}
+                        <!-- When searching, highlight matching keywords -->
+                        {% set matched_keywords = [] %}
+                        {% set other_keywords = [] %}
+                        {% for keyword in component.keywords %}
+                        {% if search.lower() in keyword.name.lower() %}
+                        {% set _ = matched_keywords.append(keyword) %}
+                        {% else %}
+                        {% set _ = other_keywords.append(keyword) %}
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Show matched keywords first with highlight -->
+                        {% for keyword in matched_keywords[:2] %}
+                        <span class="keyword-tag" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24;">
+            <i data-lucide="search" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i>
+            {{ keyword.name }}
+        </span>
+                        {% endfor %}
+
+                        <!-- Show other keywords if space permits -->
+                        {% set remaining_slots = 2 - matched_keywords[:2]|length %}
+                        {% for keyword in other_keywords[:remaining_slots] %}
+                        <span class="keyword-tag">{{ keyword.name }}</span>
+                        {% endfor %}
+
+                        <!-- Show count of remaining -->
+                        {% if component.keywords|length > 2 %}
+                        <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
+                        {% endif %}
+                        {% else %}
+                        <!-- Normal display when not searching -->
                         {% for keyword in component.keywords[:2] %}
                         <span class="keyword-tag">{{ keyword.name }}</span>
                         {% endfor %}
                         {% if component.keywords|length > 2 %}
                         <span class="keyword-tag">+{{ component.keywords|length - 2 }}</span>
+                        {% endif %}
                         {% endif %}
                     </div>
                     {% endif %}
@@ -905,6 +1444,28 @@
                                     <span class="brand-tag bg-secondary">+{{ component._cached_brands|length - 2 }}</span>
                                     {% endif %}
                                     {% endif %}
+
+                                    {% if component.keywords %}
+                                    {% if search %}
+                                    <!-- Highlight matching keywords in list view -->
+                                    {% for keyword in component.keywords[:3] %}
+                                    {% if search.lower() in keyword.name.lower() %}
+                                    <span class="keyword-tag" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; font-size: 0.65rem;">
+                    <i data-lucide="search" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i>
+                    {{ keyword.name }}
+                </span>
+                                    {% else %}
+                                    <span class="keyword-tag" style="font-size: 0.65rem;">{{ keyword.name }}</span>
+                                    {% endif %}
+                                    {% endfor %}
+                                    {% else %}
+                                    {% for keyword in component.keywords[:3] %}
+                                    <span class="keyword-tag" style="font-size: 0.65rem;">{{ keyword.name }}</span>
+                                    {% endfor %}
+                                    {% endif %}
+                                    {% endif %}
+
+
                                 </div>
                             </div>
                             <div class="text-end">
@@ -1082,210 +1643,375 @@
 
 {% block scripts %}
 <script>
-   function componentDashboard() {
-        return {
-            viewMode: localStorage.getItem('componentViewMode') || 'grid',
-            searchQuery: '{{ search }}',
-            selectedComponents: [],
-            activeQuickFilter: '{{ request.args.get("status", "all") }}',
-            filters: {
-                componentType: '{{ request.args.get("component_type_id", "") }}',
-                category: '{{ request.args.get("category_id", "") }}',
-                supplier: '{{ request.args.get("supplier_id", "") }}',
-                brand: '{{ request.args.get("brand_id", "") }}'
-            },
-            componentsOnPage: window.componentsOnPage || [],
+function componentDashboard() {
+    return {
+        viewMode: localStorage.getItem('componentViewMode') || 'grid',
+        searchQuery: '{{ search }}',
+        selectedComponents: [],
+        activeQuickFilter: '{{ request.args.get("status", "all") }}',
 
-            init() {
-                this.$watch('viewMode', (value) => {
-                    localStorage.setItem('componentViewMode', value);
-                    setTimeout(() => lucide.createIcons(), 100);
-                });
-            },
+        // UPDATED: Multi-select filters
+        filters: {
+    componentTypes: {{ current_filters.component_type_ids | tojson if current_filters else [] }},
+    categories: {{ current_filters.category_ids | tojson if current_filters else [] }},
+    suppliers: {{ current_filters.supplier_ids | tojson if current_filters else [] }},
+    brands: {{ current_filters.brand_ids | tojson if current_filters else [] }}
+},
 
-            performSearch() {
-                clearTimeout(this.searchTimeout);
-                this.searchTimeout = setTimeout(() => {
-                    this.$refs.filterForm.submit();
-                }, 300);
-            },
+        // Multi-select dropdown states
+        dropdownStates: {
+            componentTypes: false,
+            categories: false,
+            suppliers: false,
+            brands: false
+        },
 
-            quickFilter(type) {
-                this.activeQuickFilter = type;
-                const url = new URL(window.location);
+        // Search within dropdowns
+        dropdownSearch: {
+            componentTypes: '',
+            categories: '',
+            suppliers: '',
+            brands: ''
+        },
 
-                // Remove pagination when filtering
-                url.searchParams.delete('page');
-                url.searchParams.delete('show_all');
+        componentsOnPage: window.componentsOnPage || [],
 
-                switch(type) {
-                    case 'approved':
-                        url.searchParams.set('status', 'approved');
-                        break;
-                    case 'pending':
-                        url.searchParams.set('status', 'pending');
-                        break;
-                    case 'recent':
-                        url.searchParams.set('recent', '7');
-                        url.searchParams.delete('status');
-                        break;
-                    default:
-                        url.searchParams.delete('status');
-                        url.searchParams.delete('recent');
-                }
-
-                window.location.href = url.toString();
-            },
-
-            toggleSelection(componentId) {
-                const index = this.selectedComponents.indexOf(componentId);
-                if (index > -1) {
-                    this.selectedComponents.splice(index, 1);
-                } else {
-                    this.selectedComponents.push(componentId);
-                }
-            },
-
-            toggleSelectAll(event) {
-                if (event.target.checked) {
-                    // Add all IDs from this page that aren't already selected
-                    this.selectedComponents = Array.from(new Set([...this.selectedComponents, ...this.componentsOnPage]));
-                } else {
-                    // Remove all IDs from this page
-                    this.selectedComponents = this.selectedComponents.filter(id => !this.componentsOnPage.includes(id));
-                }
-            },
-
-            clearSelection() {
-                this.selectedComponents = [];
-            },
-
-            bulkAction(action) {
-                if (this.selectedComponents.length === 0) return;
-
-                switch(action) {
-                    case 'export':
-                        const exportUrl = `/api/components/export?ids=${this.selectedComponents.join(',')}`;
-                        window.open(exportUrl, '_blank');
-                        break;
-                    case 'delete':
-                        if (confirm(`Delete ${this.selectedComponents.length} component(s)?`)) {
-                            fetch('/api/components/bulk-delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value
-                                },
-                                body: JSON.stringify({ ids: this.selectedComponents })
-                            }).then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    window.location.reload();
-                                } else {
-                                    alert('Error: ' + data.error);
-                                }
-                            }).catch(error => {
-                                alert('Error deleting components: ' + error);
-                            });
-                        }
-                        break;
-                }
-            },
-
-            navigateToComponent(componentId) {
-                window.location.href = `/component/${componentId}`;
-            }
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        lucide.createIcons();
-
-        // Auto-hide flash messages after 5 seconds
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.alert-modern');
-            alerts.forEach(alert => {
-                const closeBtn = alert.querySelector('.btn-close');
-                if (closeBtn) closeBtn.click();
+        init() {
+            this.$watch('viewMode', (value) => {
+                localStorage.setItem('componentViewMode', value);
+                setTimeout(() => lucide.createIcons(), 100);
             });
-        }, 5000);
 
-        // Initialize quick filter state
-        const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('status');
-        const recent = urlParams.get('recent');
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.multi-select-wrapper')) {
+                    this.closeAllDropdowns();
+                }
+            });
 
-        if (status) {
-            document.querySelector(`[onclick*="${status}"]`)?.classList.add('active');
-        } else if (recent) {
-            document.querySelector(`[onclick*="recent"]`)?.classList.add('active');
-        } else {
-            document.querySelector(`[onclick*="all"]`)?.classList.add('active');
-        }
-    });
+            // Initialize filters from URL parameters
+            this.initializeFiltersFromUrl();
+        },
 
-    // Utility function to preserve URL parameters
-    function preserveUrlParams(newParams) {
-        const url = new URL(window.location);
-        Object.entries(newParams).forEach(([key, value]) => {
-            if (value) {
-                url.searchParams.set(key, value);
+        initializeFiltersFromUrl() {
+            // Convert string arrays to proper format if needed
+            Object.keys(this.filters).forEach(key => {
+                if (this.filters[key] && Array.isArray(this.filters[key])) {
+                    this.filters[key] = this.filters[key].map(val => val.toString());
+                }
+            });
+        },
+
+        // Multi-select dropdown methods
+        toggleMultiSelect(filterType) {
+            // Close other dropdowns
+            Object.keys(this.dropdownStates).forEach(key => {
+                if (key !== filterType) {
+                    this.dropdownStates[key] = false;
+                }
+            });
+            // Toggle current dropdown
+            this.dropdownStates[filterType] = !this.dropdownStates[filterType];
+        },
+
+        closeAllDropdowns() {
+            Object.keys(this.dropdownStates).forEach(key => {
+                this.dropdownStates[key] = false;
+            });
+        },
+
+        selectOption(filterType, optionValue, optionText) {
+            if (!this.filters[filterType]) {
+                this.filters[filterType] = [];
+            }
+
+            const index = this.filters[filterType].indexOf(optionValue.toString());
+            if (index > -1) {
+                // Remove if already selected
+                this.filters[filterType].splice(index, 1);
             } else {
-                url.searchParams.delete(key);
+                // Add if not selected
+                this.filters[filterType].push(optionValue.toString());
             }
-        });
-        return url.toString();
+
+            // Auto-submit after selection
+           // this.performSearch();
+        },
+
+        isOptionSelected(filterType, optionValue) {
+            return this.filters[filterType] &&
+                   this.filters[filterType].includes(optionValue.toString());
+        },
+
+        getSelectedText(filterType, maxShow = 1) {
+            if (!this.filters[filterType] || this.filters[filterType].length === 0) {
+                return '';
+            }
+
+            if (this.filters[filterType].length === 1) {
+                return this.getOptionText(this.getSelectName(filterType), this.filters[filterType][0]);
+            }
+
+            return `${this.filters[filterType].length} selected`;
+        },
+
+        getSelectName(filterType) {
+            const mapping = {
+                'componentTypes': 'component_type_id',
+                'categories': 'category_id',
+                'suppliers': 'supplier_id',
+                'brands': 'brand_id'
+            };
+            return mapping[filterType];
+        },
+
+        getOptionText(selectName, optionValue) {
+    // Map the filterType to the correct element
+    const elementMap = {
+        'component_type_id': 'componentTypes',
+        'category_id': 'categories',
+        'supplier_id': 'suppliers',
+        'brand_id': 'brands'
+    };
+
+    // Find the option in the template data
+    switch(selectName) {
+        case 'component_type_id':
+            {% for ct in component_types %}
+            if ('{{ ct.id }}' === optionValue.toString()) return '{{ ct.name }}';
+            {% endfor %}
+            break;
+        case 'supplier_id':
+            {% for sup in suppliers %}
+            if ('{{ sup.id }}' === optionValue.toString()) return '{{ sup.supplier_code }}';
+            {% endfor %}
+            break;
+        case 'brand_id':
+            {% for brand in brands %}
+            if ('{{ brand.id }}' === optionValue.toString()) return '{{ brand.name }}';
+            {% endfor %}
+            break;
     }
+    return optionValue;
+},
 
-    // Enhanced error handling for images
-    function handleImageError(img) {
-        const placeholder = document.createElement('div');
-        placeholder.className = 'd-flex align-items-center justify-content-center bg-light';
-        placeholder.style.height = img.style.height || '80px';
-        placeholder.innerHTML = '<i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>';
-        img.parentNode.replaceChild(placeholder, img);
-        lucide.createIcons();
-    }
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + A to select all visible components
-        if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !e.target.matches('input, textarea')) {
-            e.preventDefault();
-            const selectAllCheckbox = document.getElementById('selectAll');
-            if (selectAllCheckbox && window.Alpine) {
-                selectAllCheckbox.click();
+        removeFilter(filterType, index) {
+            if (this.filters[filterType] && this.filters[filterType][index] !== undefined) {
+                this.filters[filterType].splice(index, 1);
+                this.performSearch();
             }
-        }
+        },
 
-        // Escape to clear selection
-        if (e.key === 'Escape' && window.Alpine) {
-            const dashboard = document.querySelector('[x-data*="componentDashboard"]');
-            if (dashboard && dashboard.__x) {
-                dashboard.__x.$data.selectedComponents = [];
+        clearAllFilters() {
+            this.filters = {
+                componentTypes: [],
+                categories: [],
+                suppliers: [],
+                brands: []
+            };
+            this.searchQuery = '';
+            this.performSearch();
+        },
+
+        hasActiveFilters() {
+            return Object.values(this.filters).some(filter => filter && filter.length > 0) ||
+                   this.searchQuery.length > 0;
+        },
+
+        selectAllOptions(filterType) {
+            const selectElement = document.querySelector(`select[name="${this.getSelectName(filterType)}"]`);
+            if (selectElement) {
+                const allValues = Array.from(selectElement.options)
+                    .map(option => option.value)
+                    .filter(value => value !== '');
+                this.filters[filterType] = allValues;
+             //   this.performSearch();
             }
-        }
-    });
+        },
 
-    // Performance optimization: Lazy load images in grid view
-    if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        observer.unobserve(img);
-                    }
+        deselectAllOptions(filterType) {
+            this.filters[filterType] = [];
+            this.performSearch();
+        },
+
+        filterDropdownOptions(filterType, options) {
+            const searchTerm = this.dropdownSearch[filterType].toLowerCase();
+            if (!searchTerm) return options;
+
+            return options.filter(option =>
+                option.text.toLowerCase().includes(searchTerm)
+            );
+        },
+
+        performSearch() {
+            // Update the actual form inputs
+            this.updateFormInputs();
+
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.$refs.filterForm.submit();
+            }, 300);
+        },
+
+        updateFormInputs() {
+            // Update hidden inputs or actual select elements
+            Object.keys(this.filters).forEach(filterType => {
+                const selectName = this.getSelectName(filterType);
+                const select = document.querySelector(`select[name="${selectName}"]`);
+
+                if (select) {
+                    // Clear all selections
+                    Array.from(select.options).forEach(option => {
+                        option.selected = false;
+                    });
+
+                    // Set selected options
+                    this.filters[filterType].forEach(value => {
+                        const option = select.querySelector(`option[value="${value}"]`);
+                        if (option) {
+                            option.selected = true;
+                        }
+                    });
                 }
             });
-        });
+        },
 
-        // Apply lazy loading to component images
-        document.querySelectorAll('.card-img-top[data-src]').forEach(img => {
-            imageObserver.observe(img);
-        });
+        quickFilter(type) {
+            this.activeQuickFilter = type;
+            const url = new URL(window.location);
+
+            // Remove pagination when filtering
+            url.searchParams.delete('page');
+            url.searchParams.delete('show_all');
+
+            switch(type) {
+                case 'approved':
+                    url.searchParams.set('status', 'approved');
+                    break;
+                case 'pending':
+                    url.searchParams.set('status', 'pending');
+                    break;
+                case 'recent':
+                    url.searchParams.set('recent', '7');
+                    url.searchParams.delete('status');
+                    break;
+                default:
+                    url.searchParams.delete('status');
+                    url.searchParams.delete('recent');
+            }
+
+            window.location.href = url.toString();
+        },
+
+        toggleSelection(componentId) {
+            const index = this.selectedComponents.indexOf(componentId);
+            if (index > -1) {
+                this.selectedComponents.splice(index, 1);
+            } else {
+                this.selectedComponents.push(componentId);
+            }
+        },
+
+        toggleSelectAll(event) {
+            if (event.target.checked) {
+                this.selectedComponents = Array.from(new Set([...this.selectedComponents, ...this.componentsOnPage]));
+            } else {
+                this.selectedComponents = this.selectedComponents.filter(id => !this.componentsOnPage.includes(id));
+            }
+        },
+
+        clearSelection() {
+            this.selectedComponents = [];
+        },
+
+        bulkAction(action) {
+            if (this.selectedComponents.length === 0) return;
+
+            switch(action) {
+                case 'export':
+                    const exportUrl = `/api/components/export?ids=${this.selectedComponents.join(',')}`;
+                    window.open(exportUrl, '_blank');
+                    break;
+                case 'delete':
+                    if (confirm(`Delete ${this.selectedComponents.length} component(s)?`)) {
+                        fetch('/api/components/bulk-delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value
+                            },
+                            body: JSON.stringify({ ids: this.selectedComponents })
+                        }).then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Error: ' + data.error);
+                            }
+                        }).catch(error => {
+                            alert('Error deleting components: ' + error);
+                        });
+                    }
+                    break;
+            }
+        },
+
+        navigateToComponent(componentId) {
+            window.location.href = `/component/${componentId}`;
+        }
     }
+}
+
+// Utility functions for URL parameter manipulation
+function addUrlParam(key, value) {
+    const url = new URL(window.location);
+    url.searchParams.set(key, value);
+    if (key === 'show_all' && value === 'true') {
+        url.searchParams.delete('page');
+        url.searchParams.delete('per_page');
+
+        const total = {{ components.total if components else 0 }};
+        if (total > 500) {
+            if (!confirm(`This will show all ${total} components on one page, which may slow down your browser. Continue?`)) {
+                return;
+            }
+        }
+    }
+    window.location.href = url.toString();
+}
+
+function removeUrlParam(key) {
+    const url = new URL(window.location);
+    url.searchParams.delete(key);
+    window.location.href = url.toString();
+}
+
+function goToPage(pageNum) {
+    const url = new URL(window.location);
+    url.searchParams.set('page', pageNum);
+    url.searchParams.delete('show_all');
+    window.location.href = url.toString();
+}
+
+function changePerPage(value) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', value);
+    url.searchParams.delete('page');
+    url.searchParams.delete('show_all');
+    window.location.href = url.toString();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+
+    // Auto-hide flash messages after 5 seconds
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert-modern');
+        alerts.forEach(alert => {
+            const closeBtn = alert.querySelector('.btn-close');
+            if (closeBtn) closeBtn.click();
+        });
+    }, 5000);
+});
 </script>
 {% endblock %}

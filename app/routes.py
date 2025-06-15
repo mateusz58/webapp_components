@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
 from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, \
-    ComponentVariant, Brand, ComponentBrand
+    ComponentVariant, Brand, ComponentBrand, keyword_component
 from app.utils import process_csv_file
 from sqlalchemy import or_, text, func
 from datetime import datetime, timedelta
@@ -89,7 +89,7 @@ def save_uploaded_file(file, folder='uploads'):
 def index():
     """
     Main components listing with advanced pagination and filtering
-    UPDATED: Filter suppliers to only show those with components
+    UPDATED: Multi-select filtering for suppliers, brands, component types, and categories
     """
     try:
         # Get pagination parameters
@@ -104,15 +104,26 @@ def index():
         elif per_page < 1:
             per_page = DEFAULT_PER_PAGE
 
-        # Get filter parameters
+        # UPDATED: Get filter parameters with multi-select support
         search = request.args.get('search', '', type=str).strip()
-        component_type_id = request.args.get('component_type_id', type=int)
-        category_id = request.args.get('category_id', type=int)
-        supplier_id = request.args.get('supplier_id', type=int)
-        brand_id = request.args.get('brand_id', type=int)
+
+        # Multi-select parameters - get lists of IDs
+        component_type_ids = request.args.getlist('component_type_id')
+        component_type_ids = [int(id) for id in component_type_ids if id.isdigit()]
+
+        category_ids = request.args.getlist('category_id')
+        category_ids = [int(id) for id in category_ids if id.isdigit()]
+
+        supplier_ids = request.args.getlist('supplier_id')
+        supplier_ids = [int(id) for id in supplier_ids if id.isdigit()]
+
+        brand_ids = request.args.getlist('brand_id')
+        brand_ids = [int(id) for id in brand_ids if id.isdigit()]
+
+        # Single-select parameters (for status and recent)
         status = request.args.get('status', type=str)
         recent = request.args.get('recent', type=int)
-        
+
         # Sort parameters
         sort_by = request.args.get('sort_by', 'created_at', type=str)
         sort_order = request.args.get('sort_order', 'desc', type=str)
@@ -125,42 +136,50 @@ def index():
             joinedload(Component.pictures),
             joinedload(Component.keywords)
         )
-        
-        # Apply filters
+
+        # UPDATED: Apply filters with multi-select support
         filters = []
 
-        # Search filter
+        # Search filter - INCLUDING KEYWORDS
         if search:
+            # First, try to find keywords that match the search
+            keyword_subquery = db.session.query(keyword_component.c.component_id).join(
+                Keyword, keyword_component.c.keyword_id == Keyword.id
+            ).filter(
+                Keyword.name.ilike(f'%{search}%')
+            ).subquery()
+
             search_filter = or_(
                 Component.product_number.ilike(f'%{search}%'),
                 Component.description.ilike(f'%{search}%'),
                 Component.supplier.has(Supplier.supplier_code.ilike(f'%{search}%')),
                 Component.category.has(Category.name.ilike(f'%{search}%')),
-                Component.component_type.has(ComponentType.name.ilike(f'%{search}%'))
+                Component.component_type.has(ComponentType.name.ilike(f'%{search}%')),
+                Component.id.in_(keyword_subquery)  # Add keyword search
             )
             filters.append(search_filter)
-        
-        # Component type filter
-        if component_type_id:
-            filters.append(Component.component_type_id == component_type_id)
 
-        # Category filter
-        if category_id:
-            filters.append(Component.category_id == category_id)
+        # UPDATED: Multi-select component type filter
+        if component_type_ids:
+            filters.append(Component.component_type_id.in_(component_type_ids))
 
-        # Supplier filter
-        if supplier_id:
-            filters.append(Component.supplier_id == supplier_id)
+        # UPDATED: Multi-select category filter
+        if category_ids:
+            filters.append(Component.category_id.in_(category_ids))
 
-        # Brand filter
-        if brand_id:
-            # Filter components that have the specified brand
+        # UPDATED: Multi-select supplier filter
+        if supplier_ids:
+            filters.append(Component.supplier_id.in_(supplier_ids))
+
+        # UPDATED: Multi-select brand filter
+        if brand_ids:
+            # Filter components that have any of the specified brands
             brand_components_subquery = db.session.query(ComponentBrand.component_id).filter(
-                ComponentBrand.brand_id == brand_id
+                ComponentBrand.brand_id.in_(brand_ids)
             ).subquery()
             filters.append(Component.id.in_(brand_components_subquery))
 
-        # Status filter
+        # Status filter (single select)
         if status:
             if status == 'approved':
                 filters.append(and_(
@@ -180,8 +199,8 @@ def index():
                     Component.sms_status == 'not_ok',
                     Component.pps_status == 'not_ok'
                 ))
-        
-        # Recent filter (days)
+
+        # Recent filter (single select)
         if recent:
             recent_date = datetime.utcnow() - timedelta(days=recent)
             filters.append(Component.created_at >= recent_date)
@@ -189,7 +208,7 @@ def index():
         # Apply all filters
         if filters:
             query = query.filter(and_(*filters))
-        
+
         # Apply sorting
         sort_column = getattr(Component, sort_by, None)
         if sort_column:
@@ -206,7 +225,6 @@ def index():
             total_count = query.count()
             if total_count > SHOW_ALL_LIMIT:
                 flash(f'Too many results ({total_count}). Showing first {SHOW_ALL_LIMIT} items. Please use filters to narrow down results.', 'warning')
-                # Use regular pagination with the limit as per_page
                 components_pagination = query.paginate(
                     page=1,
                     per_page=SHOW_ALL_LIMIT,
@@ -214,7 +232,6 @@ def index():
                     max_per_page=SHOW_ALL_LIMIT
                 )
             else:
-                # Use regular pagination with total count as per_page
                 components_pagination = query.paginate(
                     page=1,
                     per_page=total_count,
@@ -229,15 +246,22 @@ def index():
                 error_out=False,
                 max_per_page=MAX_PER_PAGE
             )
-            components = components_pagination
 
-        # Load brands for each component (optimized)
+        # Load components with proper filtering
         component_items = components_pagination.items
 
-        # Batch load brands for all components (using ComponentBrand association)
-        component_ids = [c.id for c in component_items]
+        # Filter out components with missing required relationships
+        valid_components = []
+        for component in component_items:
+            if component.component_type and component.supplier and component.category:
+                valid_components.append(component)
+
+        # Update pagination items with valid components only
+        components_pagination.items = valid_components
+
+        # Batch load brands for all components
+        component_ids = [c.id for c in valid_components]
         if component_ids:
-            # Query the ComponentBrand association table to get brands for components
             brands_query = db.session.query(
                 ComponentBrand.component_id,
                 Brand.id,
@@ -246,28 +270,67 @@ def index():
                 ComponentBrand.component_id.in_(component_ids)
             ).all()
 
-            # Group brands by component
             component_brands = {}
             for comp_id, brand_id, brand_name in brands_query:
                 if comp_id not in component_brands:
                     component_brands[comp_id] = []
                 component_brands[comp_id].append({'id': brand_id, 'name': brand_name})
 
-            # Attach brands to components
-            for component in component_items:
+            for component in valid_components:
                 component._cached_brands = component_brands.get(component.id, [])
 
-        # UPDATED: Get filter options - only show options that have components
-        # Only get component types that have at least one component
+        # Batch load variants with colors and primary pictures
+        if component_ids:
+            # Load variants with color info and primary picture
+            variants_query = db.session.query(
+                ComponentVariant.component_id,
+                ComponentVariant.id,
+                ComponentVariant.variant_name,
+                Color.id.label('color_id'),
+                Color.name.label('color_name'),
+                Picture.url.label('picture_url')
+            ).join(
+                Color, ComponentVariant.color_id == Color.id
+            ).outerjoin(
+                Picture,
+                and_(
+                    Picture.variant_id == ComponentVariant.id,
+                    Picture.is_primary == True
+                )
+            ).filter(
+                ComponentVariant.component_id.in_(component_ids),
+                ComponentVariant.is_active == True
+            ).order_by(
+                ComponentVariant.component_id,
+                ComponentVariant.id
+            ).all()
+
+            component_variants = {}
+            for row in variants_query:
+                if row.component_id not in component_variants:
+                    component_variants[row.component_id] = []
+
+                # If no primary picture, try to get any picture for this variant
+                picture_url = row.picture_url
+                if not picture_url:
+                    any_pic = Picture.query.filter_by(variant_id=row.id).first()
+                    picture_url = any_pic.url if any_pic else None
+
+                component_variants[row.component_id].append({
+                    'id': row.id,
+                    'name': row.variant_name or row.color_name,
+                    'color_id': row.color_id,
+                    'color_name': row.color_name,
+                    'picture_url': picture_url
+                })
+
+            for component in valid_components:
+                component._cached_variants = component_variants.get(component.id, [])
+
+        # Get filter options - only show options that have components
         component_types_with_components = db.session.query(ComponentType).join(Component).distinct().order_by(ComponentType.name).all()
-
-        # FIXED: Only get suppliers that have at least one component
         suppliers_with_components = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
-
-        # UPDATED: Only get categories that have at least one component (optional)
         categories_with_components = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
-
-        # UPDATED: Only get brands that have at least one component
         brands_with_components = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
 
         # Get statistics
@@ -287,18 +350,18 @@ def index():
         return render_template(
             'index.html',
             components=components_pagination,
-            component_types=component_types_with_components,  # UPDATED: Only component types with components
-            categories=categories_with_components,           # UPDATED: Only categories with components
-            suppliers=suppliers_with_components,             # UPDATED: Only suppliers with components
-            brands=brands_with_components,                   # UPDATED: Only brands with components
+            component_types=component_types_with_components,
+            categories=categories_with_components,
+            suppliers=suppliers_with_components,
+            brands=brands_with_components,
             brands_count=brands_count,
             search=search,
             pagination_info=pagination_info,
             current_filters={
-                'component_type_id': component_type_id,
-                'category_id': category_id,
-                'supplier_id': supplier_id,
-                'brand_id': brand_id,
+                'component_type_ids': component_type_ids,
+                'category_ids': category_ids,
+                'supplier_ids': supplier_ids,
+                'brand_ids': brand_ids,
                 'status': status,
                 'recent': recent,
                 'sort_by': sort_by,
@@ -309,8 +372,6 @@ def index():
     except Exception as e:
         flash(f'An error occurred while loading components: {str(e)}', 'error')
         return render_template('index.html', components=None)
-
-
 
 @main.route('/component/<int:id>')
 def component_detail(id):
@@ -328,7 +389,7 @@ def component_detail(id):
 
         # USES YOUR EXACT TEMPLATE: component_detail.html
         return render_template('component_detail.html', component=component)
-        
+
     except Exception as e:
         current_app.logger.error(f"Error loading component {id}: {str(e)}")
         flash(f'Error loading component: {str(e)}', 'danger')
@@ -344,10 +405,22 @@ def new_component():
             description = request.form.get('description', '').strip()
             component_type_id = request.form.get('component_type_id')
             supplier_id = request.form.get('supplier_id')
-            category_id = request.form.get('category_id')
 
-            # Validate required fields
-            if not all([product_number, component_type_id, supplier_id, category_id]):
+            # FIXED: Get or create default category
+            category_id = request.form.get('category_id')
+            if not category_id:
+                # Try to find or create a default category
+                default_category = Category.query.filter_by(name='Uncategorized').first()
+                if not default_category:
+                    default_category = Category(name='Uncategorized')
+                    db.session.add(default_category)
+                    db.session.flush()
+                category_id = default_category.id
+            else:
+                category_id = int(category_id)
+
+            # Validate required fields (removed category_id from validation since we provide default)
+            if not all([product_number, component_type_id, supplier_id]):
                 flash('Please fill in all required fields.', 'danger')
                 return redirect(request.url)
 
@@ -366,7 +439,7 @@ def new_component():
                 description=description,
                 component_type_id=int(component_type_id),
                 supplier_id=int(supplier_id),
-                category_id=int(category_id)
+                category_id=category_id  # Now guaranteed to have a value
             )
 
             db.session.add(component)
@@ -421,13 +494,13 @@ def new_component():
     brands = Brand.query.order_by(Brand.name).all()  # NEW: Add brands
 
     return render_template('component_form.html',
-                          component=None,
-                          component_types=component_types,
-                          categories=categories,
-                          suppliers=suppliers,
-                          colors=colors,
-                          materials=materials,
-                          brands=brands)  # NEW: Pass brands to template
+                           component=None,
+                           component_types=component_types,
+                           categories=categories,
+                           suppliers=suppliers,
+                           colors=colors,
+                           materials=materials,
+                           brands=brands)  # NEW: Pass brands to template
 
 @main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
 def edit_component(id):
@@ -462,24 +535,34 @@ def edit_component(id):
                         db.session.add(keyword)
                     component.keywords.append(keyword)
 
-            # FIXED: Update brand associations properly
-            # Clear existing brand associations
-            for association in component.brand_associations[:]:  # Use slice to avoid modification during iteration
-                db.session.delete(association)
+            # FIXED: Update brand associations with proper handling
+            # Get current brand IDs
+            current_brand_ids = {assoc.brand_id for assoc in component.brand_associations}
 
-            # Add new brand associations
+            # Get new brand IDs from form
             selected_brands = request.form.getlist('brands')
-            if selected_brands:
-                for brand_id in selected_brands:
-                    if brand_id:  # Check for empty values
-                        brand = Brand.query.get(int(brand_id))
-                        if brand:
-                            # Create new ComponentBrand association
-                            association = ComponentBrand(
-                                component_id=component.id,
-                                brand_id=brand.id
-                            )
-                            db.session.add(association)
+            new_brand_ids = {int(brand_id) for brand_id in selected_brands if brand_id}
+
+            # Find brands to remove and add
+            brands_to_remove = current_brand_ids - new_brand_ids
+            brands_to_add = new_brand_ids - current_brand_ids
+
+            # Remove associations that are no longer needed
+            if brands_to_remove:
+                ComponentBrand.query.filter(
+                    ComponentBrand.component_id == component.id,
+                    ComponentBrand.brand_id.in_(brands_to_remove)
+                ).delete(synchronize_session=False)
+
+            # Add new associations
+            for brand_id in brands_to_add:
+                brand = Brand.query.get(brand_id)
+                if brand:
+                    association = ComponentBrand(
+                        component_id=component.id,
+                        brand_id=brand_id
+                    )
+                    db.session.add(association)
 
             # Update properties
             component_type = ComponentType.query.get(component.component_type_id)
@@ -537,16 +620,15 @@ def edit_component(id):
         available_brands = [{'id': brand.id, 'name': brand.name} for brand in brands]
 
     return render_template('component_edit_form.html',
-                          component=component,
-                          component_types=component_types,
-                          categories=categories,
-                          suppliers=suppliers,
-                          colors=colors,
-                          materials=materials,
-                          brands=brands,
-                          available_brands_json=available_brands,  # FIXED: Pass serializable data
-                          component_brands_json=component_cached_brands)  # FIXED: Pass serializable data
-
+                           component=component,
+                           component_types=component_types,
+                           categories=categories,
+                           suppliers=suppliers,
+                           colors=colors,
+                           materials=materials,
+                           brands=brands,
+                           available_brands_json=available_brands,  # FIXED: Pass serializable data
+                           component_brands_json=component_cached_brands)  # FIXED: Pass serializable data
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
@@ -728,9 +810,9 @@ def new_variant(id):
 
     # USES YOUR EXACT TEMPLATE: variant_form.html
     return render_template('variant_form.html',
-                          component=component,
-                          variant=None,
-                          colors=available_colors)
+                           component=component,
+                           variant=None,
+                           colors=available_colors)
 
 @main.route('/component/<int:component_id>/variant/<int:variant_id>/edit', methods=['GET', 'POST'])
 def edit_variant(component_id, variant_id):
@@ -864,56 +946,6 @@ def upload_csv():
 
     # GET request - show upload form
     return render_template('upload.html')
-
-# @main.route('/download/csv-template')
-# def download_csv_template():
-#     """Generate and download CSV template without picture_order fields."""
-#     try:
-#         # Create CSV template (removed picture_order fields)
-#         template_data = [
-#             [
-#                 'product_number', 'description', 'component_type', 'supplier_code',
-#                 'category_name', 'keywords', 'material', 'color', 'gender', 'style',
-#                 'brand', 'subbrand', 'size', 'finish', 'weight',
-#                 'picture_1_name', 'picture_1_url',
-#                 'picture_2_name', 'picture_2_url',
-#                 'picture_3_name', 'picture_3_url',
-#                 'picture_4_name', 'picture_4_url',
-#                 'picture_5_name', 'picture_5_url'
-#             ],
-#             [
-#                 'F-WL001', 'Shiny polyester 50D fabric', 'Fabrics', 'SUPP001',
-#                 'Polyester Fabrics', 'shiny,polyester,jacket,outerwear', 'polyester', 'silver',
-#                 'ladies,unisex', 'casual', 'MAR', 'MAR,MMC', '50D', 'waterproof', '120gsm',
-#                 'fabric_front.jpg', 'http://example.com/fabric_front.jpg',
-#                 'fabric_detail.jpg', 'http://example.com/fabric_detail.jpg',
-#                 '', '', '', '', '', ''
-#             ]
-#         ]
-#
-#         # Create CSV in memory
-#         output = io.StringIO()
-#         writer = csv.writer(output, delimiter=';')
-#         for row in template_data:
-#             writer.writerow(row)
-#
-#         # Create file-like object
-#         csv_data = output.getvalue()
-#         output.close()
-#
-#         # Return as downloadable file
-#         return current_app.response_class(
-#             csv_data,
-#             mimetype='text/csv',
-#             headers={
-#                 'Content-Disposition': 'attachment; filename=component_template.csv'
-#             }
-#         )
-#
-#     except Exception as e:
-#         current_app.logger.error(f"Error generating CSV template: {str(e)}")
-#         flash('Error generating template', 'danger')
-#         return redirect(url_for('main.upload_csv'))
 
 # API Routes for AJAX functionality - Enhanced for new frontend
 @main.route('/api/components/search')
@@ -1152,7 +1184,6 @@ def api_export_components():
         }), 500
 
 # Enhanced Supplier Routes - adapted for new frontend
-
 @main.route('/api/suppliers/<int:supplier_id>', methods=['PUT'])
 def api_update_supplier(supplier_id):
     """API endpoint to update a supplier."""
@@ -1299,7 +1330,6 @@ def api_export_suppliers():
         current_app.logger.error(f"Error exporting suppliers: {str(e)}")
         return jsonify({'error': 'Export failed'}), 500
 
-
 @main.route('/suppliers')
 def suppliers():
     """Display all suppliers with management interface."""
@@ -1327,8 +1357,8 @@ def suppliers():
             suppliers_data.append(supplier_dict)
 
         return render_template('suppliers.html',
-                             suppliers=suppliers_query,  # For server-side rendering
-                             suppliers_data=suppliers_data)  # For JavaScript
+                               suppliers=suppliers_query,  # For server-side rendering
+                               suppliers_data=suppliers_data)  # For JavaScript
 
     except Exception as e:
         current_app.logger.error(f"Error loading suppliers: {str(e)}")
@@ -1455,6 +1485,7 @@ def edit_supplier(id):
         current_app.logger.error(f"Error rendering template: {str(e)}")
         flash(f'Error loading edit form: {str(e)}', 'danger')
         return redirect(url_for('main.suppliers'))
+
 @main.route('/supplier/delete/<int:id>', methods=['POST'])
 def delete_supplier(id):
     """Delete a supplier."""
@@ -1490,7 +1521,7 @@ def _process_component_properties(component, component_type_name, form_data):
         'Hangtags': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
         'Packaging': ['material']  # Removed 'brand' - now handled separately
     }
-    
+
     allowed_properties = type_properties.get(component_type_name, [])
 
     # Initialize properties dict if it doesn't exist
@@ -1521,9 +1552,6 @@ def _process_component_properties(component, component_type_name, form_data):
                     'updated_at': datetime.utcnow().isoformat()
                 }
 
-
-# Update the image processing helper function
-# Update the image processing helper function
 def _process_image_uploads(component, request):
     """Process image uploads for a component with auto-assigned order - enhanced for new frontend."""
     uploaded_count = 0
@@ -1752,7 +1780,6 @@ def api_component_brands(component_id):
         current_app.logger.error(f"Error managing component brands: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 # Error handlers for better UX
 @main.errorhandler(404)
 def not_found_error(error):
@@ -1770,9 +1797,6 @@ def file_too_large_error(error):
     """Handle file upload size errors"""
     flash('File is too large. Maximum size is 16MB.', 'error')
     return redirect(request.url or url_for('main.index'))
-
-# Add any remaining routes from your original file that weren't covered above
-# (supplier management, additional API endpoints, etc.)
 
 @main.route('/download/csv-template')
 def download_csv_template():

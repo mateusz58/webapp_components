@@ -5,13 +5,39 @@
 {% block extra_css %}
 <style>
     .supplier-card {
-        border: none;
-        border-radius: var(--border-radius-lg);
-        box-shadow: var(--shadow-md);
-        transition: all 0.3s ease;
-        background: white;
-        overflow: hidden;
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    background: white;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px; /* Ensure consistent height */
+}
+
+    .supplier-card .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
     }
+
+    .supplier-card .card-body > div:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+.supplier-card .card-body > div:last-child {
+    margin-top: auto; /* Push action buttons to bottom */
+    margin-bottom: 0;
+}
+
+/* Ensure component types and recent components don't collapse when empty */
+.supplier-card .mb-3 {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+}
 
     .supplier-card:hover {
         transform: translateY(-5px);
@@ -181,12 +207,24 @@
     }
 
     .component-list {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #e2e8f0;
-        border-radius: var(--border-radius);
-        padding: 0.5rem;
-    }
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    background: white;
+    flex: 1;
+    min-height: 80px; /* Prevent collapse */
+}
+
+.component-list:empty::before {
+    content: "No components yet";
+    color: #94a3b8;
+    font-size: 0.75rem;
+    padding: 1rem;
+    display: block;
+    text-align: center;
+}
 
     .component-item {
         padding: 0.5rem;
@@ -202,11 +240,11 @@
         .supplier-grid {
             grid-template-columns: 1fr;
         }
-        
+
         .search-filter-bar {
             padding: 1rem;
         }
-        
+
         .quick-add-form {
             padding: 1rem;
         }
@@ -243,28 +281,28 @@
         <form @submit.prevent="addSupplier()">
             <div class="row">
                 <div class="col-md-4">
-                    <input type="text" 
-                           class="form-control form-control-modern" 
-                           placeholder="Supplier Code (e.g., SUPP001)" 
+                    <input type="text"
+                           class="form-control form-control-modern"
+                           placeholder="Supplier Code (e.g., SUPP001)"
                            x-model="newSupplier.code"
                            required>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" 
-                           class="form-control form-control-modern" 
-                           placeholder="Company Name" 
+                    <input type="text"
+                           class="form-control form-control-modern"
+                           placeholder="Company Name"
                            x-model="newSupplier.name">
                 </div>
                 <div class="col-md-4">
                     <div class="d-flex gap-2">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="btn btn-primary-modern btn-modern flex-grow-1"
                                 :disabled="!newSupplier.code">
                             <i data-lucide="save" class="me-2" style="width: 16px; height: 16px;"></i>
                             Add Supplier
                         </button>
-                        <button type="button" 
-                                class="btn btn-outline-secondary" 
+                        <button type="button"
+                                class="btn btn-outline-secondary"
                                 @click="showAddForm = false; resetForm()">
                             <i data-lucide="x" style="width: 16px; height: 16px;"></i>
                         </button>
@@ -273,15 +311,15 @@
             </div>
             <div class="row mt-2">
                 <div class="col-md-8">
-                    <textarea class="form-control form-control-modern" 
-                              rows="2" 
-                              placeholder="Address (optional)" 
+                    <textarea class="form-control form-control-modern"
+                              rows="2"
+                              placeholder="Address (optional)"
                               x-model="newSupplier.address"></textarea>
                 </div>
                 <div class="col-md-4">
-                    <input type="email" 
-                           class="form-control form-control-modern" 
-                           placeholder="Contact Email" 
+                    <input type="email"
+                           class="form-control form-control-modern"
+                           placeholder="Contact Email"
                            x-model="newSupplier.email">
                 </div>
             </div>
@@ -293,13 +331,13 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="position-relative">
-                    <input type="text" 
-                           class="form-control form-control-modern" 
-                           placeholder="Search suppliers by code, name, or address..." 
+                    <input type="text"
+                           class="form-control form-control-modern"
+                           placeholder="Search suppliers by code, name, or address..."
                            x-model="searchQuery"
                            @input="filterSuppliers()">
-                    <i data-lucide="search" 
-                       class="position-absolute top-50 end-0 translate-middle-y me-3" 
+                    <i data-lucide="search"
+                       class="position-absolute top-50 end-0 translate-middle-y me-3"
                        style="width: 20px; height: 20px; color: var(--color-secondary);"></i>
                 </div>
             </div>
@@ -348,7 +386,7 @@
     {% if suppliers %}
         <div class="supplier-grid">
             {% for supplier in suppliers %}
-                <div class="supplier-card" 
+                <div class="supplier-card"
                      x-show="filteredSuppliers.includes({{ supplier.id }}) || filteredSuppliers.length === 0">
                     <!-- Selection Checkbox -->
                     <div class="position-absolute top-0 start-0 p-3" style="z-index: 10;">
@@ -397,86 +435,94 @@
 
                     <!-- Supplier Body -->
                     <div class="card-body">
-                        <!-- Stats -->
-                        <div class="supplier-stats">
-                            <div class="stat-item">
-                                <span class="text-muted">
-                                    <i data-lucide="package" class="me-2" style="width: 14px; height: 14px;"></i>
-                                    Components
-                                </span>
-                                <span class="stat-value">{{ supplier.components|length }}</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="text-muted">
-                                    <i data-lucide="calendar" class="me-2" style="width: 14px; height: 14px;"></i>
-                                    Added
-                                </span>
-                                <span class="stat-value">{{ supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else 'Unknown' }}</span>
-                            </div>
-                            {% if supplier.updated_at and supplier.updated_at != supplier.created_at %}
-                                <div class="stat-item">
-                                    <span class="text-muted">
-                                        <i data-lucide="edit" class="me-2" style="width: 14px; height: 14px;"></i>
-                                        Updated
-                                    </span>
-                                    <span class="stat-value">{{ supplier.updated_at.strftime('%Y-%m-%d') }}</span>
-                                </div>
-                            {% endif %}
+    <!-- Stats Section -->
+    <div class="supplier-stats">
+        <div class="stat-item">
+            <span class="text-muted">
+                <i data-lucide="package" class="me-2" style="width: 14px; height: 14px;"></i>
+                Components
+            </span>
+            <span class="stat-value">{{ supplier.components|length }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="text-muted">
+                <i data-lucide="calendar" class="me-2" style="width: 14px; height: 14px;"></i>
+                Added
+            </span>
+            <span class="stat-value">{{ supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else 'Unknown' }}</span>
+        </div>
+        {% if supplier.updated_at and supplier.updated_at != supplier.created_at %}
+            <div class="stat-item">
+                <span class="text-muted">
+                    <i data-lucide="edit" class="me-2" style="width: 14px; height: 14px;"></i>
+                    Updated
+                </span>
+                <span class="stat-value">{{ supplier.updated_at.strftime('%Y-%m-%d') }}</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Component Types Section - Always show -->
+    <div class="mb-3">
+        <h6 class="fw-bold mb-2">Component Types</h6>
+        {% if supplier.components %}
+            <div class="d-flex flex-wrap gap-1">
+                {% set component_types = supplier.components | map(attribute='component_type.name') | unique | list %}
+                {% for type_name in component_types[:3] %}
+                    <span class="badge bg-primary">{{ type_name }}</span>
+                {% endfor %}
+                {% if component_types|length > 3 %}
+                    <span class="badge bg-light text-dark">+{{ component_types|length - 3 }}</span>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-muted" style="font-size: 0.875rem;">No component types yet</div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Components Section - Always show -->
+    <div class="mb-3">
+        <h6 class="fw-bold mb-2">Recent Components</h6>
+        <div class="component-list">
+            {% if supplier.components %}
+                {% for component in supplier.components | sort(attribute='created_at', reverse=true) | list %}
+                    {% if loop.index <= 5 %}
+                        <div class="component-item d-flex justify-content-between align-items-center">
+                            <span>{{ component.product_number }}</span>
+                            <small class="text-muted">{{ component.created_at.strftime('%m/%d') if component.created_at else 'N/A' }}</small>
                         </div>
-
-                        <!-- Component Types -->
-                        {% if supplier.components %}
-                            <div class="mb-3">
-                                <h6 class="fw-bold mb-2">Component Types</h6>
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% set component_types = supplier.components | map(attribute='component_type.name') | unique | list %}
-                                    {% for type_name in component_types[:3] %}
-                                        <span class="badge bg-primary">{{ type_name }}</span>
-                                    {% endfor %}
-                                    {% if component_types|length > 3 %}
-                                        <span class="badge bg-light text-dark">+{{ component_types|length - 3 }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Recent Components -->
-                            <div class="mb-3">
-                                <h6 class="fw-bold mb-2">Recent Components</h6>
-                                <div class="component-list">
-                                    {% for component in supplier.components | sort(attribute='created_at', reverse=true) | list %}
-                                        {% if loop.index <= 5 %}
-                                            <div class="component-item d-flex justify-content-between align-items-center">
-                                                <span>{{ component.product_number }}</span>
-                                                <small class="text-muted">{{ component.created_at.strftime('%m/%d') if component.created_at else 'N/A' }}</small>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% if supplier.components|length > 5 %}
-                                        <div class="component-item text-center text-muted">
-                                            <small>... and {{ supplier.components|length - 5 }} more</small>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        <!-- Action Buttons -->
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('main.index') }}?supplier_id={{ supplier.id }}" 
-                               class="btn btn-primary-modern btn-modern btn-sm">
-                                <i data-lucide="grid-3x3" class="me-2" style="width: 14px; height: 14px;"></i>
-                                View Components ({{ supplier.components|length }})
-                            </a>
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-outline-warning btn-sm" @click="editSupplier({{ supplier.id }})">
-                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm" @click="deleteSupplier({{ supplier.id }})">
-                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                                </button>
-                            </div>
-                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if supplier.components|length > 5 %}
+                    <div class="component-item text-center text-muted">
+                        <small>... and {{ supplier.components|length - 5 }} more</small>
                     </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center text-muted py-3" style="font-size: 0.75rem;">
+                    No components added yet
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons - This will be pushed to bottom -->
+    <div class="d-grid gap-2">
+        <a href="{{ url_for('main.index') }}?supplier_id={{ supplier.id }}"
+           class="btn btn-primary-modern btn-modern btn-sm">
+            <i data-lucide="grid-3x3" class="me-2" style="width: 14px; height: 14px;"></i>
+            View Components ({{ supplier.components|length }})
+        </a>
+        <div class="btn-group" role="group">
+            <button class="btn btn-outline-warning btn-sm" @click="editSupplier({{ supplier.id }})">
+                <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-sm" @click="deleteSupplier({{ supplier.id }})">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+        </div>
+    </div>
+</div>
                 </div>
             {% endfor %}
         </div>
@@ -507,34 +553,34 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form x-ref="editForm">
-                        <div class="mb-3">
-                            <label class="form-label form-label-modern">Supplier Code *</label>
-                            <input type="text" 
-                                   class="form-control form-control-modern" 
-                                   x-model="editSupplier.code"
-                                   required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label form-label-modern">Company Name</label>
-                            <input type="text" 
-                                   class="form-control form-control-modern" 
-                                   x-model="editSupplier.name">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label form-label-modern">Address</label>
-                            <textarea class="form-control form-control-modern" 
-                                      rows="3" 
-                                      x-model="editSupplier.address"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label form-label-modern">Contact Email</label>
-                            <input type="email" 
-                                   class="form-control form-control-modern" 
-                                   x-model="editSupplier.email">
-                        </div>
-                    </form>
-                </div>
+    <form x-ref="editForm">
+        <div class="mb-3">
+            <label class="form-label form-label-modern">Supplier Code *</label>
+            <input type="text"
+                   class="form-control form-control-modern"
+                   x-model="editSupplierData.code"
+                   required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label form-label-modern">Company Name</label>
+            <input type="text"
+                   class="form-control form-control-modern"
+                   x-model="editSupplierData.name">
+        </div>
+        <div class="mb-3">
+            <label class="form-label form-label-modern">Address</label>
+            <textarea class="form-control form-control-modern"
+                      rows="3"
+                      x-model="editSupplierData.address"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label form-label-modern">Contact Email</label>
+            <input type="email"
+                   class="form-control form-control-modern"
+                   x-model="editSupplierData.email">
+        </div>
+    </form>
+</div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary-modern btn-modern" @click="saveSupplier()">
@@ -601,7 +647,7 @@ function supplierManagement() {
             email: ''
         },
         
-        editSupplier: {
+        editSupplierData: {
             id: null,
             code: '',
             name: '',
@@ -709,7 +755,8 @@ function supplierManagement() {
         editSupplier(supplierId) {
             const supplier = this.suppliers.find(s => s.id === supplierId);
             if (supplier) {
-                this.editSupplier = {
+                // Use the renamed data object
+                this.editSupplierData = {
                     id: supplier.id,
                     code: supplier.supplier_code,
                     name: supplier.name || '',
@@ -717,24 +764,35 @@ function supplierManagement() {
                     email: supplier.email || ''
                 };
                 
-                const modal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
-                modal.show();
+                // Properly initialize and show modal
+                const modalElement = document.getElementById('editSupplierModal');
+                if (modalElement) {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                }
             }
         },
 
-        saveSupplier() {
-            // Implement save supplier logic
+          saveSupplier() {
+            // Use the renamed data object
             const formData = new FormData();
-            formData.append('supplier_code', this.editSupplier.code);
-            formData.append('address', this.editSupplier.address);
-            formData.append('email', this.editSupplier.email);
+            formData.append('supplier_code', this.editSupplierData.code);
+            formData.append('address', this.editSupplierData.address);
+            formData.append('email', this.editSupplierData.email);
 
-            fetch(`/api/suppliers/${this.editSupplier.id}`, {
+            fetch(`/api/suppliers/${this.editSupplierData.id}`, {
                 method: 'PUT',
                 body: formData
             }).then(response => {
                 if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('editSupplierModal')).hide();
+                    // Properly hide modal
+                    const modalElement = document.getElementById('editSupplierModal');
+                    if (modalElement) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    }
                     window.location.reload();
                 } else {
                     alert('Error updating supplier');
