@@ -570,6 +570,143 @@
         from { opacity: 0; transform: scale(0.8); }
         to { opacity: 1; transform: scale(1); }
     }
+
+    /* Variant Management Styles */
+    .variant-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+
+    .variant-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .variant-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .variant-color-indicator {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+
+    .variant-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .variant-info h6 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--color-dark);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .variant-actions {
+        display: flex;
+        gap: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .variant-actions .btn {
+        padding: 0.25rem;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .variant-images {
+        margin-bottom: 0.75rem;
+    }
+
+    .variant-image-preview {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .variant-thumbnail {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .variant-thumbnail-more {
+        width: 40px;
+        height: 40px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .variant-no-images {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 4px;
+        border: 1px dashed #cbd5e1;
+    }
+
+    .variant-description {
+        padding-top: 0.75rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .variant-description small {
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Responsive variant grid */
+    @media (max-width: 768px) {
+        .variant-card {
+            margin-bottom: 1rem;
+        }
+        
+        .variant-header {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .variant-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+        
+        .variant-image-preview {
+            justify-content: center;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -644,6 +781,14 @@
                                     <span x-show="currentStep !== 5 && currentStep <= 5">5</span>
                                 </div>
                                 <div class="step-title">Keywords & Review</div>
+                            </div>
+                            <div class="wizard-step" :class="{ 'active': currentStep === 6, 'completed': currentStep > 6 }">
+                                <div class="step-indicator">
+                                    <i data-lucide="palette" x-show="currentStep === 6" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="check" x-show="currentStep > 6" style="width: 16px; height: 16px;"></i>
+                                    <span x-show="currentStep !== 6 && currentStep <= 6">6</span>
+                                </div>
+                                <div class="step-title">Variants</div>
                             </div>
                         </div>
                     </div>
@@ -1086,6 +1231,178 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Step 6: Variants -->
+                        <div class="step-content" :class="{ 'active': currentStep === 6 }">
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i data-lucide="palette" class="me-2" style="width: 20px; height: 20px;"></i>
+                                    Color Variants
+                                </h5>
+                                
+                                <p class="text-muted mb-4">
+                                    Manage color variants for this component. Each variant can have its own set of images.
+                                </p>
+
+                                <!-- Existing Variants -->
+                                {% if component and component.variants %}
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i data-lucide="list" class="me-2" style="width: 16px; height: 16px;"></i>
+                                        Existing Variants ({{ component.variants|length }})
+                                    </h6>
+                                    
+                                    <div class="row">
+                                        {% for variant in component.variants %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="variant-card">
+                                                <div class="variant-header">
+                                                    <div class="variant-color-indicator" 
+                                                         style="background-color: {{ variant.color.hex_code if hasattr(variant.color, 'hex_code') and variant.color.hex_code else '#ccc' }};"
+                                                         title="{{ variant.color.name }}"></div>
+                                                    <div class="variant-info">
+                                                        <h6 class="mb-1">{{ variant.get_display_name() }}</h6>
+                                                        <small class="text-muted">{{ variant.color.name }}</small>
+                                                    </div>
+                                                    <div class="variant-actions">
+                                                        <a href="{{ url_for('main.edit_variant', component_id=component.id, variant_id=variant.id) }}"
+                                                           class="btn btn-sm btn-outline-primary"
+                                                           title="Edit variant">
+                                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                                        </a>
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-danger"
+                                                                onclick="deleteVariant({{ variant.id }})"
+                                                                title="Delete variant">
+                                                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="variant-images">
+                                                    {% if variant.variant_pictures %}
+                                                    <div class="variant-image-preview">
+                                                        {% for picture in variant.variant_pictures[:3] %}
+                                                        <img src="{{ picture.url }}" 
+                                                             alt="{{ picture.picture_name }}"
+                                                             class="variant-thumbnail"
+                                                             title="{{ picture.picture_name }}">
+                                                        {% endfor %}
+                                                        {% if variant.variant_pictures|length > 3 %}
+                                                        <div class="variant-thumbnail-more">
+                                                            <span>+{{ variant.variant_pictures|length - 3 }}</span>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <small class="text-muted">{{ variant.variant_pictures|length }} image{{ 's' if variant.variant_pictures|length != 1 else '' }}</small>
+                                                    {% else %}
+                                                    <div class="variant-no-images">
+                                                        <i data-lucide="image" style="width: 24px; height: 24px; color: #ccc;"></i>
+                                                        <small class="text-muted">No images</small>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if variant.description %}
+                                                <div class="variant-description">
+                                                    <small class="text-muted">{{ variant.description }}</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Add New Variant Section -->
+                                <div class="form-section">
+                                    <h6 class="fw-bold mb-3">
+                                        <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                                        Add New Variant
+                                    </h6>
+                                    
+                                    <div class="alert alert-modern alert-info">
+                                        <div class="d-flex align-items-center">
+                                            <i data-lucide="info" class="me-2" style="width: 20px; height: 20px;"></i>
+                                            <div>
+                                                <strong>New variants are managed separately</strong>
+                                                <p class="mb-0 mt-1">Click the button below to add a new color variant. You'll be taken to a dedicated form where you can set the color, name, description, and upload variant-specific images.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('main.new_variant', id=component.id) if component else '#' }}"
+                                           class="btn btn-primary-modern btn-modern"
+                                           {% if not component %}disabled{% endif %}>
+                                            <i data-lucide="plus" class="me-2" style="width: 16px; height: 16px;"></i>
+                                            Add New Variant
+                                        </a>
+                                        
+                                        {% if component and component.variants %}
+                                        <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                           class="btn btn-outline-secondary">
+                                            <i data-lucide="eye" class="me-2" style="width: 16px; height: 16px;"></i>
+                                            View All Variants
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if not component %}
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                                            Save the component first to add variants
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Variant Management Tips -->
+                                <div class="form-section">
+                                    <h6 class="fw-bold mb-3">
+                                        <i data-lucide="lightbulb" class="me-2" style="width: 16px; height: 16px;"></i>
+                                        Tips for Managing Variants
+                                    </h6>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <ul class="list-unstyled">
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Each variant can have multiple images</small>
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Images are ordered for display</small>
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Variants can have custom names</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <ul class="list-unstyled">
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Each color can only be used once</small>
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Variants can be activated/deactivated</small>
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                                                    <small class="ms-2">Images are automatically optimized</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Wizard Navigation -->
@@ -1224,13 +1541,25 @@
 {% endblock %}
 {% block scripts %}
 <script>
- function componentForm() {
+// Parse backend-provided component_type_properties JSON once
+const typeProperties = JSON.parse('{{ component_type_properties | tojson | safe }}');
+const initialKeywords = {% if component and component.keywords %}{{ (component.keywords | map(attribute='name') | list) | tojson }}{% else %}[]{% endif %};
+const initialSelectedBrands = {% if component_brands_json is defined %}{{ component_brands_json | tojson }}{% else %}[]{% endif %};
+const initialAvailableBrands = {% if available_brands_json is defined %}{{ available_brands_json | tojson }}{% else %}[]{% endif %};
+const initialProductNumber = {{ component.product_number | tojson if component and component.product_number is not none else '""' }};
+const initialDescription = {{ component.description | tojson if component and component.description is not none else '""' }};
+const initialComponentTypeId = {{ component.component_type_id | tojson if component and component.component_type_id is not none else '""' }};
+const initialSupplierId = {{ component.supplier_id | tojson if component and component.supplier_id is not none else '""' }};
+const initialCategoryId = {{ component.category_id | tojson if component and component.category_id is not none else '""' }};
+const initialProperties = {% if component and component.properties is not none %}{{ component.properties | tojson }}{% else %}{}{% endif %};
+
+function componentForm() {
     return {
         currentStep: 1,
-        totalSteps: 5,
+        totalSteps: 6,
         dragOver: false,
         keywordInput: '',
-        keywords: {% if component and component.keywords %}{{ (component.keywords | map(attribute='name') | list) | tojson }}{% else %}[]{% endif %},
+        keywords: initialKeywords,
         keywordSuggestions: [],
         images: [],
         lastSaved: null,
@@ -1238,18 +1567,18 @@
         isSubmitting: false,
         errors: {},
 
-        // FIXED: Brand selection using serializable data passed from route
-        selectedBrands: {% if component_brands_json is defined %}{{ component_brands_json | tojson }}{% else %}[]{% endif %},
+        // Brand selection using serializable data passed from route
+        selectedBrands: initialSelectedBrands,
         selectedBrandId: '',
-        availableBrands: {% if available_brands_json is defined %}{{ available_brands_json | tojson }}{% else %}[]{% endif %},
+        availableBrands: initialAvailableBrands,
 
         formData: {
-            product_number: {% if component %}'{{ component.product_number | replace("'", "\\'") }}'{% else %}''{% endif %},
-            description: {% if component %}'{{ (component.description | replace("'", "\\'") | replace("\n", "\\n")) if component.description else "" }}'{% else %}''{% endif %},
-            component_type_id: {% if component %}'{{ component.component_type_id }}'{% else %}''{% endif %},
-            supplier_id: {% if component %}'{{ component.supplier_id }}'{% else %}''{% endif %},
-            category_id: {% if component %}'{{ component.category_id }}'{% else %}''{% endif %},
-            properties: {% if component and component.properties %}{{ component.properties | tojson }}{% else %}{}{% endif %}
+            product_number: initialProductNumber,
+            description: initialDescription,
+            component_type_id: initialComponentTypeId,
+            supplier_id: initialSupplierId,
+            category_id: initialCategoryId,
+            properties: initialProperties
         },
 
         availableProperties: [],
@@ -1278,17 +1607,6 @@
             'weight': 'e.g., 50g',
             'finish': 'e.g., matte, glossy'
         },
-
-            // Component type properties mapping (brand removed - now handled separately)
-            typePropertiesMap: {
-                'Fabrics': ['material', 'color', 'gender', 'finish', 'weight'],
-                'Shapes': ['gender', 'style', 'subbrand', 'subcategory'],
-                'Buttons': ['material', 'color', 'size'],
-                'Zippers': ['material', 'color', 'size'],
-                'Labels': ['subbrand', 'material'],
-                'Hangtags': ['subbrand', 'material'],
-                'Packaging': ['material']
-            },
 
         init() {
             // Debug logging
@@ -1323,6 +1641,21 @@
                 id: brand.id,
                 name: brand.name || 'Unknown Brand'
             }));
+        },
+
+        loadComponentTypeProperties() {
+            const componentTypeSelect = document.getElementById('component_type_id');
+            const selectedText = componentTypeSelect?.options[componentTypeSelect.selectedIndex]?.text;
+            if (selectedText && typeProperties[selectedText]) {
+                this.availableProperties = typeProperties[selectedText].map(p => p.property_name);
+                this.availableProperties.forEach(prop => {
+                    if (!(prop in this.formData.properties)) {
+                        this.formData.properties[prop] = '';
+                    }
+                });
+            } else {
+                this.availableProperties = [];
+            }
         },
 
         // FIXED: Brand management methods
@@ -1376,6 +1709,8 @@
                     return true; // Images are optional
                 case 5:
                     return true; // Keywords are optional
+                case 6:
+                    return true; // Variants are optional
                 default:
                     return true;
             }
@@ -1422,24 +1757,6 @@
             return this.isStepValid(1);
         },
 
-        loadComponentTypeProperties() {
-            const componentTypeSelect = document.getElementById('component_type_id');
-            const selectedText = componentTypeSelect?.options[componentTypeSelect.selectedIndex]?.text;
-
-            if (selectedText && this.typePropertiesMap[selectedText]) {
-                this.availableProperties = this.typePropertiesMap[selectedText];
-
-                this.availableProperties.forEach(prop => {
-                    if (!(prop in this.formData.properties)) {
-                        this.formData.properties[prop] = '';
-                    }
-                });
-            } else {
-                this.availableProperties = [];
-            }
-        },
-
-        // Image handling methods remain the same...
         handleImageSelect(event) {
             const files = event.target.files;
             this.processImages(files);
@@ -1488,7 +1805,6 @@
             }
         },
 
-        // Keyword methods remain the same...
         searchKeywords() {
             const input = this.keywordInput.toLowerCase();
             if (input.length > 1) {
@@ -1597,5 +1913,28 @@
             });
         }, 5000);
     });
+
+    // Variant deletion function
+    function deleteVariant(variantId) {
+        if (confirm('Are you sure you want to delete this variant? This action cannot be undone.')) {
+            // Create a form to submit the deletion
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/component/{{ component.id if component else '' }}/variant/${variantId}/delete`;
+            
+            // Add CSRF token if available
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
 {% endblock %}

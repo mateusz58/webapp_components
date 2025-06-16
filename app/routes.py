@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
 from app.models import Supplier, Category, Color, Material, Component, Picture, ComponentType, Keyword, \
-    ComponentVariant, Brand, ComponentBrand, keyword_component
+    ComponentVariant, Brand, ComponentBrand, keyword_component, ComponentTypeProperty
 from app.utils_legacy import process_csv_file
 from sqlalchemy import or_, text, func
 from datetime import datetime, timedelta
@@ -157,7 +157,11 @@ def index():
             search_filter = or_(
                 Component.product_number.ilike(f'%{search}%'),
                 Component.description.ilike(f'%{search}%'),
-                Component.supplier.has(Supplier.supplier_code.ilike(f'%{search}%')),
+                # Handle supplier search - only search if supplier_id is not null
+                and_(
+                    Component.supplier_id.isnot(None),
+                    Component.supplier.has(Supplier.supplier_code.ilike(f'%{search}%'))
+                ),
                 Component.category.has(Category.name.ilike(f'%{search}%')),
                 Component.component_type.has(ComponentType.name.ilike(f'%{search}%')),
                 Component.id.in_(keyword_subquery)  # Add keyword search
@@ -217,8 +221,8 @@ def index():
         # Filter out components with missing required relationships BEFORE pagination
         query = query.filter(
             Component.component_type_id.isnot(None),
-            Component.supplier_id.isnot(None),
             Component.category_id.isnot(None)
+            # supplier_id is now optional, so we don't filter it out
         )
 
         # Apply sorting
@@ -352,6 +356,22 @@ def index():
             'show_all': show_all
         }
 
+        # NEW: Load component type properties from database
+        component_type_properties = {}
+        for ct in component_types_with_components:
+            ct_properties = ComponentTypeProperty.query.filter_by(component_type_id=ct.id).order_by(ComponentTypeProperty.display_order).all()
+            component_type_properties[ct.name] = [
+                {
+                    'property_name': prop.property_name,
+                    'property_type': prop.property_type,
+                    'is_required': prop.is_required,
+                    'options': prop.get_options(),
+                    'placeholder': prop.get_placeholder(),
+                    'display_name': prop.display_name
+                }
+                for prop in ct_properties
+            ]
+
         return render_template(
             'index.html',
             components=components_pagination,
@@ -402,14 +422,14 @@ def component_detail(id):
 
 @main.route('/component/new', methods=['GET', 'POST'])
 def new_component():
-    """Create new component - UPDATED with brand handling"""
+    """Create new component - UPDATED with improved brand handling and type-specific property creation"""
     if request.method == 'POST':
         try:
             # Get form data
             product_number = request.form.get('product_number', '').strip()
             description = request.form.get('description', '').strip()
             component_type_id = request.form.get('component_type_id')
-            supplier_id = request.form.get('supplier_id')
+            supplier_id = request.form.get('supplier_id')  # Now optional
 
             # FIXED: Get or create default category
             category_id = request.form.get('category_id')
@@ -424,16 +444,34 @@ def new_component():
             else:
                 category_id = int(category_id)
 
-            # Validate required fields (removed category_id from validation since we provide default)
-            if not all([product_number, component_type_id, supplier_id]):
-                flash('Please fill in all required fields.', 'danger')
+            # Validate required fields (only product_number and component_type_id are required)
+            if not all([product_number, component_type_id]):
+                flash('Please fill in all required fields (Product Number and Component Type).', 'danger')
                 return redirect(request.url)
 
-            # Check if product_number already exists for this supplier
-            existing = Component.query.filter_by(
-                product_number=product_number,
-                supplier_id=supplier_id
-            ).first()
+            # Check if at least one picture is uploaded
+            has_picture = False
+            for i in range(1, 6):
+                picture_file = request.files.get(f'picture_{i}')
+                if picture_file and picture_file.filename:
+                    has_picture = True
+                    break
+            
+            if not has_picture:
+                flash('Please upload at least one picture for the component.', 'danger')
+                return redirect(request.url)
+
+            # Handle optional supplier_id
+            supplier_id = int(supplier_id) if supplier_id else None
+
+            # Check if product_number already exists for this supplier (or no supplier)
+            existing_query = Component.query.filter_by(product_number=product_number)
+            if supplier_id:
+                existing_query = existing_query.filter_by(supplier_id=supplier_id)
+            else:
+                existing_query = existing_query.filter_by(supplier_id=None)
+            
+            existing = existing_query.first()
             if existing:
                 flash('Product number already exists for this supplier.', 'danger')
                 return redirect(request.url)
@@ -443,14 +481,14 @@ def new_component():
                 product_number=product_number,
                 description=description,
                 component_type_id=int(component_type_id),
-                supplier_id=int(supplier_id),
+                supplier_id=supplier_id,  # Can be None
                 category_id=category_id  # Now guaranteed to have a value
             )
 
             db.session.add(component)
             db.session.flush()  # Get the ID
 
-            # Process keywords
+            # Process keywords (optional)
             keywords = request.form.get('keywords', '').strip()
             if keywords:
                 keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
@@ -463,22 +501,68 @@ def new_component():
                     if keyword not in component.keywords:
                         component.keywords.append(keyword)
 
-            # NEW: Process brand associations
-            selected_brands = request.form.getlist('brands')  # Get list of selected brand IDs
-            if selected_brands:
-                for brand_id in selected_brands:
-                    if brand_id:  # Check for empty values
-                        brand = Brand.query.get(int(brand_id))
-                        if brand:
-                            component.add_brand(brand)
+            # IMPROVED: Process brand associations with new options
+            brand_option = request.form.get('brand_option', 'none')
+            
+            if brand_option == 'existing':
+                # Handle existing brand selection
+                selected_brands = request.form.getlist('brands')  # Get list of selected brand IDs
+                if selected_brands:
+                    for brand_id in selected_brands:
+                        if brand_id:  # Check for empty values
+                            brand = Brand.query.get(int(brand_id))
+                            if brand:
+                                component.add_brand(brand)
+            
+            elif brand_option == 'new':
+                # Handle new brand creation
+                new_brand_name = request.form.get('new_brand_name', '').strip()
+                new_subbrand_name = request.form.get('new_subbrand_name', '').strip()
+                
+                if new_brand_name:
+                    # Check if brand already exists
+                    existing_brand = Brand.query.filter_by(name=new_brand_name).first()
+                    if existing_brand:
+                        brand = existing_brand
+                    else:
+                        # Create new brand
+                        brand = Brand(name=new_brand_name)
+                        db.session.add(brand)
+                        db.session.flush()  # Get the brand ID
+                    
+                    # Add brand to component
+                    component.add_brand(brand)
+                    
+                    # Handle subbrand if provided
+                    if new_subbrand_name:
+                        # Check if subbrand already exists for this brand
+                        existing_subbrand = Subbrand.query.filter_by(
+                            name=new_subbrand_name, 
+                            brand_id=brand.id
+                        ).first()
+                        
+                        if not existing_subbrand:
+                            # Create new subbrand
+                            subbrand = Subbrand(
+                                name=new_subbrand_name,
+                                brand_id=brand.id
+                            )
+                            db.session.add(subbrand)
+            
+            # If brand_option is 'none', no brand association is created
 
-            # Process flexible properties based on component type
+            # IMPROVED: Process flexible properties with new entry creation capability
             component_type = ComponentType.query.get(component_type_id)
             if component_type:
-                _process_component_properties(component, component_type.name, request.form)
+                _process_component_properties_enhanced(component, component_type.name, request.form)
 
             # Process image uploads
-            _process_image_uploads(component, request)
+            uploaded_count = _process_image_uploads(component, request)
+            
+            if uploaded_count == 0:
+                flash('No pictures were uploaded. Please upload at least one picture.', 'danger')
+                db.session.rollback()
+                return redirect(request.url)
 
             db.session.commit()
             flash('Component created successfully!', 'success')
@@ -498,6 +582,22 @@ def new_component():
     materials = Material.query.order_by(Material.name).all()
     brands = Brand.query.order_by(Brand.name).all()  # NEW: Add brands
 
+    # NEW: Load component type properties from database
+    component_type_properties = {}
+    for ct in component_types:
+        ct_properties = ComponentTypeProperty.query.filter_by(component_type_id=ct.id).order_by(ComponentTypeProperty.display_order).all()
+        component_type_properties[ct.name] = [
+            {
+                'property_name': prop.property_name,
+                'property_type': prop.property_type,
+                'is_required': prop.is_required,
+                'options': prop.get_options(),
+                'placeholder': prop.get_placeholder(),
+                'display_name': prop.display_name
+            }
+            for prop in ct_properties
+        ]
+
     return render_template('component_form.html',
                            component=None,
                            component_types=component_types,
@@ -505,7 +605,8 @@ def new_component():
                            suppliers=suppliers,
                            colors=colors,
                            materials=materials,
-                           brands=brands)  # NEW: Pass brands to template
+                           brands=brands,  # NEW: Pass brands to template
+                           component_type_properties=component_type_properties)  # NEW: Pass properties to template
 
 @main.route('/component/edit/<int:id>', methods=['GET', 'POST'])
 def edit_component(id):
@@ -515,7 +616,9 @@ def edit_component(id):
     component = Component.query.options(
         db.joinedload(Component.keywords),
         db.joinedload(Component.pictures),
-        db.joinedload(Component.brand_associations).joinedload(ComponentBrand.brand)
+        db.joinedload(Component.brand_associations).joinedload(ComponentBrand.brand),
+        db.joinedload(Component.variants).joinedload(ComponentVariant.color),
+        db.joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures)
     ).get_or_404(id)
 
     if request.method == 'POST':
@@ -524,7 +627,11 @@ def edit_component(id):
             component.product_number = request.form.get('product_number', '').strip()
             component.description = request.form.get('description', '').strip()
             component.component_type_id = int(request.form.get('component_type_id'))
-            component.supplier_id = int(request.form.get('supplier_id'))
+            
+            # Handle optional supplier_id
+            supplier_id = request.form.get('supplier_id')
+            component.supplier_id = int(supplier_id) if supplier_id else None
+            
             component.category_id = int(request.form.get('category_id'))
             component.updated_at = datetime.utcnow()
 
@@ -1515,47 +1622,85 @@ def delete_supplier(id):
         return redirect(url_for('main.suppliers'))
 
 # Helper functions - Enhanced for new frontend
-def _process_component_properties(component, component_type_name, form_data):
-    """Process component properties based on component type - UPDATED for new brand handling"""
-    type_properties = {
-        'Fabrics': ['material', 'color', 'gender', 'finish', 'weight'],  # Removed 'brand' - now handled separately
-        'Shapes': ['gender', 'style', 'subbrand', 'subcategory'],  # Removed 'brand' - now handled separately
-        'Buttons': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
-        'Zippers': ['material', 'color', 'size'],  # Removed 'brand' - now handled separately
-        'Labels': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
-        'Hangtags': ['subbrand', 'material'],  # Removed 'brand' - now handled separately
-        'Packaging': ['material']  # Removed 'brand' - now handled separately
-    }
-
-    allowed_properties = type_properties.get(component_type_name, [])
-
+def _process_component_properties_enhanced(component, component_type_name, form_data):
+    """Process component properties with enhanced capability to create new entries for type-specific properties"""
+    # Get properties from database for this component type
+    component_type = ComponentType.query.filter_by(name=component_type_name).first()
+    if not component_type:
+        return
+    
+    type_properties = ComponentTypeProperty.query.filter_by(component_type_id=component_type.id).order_by(ComponentTypeProperty.display_order).all()
+    
     # Initialize properties dict if it doesn't exist
     if not hasattr(component, 'properties') or component.properties is None:
         component.properties = {}
 
-    for prop in allowed_properties:
-        prop_value = form_data.get(prop)
-        if prop_value:
-            # Handle array properties
-            if prop in ['gender', 'style', 'subbrand']:
-                if isinstance(prop_value, list):
-                    component.properties[prop] = {
-                        'value': prop_value,
-                        'updated_at': datetime.utcnow().isoformat()
-                    }
+    for prop in type_properties:
+        prop_value = form_data.get(prop.property_name)
+        new_prop_value = form_data.get(f'new_{prop.property_name}')
+        
+        # Use new value if provided, otherwise use existing value
+        final_value = new_prop_value.strip() if new_prop_value and new_prop_value.strip() else prop_value
+        
+        if final_value:
+            # Handle different property types
+            if prop.property_type == 'multiselect':
+                if isinstance(final_value, list):
+                    values = final_value
                 else:
                     # Convert string to array if needed
-                    values = [v.strip() for v in prop_value.split(',') if v.strip()]
-                    if values:
-                        component.properties[prop] = {
-                            'value': values,
-                            'updated_at': datetime.utcnow().isoformat()
-                        }
+                    values = [v.strip() for v in final_value.split(',') if v.strip()]
+                
+                if values:
+                    # For multiselect, we might need to create new entries in the database
+                    processed_values = []
+                    for value in values:
+                        processed_value = _process_property_value(prop.property_name, value, component_type_name)
+                        processed_values.append(processed_value)
+                    
+                    component.properties[prop.property_name] = {
+                        'value': processed_values,
+                        'updated_at': datetime.utcnow().isoformat()
+                    }
             else:
-                component.properties[prop] = {
-                    'value': prop_value,
+                # For text and select types
+                processed_value = _process_property_value(prop.property_name, final_value, component_type_name)
+                component.properties[prop.property_name] = {
+                    'value': processed_value,
                     'updated_at': datetime.utcnow().isoformat()
                 }
+
+def _process_property_value(property_name, value, component_type_name):
+    """Process a property value, creating new database entries if needed"""
+    property_name_lower = property_name.lower()
+    
+    # Map property names to their corresponding models
+    property_mappings = {
+        'material': (Material, 'name'),
+        'color': (Color, 'name'),
+        'category': (Category, 'name'),
+        'keywords': (Keyword, 'name')
+    }
+    
+    if property_name_lower in property_mappings:
+        model_class, field_name = property_mappings[property_name_lower]
+        
+        # Check if the value already exists
+        existing = model_class.query.filter_by(**{field_name: value}).first()
+        
+        if not existing:
+            # Create new entry
+            new_entry = model_class(**{field_name: value})
+            db.session.add(new_entry)
+            db.session.flush()  # Get the ID
+            
+            # Log the creation for debugging
+            current_app.logger.info(f"Created new {model_class.__name__}: {value} for component type: {component_type_name}")
+        
+        return value  # Return the value (not the ID) for consistency with existing properties
+    
+    # For properties that don't map to specific models, just return the value
+    return value
 
 def _process_image_uploads(component, request):
     """Process image uploads for a component with auto-assigned order - enhanced for new frontend."""
@@ -1852,3 +1997,41 @@ def download_csv_template():
         current_app.logger.error(f"Error generating CSV template: {str(e)}")
         flash('Error generating template', 'danger')
         return redirect(url_for('main.upload_csv'))
+
+def _process_component_properties(component, component_type_name, form_data):
+    """Process component properties based on component type - UPDATED to use database-driven properties"""
+    # Get properties from database for this component type
+    component_type = ComponentType.query.filter_by(name=component_type_name).first()
+    if not component_type:
+        return
+    
+    type_properties = ComponentTypeProperty.query.filter_by(component_type_id=component_type.id).order_by(ComponentTypeProperty.display_order).all()
+    
+    # Initialize properties dict if it doesn't exist
+    if not hasattr(component, 'properties') or component.properties is None:
+        component.properties = {}
+
+    for prop in type_properties:
+        prop_value = form_data.get(prop.property_name)
+        if prop_value:
+            # Handle different property types
+            if prop.property_type == 'multiselect':
+                if isinstance(prop_value, list):
+                    component.properties[prop.property_name] = {
+                        'value': prop_value,
+                        'updated_at': datetime.utcnow().isoformat()
+                    }
+                else:
+                    # Convert string to array if needed
+                    values = [v.strip() for v in prop_value.split(',') if v.strip()]
+                    if values:
+                        component.properties[prop.property_name] = {
+                            'value': values,
+                            'updated_at': datetime.utcnow().isoformat()
+                        }
+            else:
+                # For text and select types
+                component.properties[prop.property_name] = {
+                    'value': prop_value,
+                    'updated_at': datetime.utcnow().isoformat()
+                }

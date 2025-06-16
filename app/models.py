@@ -16,9 +16,66 @@ class ComponentType(Base):
     
     # Relationship to components
     components = db.relationship('Component', backref='component_type', lazy=True)
-
+    
+    # NEW: Relationship to component type properties
+    type_properties = db.relationship('ComponentTypeProperty', backref='component_type', lazy=True, cascade='all, delete-orphan')
+    
     def __repr__(self):
         return f'<ComponentType {self.name}>'
+
+class ComponentTypeProperty(Base):
+    """Model for component_type_property table - maps component types to their properties"""
+    __tablename__ = 'component_type_property'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    component_type_id = db.Column(db.Integer, db.ForeignKey('component_app.component_type.id'), nullable=False)
+    property_name = db.Column(db.String(100), nullable=False)
+    property_type = db.Column(db.String(50), nullable=False)  # 'text', 'select', 'multiselect'
+    is_required = db.Column(db.Boolean, default=False)
+    display_order = db.Column(db.Integer, default=0)
+    
+    __table_args__ = (
+        db.UniqueConstraint('component_type_id', 'property_name'),
+        {'schema': 'component_app'}
+    )
+    
+    def __repr__(self):
+        return f'<ComponentTypeProperty {self.component_type.name}.{self.property_name}>'
+    
+    @property
+    def display_name(self):
+        """Return a human-readable property name"""
+        return self.property_name.replace('_', ' ').title()
+    
+    def get_options(self):
+        """Get options for this property based on property_name"""
+        # Define options based on property name and type
+        if self.property_type == 'select':
+            if self.property_name == 'material':
+                return ['cotton', 'polyester', 'wool', 'silk', 'linen', 'denim', 'satin', 'velvet', 'leather', 'synthetic', 'plastic', 'metal', 'wood', 'bone', 'mother of pearl', 'acrylic', 'brass', 'steel', 'nylon', 'nickel', 'aluminum', 'cardboard', 'paper', 'vinyl', 'fabric']
+            elif self.property_name == 'color':
+                return ['black', 'white', 'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'brown', 'gray', 'navy', 'beige', 'cream', 'silver', 'gold', 'bronze', 'copper', 'chrome', 'antique brass']
+        elif self.property_type == 'multiselect':
+            if self.property_name == 'gender':
+                return ['ladies', 'men', 'unisex', 'all', 'kids']
+            elif self.property_name == 'style':
+                return ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage', 'modern', 'classic']
+            elif self.property_name == 'subbrand':
+                return ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic']
+        return []
+    
+    def get_placeholder(self):
+        """Get placeholder text for this property"""
+        if self.property_type == 'text':
+            if self.property_name == 'finish':
+                return 'e.g., waterproof, matte, glossy, brushed'
+            elif self.property_name == 'weight':
+                return 'e.g., 120gsm, 200gsm'
+            elif self.property_name == 'size':
+                return 'e.g., 12mm, 15mm, 18mm, 20mm'
+            elif self.property_name == 'subcategory':
+                return 'e.g., jacket, pants, dress, shirt'
+        return ''
 
 class Supplier(Base):
     __tablename__ = 'supplier'
@@ -169,7 +226,7 @@ class Component(Base):
     
     # MANDATORY foreign keys (all components must have these)
     component_type_id = db.Column(db.Integer, db.ForeignKey('component_app.component_type.id'), nullable=False)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('component_app.supplier.id'), nullable=False)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('component_app.supplier.id'), nullable=True)  # Now optional
     category_id = db.Column(db.Integer, db.ForeignKey('component_app.category.id'), nullable=False)
     
     # STATUS TRACKING (Product-wide status - applies to all variants)
@@ -208,6 +265,7 @@ class Component(Base):
                               cascade='all, delete-orphan')
 
     __table_args__ = (
+        # Updated unique constraint to handle null supplier_id
         db.UniqueConstraint('product_number', 'supplier_id', name='_product_supplier_uc'),
         {'schema': 'component_app'}
     )

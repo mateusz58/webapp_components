@@ -3,6 +3,182 @@
 {% block title %}New Component{% endblock %}
 
 {% block content %}
+<style>
+    .properties-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        border: 1px solid #dee2e6;
+    }
+    
+    .property-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .property-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .required-field {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .form-control:required:invalid {
+        border-color: #dc3545;
+    }
+    
+    .form-control:required:valid {
+        border-color: #198754;
+    }
+    
+    .component-type-indicator {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    .property-summary {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-top: 15px;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .brand-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        border: 1px solid #dee2e6;
+    }
+    
+    .brand-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .brand-option input[type="radio"] {
+        margin-right: 8px;
+    }
+    
+    .brand-option label {
+        margin-bottom: 0;
+        cursor: pointer;
+    }
+    
+    .new-brand-form {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 10px;
+        display: none;
+    }
+    
+    .new-brand-form.show {
+        display: block;
+    }
+    
+    .property-input-group {
+        position: relative;
+    }
+    
+    .property-input-group .form-control {
+        padding-right: 40px;
+    }
+    
+    .property-input-group .btn-add-new {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: #28a745;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .property-input-group .btn-add-new:hover {
+        background: #218838;
+    }
+    
+    .property-input-group .btn-add-new:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .existing-options {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background: white;
+        display: none;
+    }
+    
+    .existing-options.show {
+        display: block;
+    }
+    
+    .existing-option {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .existing-option:hover {
+        background: #f8f9fa;
+    }
+    
+    .existing-option:last-child {
+        border-bottom: none;
+    }
+    
+    .no-brand-option {
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Add New Component</h1>
     <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to List</a>
@@ -36,13 +212,14 @@
                 </div>
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="supplier_id" class="form-label">Supplier *</label>
-                        <select class="form-select" id="supplier_id" name="supplier_id" required>
-                            <option value="">Select Supplier</option>
+                        <label for="supplier_id" class="form-label">Supplier</label>
+                        <select class="form-select" id="supplier_id" name="supplier_id">
+                            <option value="">Select Supplier (Optional)</option>
                             {% for supplier in suppliers %}
                                 <option value="{{ supplier.id }}">{{ supplier.supplier_code }}</option>
                             {% endfor %}
                         </select>
+                        <div class="form-text">Optional: Select a supplier or leave empty</div>
                     </div>
                 </div>
             </div>
@@ -50,40 +227,69 @@
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">Keywords *</label>
-                        <input type="text" class="form-control" id="keywords" name="keywords" required>
-                        <div class="form-text">Comma-separated keywords (e.g., shiny, polyester, jacket, outerwear)</div>
+                        <label for="keywords" class="form-label">Keywords</label>
+                        <input type="text" class="form-control" id="keywords" name="keywords">
+                        <div class="form-text">Optional: Comma-separated keywords (e.g., shiny, polyester, jacket, outerwear)</div>
                     </div>
                 </div>
             </div>
 
-            <!-- NEW: Brand Selection Section -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card bg-light">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-tag me-2"></i>
-                                Brand Association
-                            </h6>
+            <!-- IMPROVED: Brand Association Section -->
+            <div class="brand-section">
+                <h6 class="mb-3">
+                    <i class="fas fa-tag me-2"></i>
+                    Brand Association
+                </h6>
+                
+                <div class="brand-option">
+                    <input type="radio" id="no_brand" name="brand_option" value="none" checked>
+                    <label for="no_brand" class="no-brand-option">No brand association</label>
+                </div>
+                
+                {% if brands %}
+                <div class="brand-option">
+                    <input type="radio" id="existing_brands" name="brand_option" value="existing">
+                    <label for="existing_brands">Select from existing brands</label>
+                </div>
+                
+                <div id="existingBrandsSection" style="display: none;">
+                    <div class="mb-3">
+                        <label for="brands" class="form-label">Select Brands</label>
+                        <select class="form-select" id="brands" name="brands" multiple size="5">
+                            {% for brand in brands %}
+                                <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Hold Ctrl/Cmd to select multiple brands. You can associate this component with multiple brands.
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="brands" class="form-label">Select Brands</label>
-                                <select class="form-select" id="brands" name="brands" multiple size="5">
-                                    {% for brand in brands %}
-                                        <option value="{{ brand.id }}">{{ brand.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">
-                                    Hold Ctrl/Cmd to select multiple brands. You can associate this component with multiple brands.
-                                </div>
-                            </div>
+                    </div>
 
-                            <!-- Brand Preview -->
-                            <div id="selectedBrandsPreview" class="mt-3" style="display: none;">
-                                <label class="form-label">Selected Brands:</label>
-                                <div id="brandTags" class="d-flex flex-wrap gap-2"></div>
+                    <!-- Brand Preview -->
+                    <div id="selectedBrandsPreview" class="mt-3" style="display: none;">
+                        <label class="form-label">Selected Brands:</label>
+                        <div id="brandTags" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="brand-option">
+                    <input type="radio" id="new_brand" name="brand_option" value="new">
+                    <label for="new_brand">Create new brand</label>
+                </div>
+                
+                <div id="newBrandForm" class="new-brand-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="new_brand_name" class="form-label">Brand Name *</label>
+                                <input type="text" class="form-control" id="new_brand_name" name="new_brand_name" placeholder="Enter brand name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="new_subbrand_name" class="form-label">Subbrand Name (Optional)</label>
+                                <input type="text" class="form-control" id="new_subbrand_name" name="new_subbrand_name" placeholder="Enter subbrand name">
                             </div>
                         </div>
                     </div>
@@ -97,29 +303,50 @@
 
             <hr>
 
-            <!-- Dynamic Properties Section -->
-            <div id="propertiesSection">
-                <h5 class="mb-3">Type-Specific Properties</h5>
+            <!-- IMPROVED: Dynamic Properties Section -->
+            <div id="propertiesSection" class="properties-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs me-2"></i>
+                    Type-Specific Properties
+                </h5>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
-                    Select a component type above to see available properties
+                    Select a component type above to see available properties for that specific type
                 </div>
             </div>
 
             <hr>
 
             <!-- Pictures -->
-            <h5 class="mb-3">Pictures (up to 5)</h5>
+            <h5 class="mb-3">
+                <i class="fas fa-images me-2"></i>
+                Pictures * (At least 1 picture required)
+            </h5>
 
             {% for i in range(1, 6) %}
                 <div class="card mb-3 picture-card">
                     <div class="card-header">
-                        <h6 class="mb-0">Picture {{ i }}</h6>
+                        <h6 class="mb-0">
+                            Picture {{ i }}
+                            {% if i == 1 %}
+                                <span class="badge bg-danger ms-2">Required</span>
+                            {% endif %}
+                        </h6>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="picture_{{ i }}" class="form-label">Image File</label>
-                            <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*">
+                            <label for="picture_{{ i }}" class="form-label">
+                                Image File
+                                {% if i == 1 %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            <input type="file" class="form-control" id="picture_{{ i }}" name="picture_{{ i }}" accept="image/*" {% if i == 1 %}required{% endif %}>
+                            {% if i == 1 %}
+                                <div class="form-text text-danger">At least one picture is required for the component</div>
+                            {% else %}
+                                <div class="form-text">Optional: Additional pictures (up to 5 total)</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -137,112 +364,44 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const componentTypeSelect = document.getElementById('component_type_id');
-    const propertiesSection = document.getElementById('propertiesSection');
-    const form = document.getElementById('componentForm');
+    // IMPROVED: Brand selection functionality
+    const brandOptions = document.querySelectorAll('input[name="brand_option"]');
+    const existingBrandsSection = document.getElementById('existingBrandsSection');
+    const newBrandForm = document.getElementById('newBrandForm');
     const brandsSelect = document.getElementById('brands');
     const selectedBrandsPreview = document.getElementById('selectedBrandsPreview');
     const brandTags = document.getElementById('brandTags');
 
-    // Property field configurations (UPDATED: removed 'brand' from type properties since it's now handled separately)
-    const typeProperties = {
-        'Fabrics': {
-            'material': { type: 'select', required: true, options: {{ materials | map(attribute='name') | list | tojson }} },
-            'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
-            'gender': { type: 'multiselect', required: false, options: ['ladies', 'men', 'unisex', 'all', 'kids'] },
-            'finish': { type: 'text', required: false, placeholder: 'e.g., waterproof, matte' },
-            'weight': { type: 'text', required: false, placeholder: 'e.g., 120gsm' }
-        },
-        'Shapes': {
-            'gender': { type: 'multiselect', required: false, options: ['ladies', 'men', 'unisex', 'all', 'kids'] },
-            'style': { type: 'multiselect', required: false, options: ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage'] },
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
-            'subcategory': { type: 'text', required: false, placeholder: 'e.g., jacket, pants' }
-        },
-        'Buttons': {
-            'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} },
-            'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
-            'size': { type: 'text', required: false, placeholder: 'e.g., 12mm, 15mm' }
-        },
-        'Zippers': {
-            'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} },
-            'color': { type: 'select', required: false, options: {{ colors | map(attribute='name') | list | tojson }} },
-            'size': { type: 'text', required: false, placeholder: 'e.g., 5mm, 8mm' }
-        },
-        'Labels': {
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
-            'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
-        },
-        'Hangtags': {
-            'subbrand': { type: 'multiselect', required: false, options: ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic'] },
-            'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
-        },
-        'Packaging': {
-            'material': { type: 'select', required: false, options: {{ materials | map(attribute='name') | list | tojson }} }
-        }
-    };
-
-    // Handle component type change
-    componentTypeSelect.addEventListener('change', function() {
-        const selectedType = this.options[this.selectedIndex].text;
-        updatePropertiesSection(selectedType);
+    // Handle brand option changes
+    brandOptions.forEach(option => {
+        option.addEventListener('change', function() {
+            const value = this.value;
+            
+            // Hide all sections first
+            existingBrandsSection.style.display = 'none';
+            newBrandForm.classList.remove('show');
+            
+            // Show relevant section
+            if (value === 'existing') {
+                existingBrandsSection.style.display = 'block';
+            } else if (value === 'new') {
+                newBrandForm.classList.add('show');
+            }
+            
+            // Clear selections when switching
+            if (brandsSelect) {
+                brandsSelect.selectedIndex = -1;
+                updateBrandPreview();
+            }
+        });
     });
 
-    // NEW: Handle brand selection changes
-    brandsSelect.addEventListener('change', function() {
-        updateBrandPreview();
-    });
-
-    function updatePropertiesSection(componentType) {
-        const properties = typeProperties[componentType] || {};
-        
-        if (Object.keys(properties).length === 0) {
-            propertiesSection.innerHTML = `
-                <h5 class="mb-3">Type-Specific Properties</h5>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    No additional properties available for ${componentType}
-                </div>
-            `;
+    // Update brand preview function
+    function updateBrandPreview() {
+        if (!brandsSelect || !selectedBrandsPreview || !brandTags) {
             return;
         }
 
-        let html = '<h5 class="mb-3">Type-Specific Properties</h5><div class="row">';
-        
-        Object.entries(properties).forEach(([propertyName, config]) => {
-            html += `<div class="col-md-6"><div class="mb-3">`;
-            html += `<label for="${propertyName}" class="form-label">${capitalizeFirst(propertyName)}${config.required ? ' *' : ''}</label>`;
-            
-            if (config.type === 'select') {
-                html += `<select class="form-select" id="${propertyName}" name="${propertyName}"${config.required ? ' required' : ''}>`;
-                html += '<option value="">Select ' + capitalizeFirst(propertyName) + '</option>';
-                config.options.forEach(option => {
-                    html += `<option value="${option}">${option}</option>`;
-                });
-                html += '</select>';
-            } else if (config.type === 'multiselect') {
-                html += `<select class="form-select" id="${propertyName}" name="${propertyName}" multiple>`;
-                config.options.forEach(option => {
-                    html += `<option value="${option}">${option}</option>`;
-                });
-                html += '</select>';
-                html += `<div class="form-text">Hold Ctrl/Cmd to select multiple options</div>`;
-            } else if (config.type === 'text') {
-                html += `<input type="text" class="form-control" id="${propertyName}" name="${propertyName}"`;
-                if (config.placeholder) html += ` placeholder="${config.placeholder}"`;
-                if (config.required) html += ' required';
-                html += '>';
-            }
-            
-            html += '</div></div>';
-        });
-        
-        html += '</div>';
-        propertiesSection.innerHTML = html;
-    }
-
-    // NEW: Update brand preview
-    function updateBrandPreview() {
         const selectedOptions = Array.from(brandsSelect.selectedOptions);
 
         if (selectedOptions.length === 0) {
@@ -261,22 +420,401 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function capitalizeFirst(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
+    // Initialize brand functionality if brands are available
+    if (brandsSelect) {
+        brandsSelect.addEventListener('change', updateBrandPreview);
+        updateBrandPreview();
+    }
+
+    // Form elements
+    const form = document.getElementById('componentForm');
+    const componentTypeSelect = document.getElementById('component_type_id');
+    const propertiesSection = document.getElementById('propertiesSection');
+
+    // Database-driven property configurations
+    const typeProperties = JSON.parse('{{ component_type_properties | tojson | safe }}');
+    
+    // Available data for type-specific properties
+    const availableData = {
+        materials: JSON.parse('{{ materials | map(attribute="name") | list | tojson | safe }}'),
+        colors: JSON.parse('{{ colors | map(attribute="name") | list | tojson | safe }}'),
+        categories: JSON.parse('{{ categories | map(attribute="name") | list | tojson | safe }}'),
+        keywords: [] // Will be populated dynamically
+    };
+    
+    console.log('Loaded component type properties:', typeProperties);
+    console.log('Available data:', availableData);
+    
+    // Error handling for missing data
+    if (!typeProperties || Object.keys(typeProperties).length === 0) {
+        console.warn('No component type properties loaded from database');
+        propertiesSection.innerHTML = `
+            <h5 class="mb-3">
+                <i class="fas fa-cogs me-2"></i>
+                Type-Specific Properties
+            </h5>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Warning:</strong> No component type properties found in database. 
+                Please ensure the component_type_property table is populated.
+            </div>
+        `;
+    }
+
+    // Handle component type change
+    componentTypeSelect.addEventListener('change', function() {
+        const selectedType = this.options[this.selectedIndex].text;
+        console.log('Component type changed to:', selectedType);
+        
+        if (!selectedType) {
+            updatePropertiesSection('');
+            return;
+        }
+        
+        updatePropertiesSection(selectedType);
+        
+        // Update product number prefix suggestion
+        const expectedPrefix = getTypePrefix(selectedType);
+        const productNumberField = document.getElementById('product_number');
+        if (expectedPrefix && !productNumberField.value) {
+            productNumberField.placeholder = `${expectedPrefix}-XXXXX`;
+        }
+    });
+
+    function updatePropertiesSection(componentType) {
+        const properties = typeProperties[componentType] || [];
+        
+        // Validate properties data
+        if (!Array.isArray(properties)) {
+            console.error('Properties for', componentType, 'is not an array:', properties);
+            propertiesSection.innerHTML = `
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs me-2"></i>
+                    Type-Specific Properties
+                </h5>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Error:</strong> Invalid property data for ${componentType}
+                </div>
+            `;
+            return;
+        }
+        
+        if (properties.length === 0) {
+            propertiesSection.innerHTML = `
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs me-2"></i>
+                    Type-Specific Properties
+                </h5>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    No additional properties available for <strong>${componentType}</strong>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <h5 class="mb-3">
+                <i class="fas fa-cogs me-2"></i>
+                Type-Specific Properties
+            </h5>
+            <div class="component-type-indicator">
+                <i class="fas fa-tag me-2"></i>
+                ${componentType}
+            </div>
+            <div class="row">
+        `;
+        
+        properties.forEach((prop, index) => {
+            // Validate property object
+            if (!prop || typeof prop !== 'object') {
+                console.warn('Invalid property at index', index, ':', prop);
+                return;
+            }
+            
+            const isRequired = prop.is_required ? ' *' : '';
+            const requiredClass = prop.is_required ? 'required-field' : '';
+            
+            html += `<div class="col-md-6"><div class="property-card">`;
+            html += `<label for="${prop.property_name}" class="form-label ${requiredClass}">${prop.display_name}${isRequired}</label>`;
+            
+            // Determine if this property should use existing data or allow new entries
+            const shouldUseExistingData = shouldUseExistingDataForProperty(prop.property_name, componentType);
+            const existingOptions = getExistingOptionsForProperty(prop.property_name);
+            
+            if (prop.property_type === 'select') {
+                if (shouldUseExistingData && existingOptions.length > 0) {
+                    // Enhanced select with existing options and new entry capability
+                    html += `<div class="property-input-group">`;
+                    html += `<select class="form-select" id="${prop.property_name}" name="${prop.property_name}"${prop.is_required ? ' required' : ''}>`;
+                    html += `<option value="">Select ${prop.display_name}</option>`;
+                    
+                    // Add existing options
+                    existingOptions.forEach(option => {
+                        html += `<option value="${option}">${option}</option>`;
+                    });
+                    
+                    html += '</select>';
+                    html += `<button type="button" class="btn-add-new" onclick="showNewEntryForm('${prop.property_name}', '${prop.display_name}')" title="Add new ${prop.display_name}">+</button>`;
+                    html += '</div>';
+                    
+                    // New entry form (hidden by default)
+                    html += `<div id="new_${prop.property_name}_form" class="new-brand-form">`;
+                    html += `<div class="mb-3">`;
+                    html += `<label for="new_${prop.property_name}" class="form-label">New ${prop.display_name}</label>`;
+                    html += `<input type="text" class="form-control" id="new_${prop.property_name}" name="new_${prop.property_name}" placeholder="Enter new ${prop.display_name.toLowerCase()}">`;
+                    html += `</div>`;
+                    html += `<div class="d-flex gap-2">`;
+                    html += `<button type="button" class="btn btn-sm btn-success" onclick="addNewEntry('${prop.property_name}', '${prop.display_name}')">Add</button>`;
+                    html += `<button type="button" class="btn btn-sm btn-secondary" onclick="cancelNewEntry('${prop.property_name}')">Cancel</button>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                } else {
+                    // Standard select with provided options
+                    html += `<select class="form-select" id="${prop.property_name}" name="${prop.property_name}"${prop.is_required ? ' required' : ''}>`;
+                    html += `<option value="">Select ${prop.display_name}</option>`;
+                    if (prop.options && Array.isArray(prop.options)) {
+                        prop.options.forEach(option => {
+                            html += `<option value="${option}">${option}</option>`;
+                        });
+                    }
+                    html += '</select>';
+                }
+            } else if (prop.property_type === 'multiselect') {
+                if (shouldUseExistingData && existingOptions.length > 0) {
+                    // Enhanced multiselect with existing options and new entry capability
+                    html += `<div class="property-input-group">`;
+                    html += `<select class="form-select" id="${prop.property_name}" name="${prop.property_name}" multiple size="4"${prop.is_required ? ' required' : ''}>`;
+                    
+                    // Add existing options
+                    existingOptions.forEach(option => {
+                        html += `<option value="${option}">${option}</option>`;
+                    });
+                    
+                    html += '</select>';
+                    html += `<button type="button" class="btn-add-new" onclick="showNewEntryForm('${prop.property_name}', '${prop.display_name}')" title="Add new ${prop.display_name}">+</button>`;
+                    html += '</div>';
+                    html += `<div class="form-text">
+                        <i class="fas fa-info-circle"></i>
+                        Hold Ctrl/Cmd to select multiple options
+                    </div>`;
+                    
+                    // New entry form (hidden by default)
+                    html += `<div id="new_${prop.property_name}_form" class="new-brand-form">`;
+                    html += `<div class="mb-3">`;
+                    html += `<label for="new_${prop.property_name}" class="form-label">New ${prop.display_name}</label>`;
+                    html += `<input type="text" class="form-control" id="new_${prop.property_name}" name="new_${prop.property_name}" placeholder="Enter new ${prop.display_name.toLowerCase()}">`;
+                    html += `</div>`;
+                    html += `<div class="d-flex gap-2">`;
+                    html += `<button type="button" class="btn btn-sm btn-success" onclick="addNewEntry('${prop.property_name}', '${prop.display_name}')">Add</button>`;
+                    html += `<button type="button" class="btn btn-sm btn-secondary" onclick="cancelNewEntry('${prop.property_name}')">Cancel</button>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                } else {
+                    // Standard multiselect
+                    html += `<select class="form-select" id="${prop.property_name}" name="${prop.property_name}" multiple size="4"${prop.is_required ? ' required' : ''}>`;
+                    if (prop.options && Array.isArray(prop.options)) {
+                        prop.options.forEach(option => {
+                            html += `<option value="${option}">${option}</option>`;
+                        });
+                    }
+                    html += '</select>';
+                    html += `<div class="form-text">
+                        <i class="fas fa-info-circle"></i>
+                        Hold Ctrl/Cmd to select multiple options
+                    </div>`;
+                }
+            } else if (prop.property_type === 'text') {
+                html += `<input type="text" class="form-control" id="${prop.property_name}" name="${prop.property_name}"`;
+                if (prop.placeholder) html += ` placeholder="${prop.placeholder}"`;
+                if (prop.is_required) html += ' required';
+                html += '>';
+                if (prop.placeholder) {
+                    html += `<div class="form-text">${prop.placeholder}</div>`;
+                }
+            } else if (prop.property_type === 'textarea') {
+                html += `<textarea class="form-control" id="${prop.property_name}" name="${prop.property_name}" rows="3"`;
+                if (prop.placeholder) html += ` placeholder="${prop.placeholder}"`;
+                if (prop.is_required) html += ' required';
+                html += '></textarea>';
+                if (prop.placeholder) {
+                    html += `<div class="form-text">${prop.placeholder}</div>`;
+                }
+            } else if (prop.property_type === 'number') {
+                html += `<input type="number" class="form-control" id="${prop.property_name}" name="${prop.property_name}"`;
+                if (prop.placeholder) html += ` placeholder="${prop.placeholder}"`;
+                if (prop.is_required) html += ' required';
+                html += '>';
+                if (prop.placeholder) {
+                    html += `<div class="form-text">${prop.placeholder}</div>`;
+                }
+            } else {
+                // Fallback for unknown property types
+                console.warn('Unknown property type:', prop.property_type, 'for property:', prop.property_name);
+                html += `<input type="text" class="form-control" id="${prop.property_name}" name="${prop.property_name}"`;
+                if (prop.placeholder) html += ` placeholder="${prop.placeholder}"`;
+                if (prop.is_required) html += ' required';
+                html += '>';
+                html += `<div class="form-text">
+                    <i class="fas fa-info-circle"></i>
+                    Unknown property type: ${prop.property_type}
+                </div>`;
+            }
+            
+            // Add help text if available
+            if (prop.help_text) {
+                html += `<div class="form-text">
+                    <i class="fas fa-question-circle"></i>
+                    ${prop.help_text}
+                </div>`;
+            }
+            
+            html += '</div></div>';
+        });
+        
+        html += '</div>';
+        
+        // Add a summary of what was loaded
+        html += `
+            <div class="property-summary">
+                <i class="fas fa-check-circle"></i>
+                Loaded <strong>${properties.length}</strong> properties for <strong>${componentType}</strong>
+            </div>
+        `;
+        
+        propertiesSection.innerHTML = html;
+        
+        // Add some styling for required fields
+        addRequiredFieldStyling();
+    }
+
+    // Helper functions for property handling
+    function shouldUseExistingDataForProperty(propertyName, componentType) {
+        // Map property names to their corresponding data types
+        const propertyMappings = {
+            'material': 'materials',
+            'color': 'colors',
+            'category': 'categories',
+            'keywords': 'keywords'
+        };
+        
+        const dataType = propertyMappings[propertyName.toLowerCase()];
+        return dataType && availableData[dataType] && availableData[dataType].length > 0;
+    }
+
+    function getExistingOptionsForProperty(propertyName) {
+        const propertyMappings = {
+            'material': 'materials',
+            'color': 'colors',
+            'category': 'categories',
+            'keywords': 'keywords'
+        };
+        
+        const dataType = propertyMappings[propertyName.toLowerCase()];
+        return dataType ? availableData[dataType] : [];
+    }
+
+    // Global functions for new entry handling
+    window.showNewEntryForm = function(propertyName, displayName) {
+        const form = document.getElementById(`new_${propertyName}_form`);
+        if (form) {
+            form.classList.add('show');
+        }
+    };
+
+    window.addNewEntry = function(propertyName, displayName) {
+        const newValueInput = document.getElementById(`new_${propertyName}`);
+        const selectElement = document.getElementById(propertyName);
+        const newValue = newValueInput.value.trim();
+        
+        if (!newValue) {
+            alert(`Please enter a ${displayName.toLowerCase()}`);
+            return;
+        }
+        
+        // Add to select options
+        const option = document.createElement('option');
+        option.value = newValue;
+        option.text = newValue;
+        option.selected = true;
+        selectElement.add(option);
+        
+        // Clear and hide the form
+        newValueInput.value = '';
+        cancelNewEntry(propertyName);
+        
+        // Update available data
+        const dataType = getDataTypeForProperty(propertyName);
+        if (dataType && availableData[dataType]) {
+            availableData[dataType].push(newValue);
+        }
+    };
+
+    window.cancelNewEntry = function(propertyName) {
+        const form = document.getElementById(`new_${propertyName}_form`);
+        const input = document.getElementById(`new_${propertyName}`);
+        if (form) {
+            form.classList.remove('show');
+        }
+        if (input) {
+            input.value = '';
+        }
+    };
+
+    function getDataTypeForProperty(propertyName) {
+        const propertyMappings = {
+            'material': 'materials',
+            'color': 'colors',
+            'category': 'categories',
+            'keywords': 'keywords'
+        };
+        
+        return propertyMappings[propertyName.toLowerCase()];
+    }
+
+    function addRequiredFieldStyling() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .required-field {
+                color: #dc3545;
+                font-weight: 600;
+            }
+            .required-field::after {
+                content: " *";
+                color: #dc3545;
+            }
+            .form-control:required:invalid {
+                border-color: #dc3545;
+            }
+            .form-control:required:valid {
+                border-color: #198754;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     // Form validation
     form.addEventListener('submit', function(event) {
-    const productNumber = document.getElementById('product_number').value;
-    const componentType = document.getElementById('component_type_id').value;
-    const supplier = document.getElementById('supplier_id').value;
-    const keywords = document.getElementById('keywords').value;
+        const productNumber = document.getElementById('product_number').value;
+        const componentType = document.getElementById('component_type_id').value;
+        const supplier = document.getElementById('supplier_id').value;
+        const keywords = document.getElementById('keywords').value;
+        const firstPicture = document.getElementById('picture_1').files[0];
 
-    if (!productNumber || !componentType || !supplier || !keywords) {
-        alert('Please fill in all required fields (Product Number, Component Type, Supplier, and Keywords)');
-        event.preventDefault();
-        return;
-    }
+        // Check required fields
+        if (!productNumber || !componentType) {
+            alert('Please fill in all required fields (Product Number and Component Type)');
+            event.preventDefault();
+            return;
+        }
+
+        // Check if at least one picture is uploaded
+        if (!firstPicture) {
+            alert('Please upload at least one picture for the component');
+            event.preventDefault();
+            return;
+        }
 
         // Validate product number format based on component type
         const selectedTypeName = componentTypeSelect.options[componentTypeSelect.selectedIndex].text;
@@ -288,6 +826,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         }
+
+        // Validate type-specific required properties
+        const properties = typeProperties[selectedTypeName] || [];
+        const missingProperties = [];
+        
+        properties.forEach(prop => {
+            if (prop.is_required) {
+                const field = document.getElementById(prop.property_name);
+                if (!field || !field.value.trim()) {
+                    missingProperties.push(prop.display_name);
+                }
+            }
+        });
+
+        if (missingProperties.length > 0) {
+            alert(`Please fill in all required type-specific properties:\n\n${missingProperties.join('\n')}`);
+            event.preventDefault();
+            return;
+        }
+
+        // Validate brand selection
+        const selectedBrandOption = document.querySelector('input[name="brand_option"]:checked');
+        if (selectedBrandOption) {
+            if (selectedBrandOption.value === 'new') {
+                const newBrandName = document.getElementById('new_brand_name').value.trim();
+                if (!newBrandName) {
+                    alert('Please enter a brand name when creating a new brand');
+                    event.preventDefault();
+                    return;
+                }
+            }
+        }
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        submitBtn.disabled = true;
+
+        // Re-enable button after a delay (in case of validation failure)
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
     });
 
     function getTypePrefix(typeName) {
@@ -307,13 +889,37 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('button[type="reset"]').addEventListener('click', function() {
         setTimeout(() => {
             propertiesSection.innerHTML = `
-                <h5 class="mb-3">Type-Specific Properties</h5>
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs me-2"></i>
+                    Type-Specific Properties
+                </h5>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
-                    Select a component type above to see available properties
+                    Select a component type above to see available properties for that specific type
                 </div>
             `;
-            selectedBrandsPreview.style.display = 'none';
+            
+            // Reset brand sections
+            if (existingBrandsSection) {
+                existingBrandsSection.style.display = 'none';
+            }
+            if (newBrandForm) {
+                newBrandForm.classList.remove('show');
+            }
+            if (selectedBrandsPreview) {
+                selectedBrandsPreview.style.display = 'none';
+            }
+            
+            // Reset brand option to "no brand"
+            const noBrandOption = document.getElementById('no_brand');
+            if (noBrandOption) {
+                noBrandOption.checked = true;
+            }
+            
+            // Clear any validation styling
+            document.querySelectorAll('.form-control').forEach(field => {
+                field.classList.remove('is-valid', 'is-invalid');
+            });
         }, 100);
     });
 });
