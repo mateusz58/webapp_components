@@ -23,6 +23,10 @@ def register_template_filters(app):
     """Register custom template filters"""
     app.jinja_env.filters['pluralize'] = pluralize
 
+def register_template_globals(app):
+    """Register custom template global functions"""
+    app.jinja_env.globals['hasattr'] = hasattr
+
 def register_context_processors(app):
     """Register template context processors"""
     import time
@@ -53,6 +57,9 @@ def create_app(config_class=Config):
 
     # Register custom template filters
     register_template_filters(app)
+    
+    # Register custom template globals
+    register_template_globals(app)
     
     # Register context processors
     register_context_processors(app)

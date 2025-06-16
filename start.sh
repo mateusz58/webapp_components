@@ -5,13 +5,13 @@ APP_NAME="component_app"
 APP_PORT=6002
 CONTAINER_NAME="component_app"
 
-# Remote deployment configuration
-REMOTE_HOST="192.168.100.30"
-REMOTE_PORT="2222"
-REMOTE_USER="rdp"
-REMOTE_SSH="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
-REMOTE_SCP="scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -P $REMOTE_PORT"
-REMOTE_DOCKER_COMPOSE_DIR="/home/$REMOTE_USER/webapp_components"
+# Remote deployment configuration (will be set interactively)
+REMOTE_HOST=""
+REMOTE_PORT=""
+REMOTE_USER=""
+REMOTE_SSH=""
+REMOTE_SCP=""
+REMOTE_DOCKER_COMPOSE_DIR=""
 
 # Color definitions
 GREEN='\033[0;32m'
@@ -137,83 +137,131 @@ show_status() {
     fi
 }
 
-# Function to check SSH connection
-check_ssh_connection() {
-    echo -e "${BLUE}Checking SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT...${NC}"
+# Function to get remote deployment configuration
+get_remote_config() {
+    echo -e "${BLUE}Remote Deployment Configuration${NC}"
+    echo -e "Please provide the remote server details:"
+    echo ""
     
-    # First try with key authentication
-    if $REMOTE_SSH "echo 'SSH connection successful'" 2>/dev/null; then
-        echo -e "${GREEN}SSH connection established with key authentication${NC}"
-        return 0
+    # Get remote host
+    while [ -z "$REMOTE_HOST" ]; do
+        read -p "Remote Host IP/Hostname: " REMOTE_HOST
+        if [ -z "$REMOTE_HOST" ]; then
+            echo -e "${RED}Host cannot be empty. Please enter a valid IP address or hostname.${NC}"
+        fi
+    done
+    
+    # Get remote port (default 22)
+    read -p "SSH Port (default: 22): " REMOTE_PORT
+    if [ -z "$REMOTE_PORT" ]; then
+        REMOTE_PORT="22"
     fi
     
-    # Try with password authentication
-    echo -e "${YELLOW}Key authentication failed, trying password authentication...${NC}"
-    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o PreferredAuthentications=password -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection successful'" 2>/dev/null; then
-        echo -e "${GREEN}SSH connection established with password authentication${NC}"
-        # Update SSH commands to use password authentication
-        REMOTE_SSH="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o PreferredAuthentications=password -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
-        REMOTE_SCP="scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o PreferredAuthentications=password -P $REMOTE_PORT"
-        return 0
+    # Get remote user
+    while [ -z "$REMOTE_USER" ]; do
+        read -p "Remote Username: " REMOTE_USER
+        if [ -z "$REMOTE_USER" ]; then
+            echo -e "${RED}Username cannot be empty.${NC}"
+        fi
+    done
+    
+    # Set remote directory
+    REMOTE_DOCKER_COMPOSE_DIR="/home/$REMOTE_USER/webapp_components"
+    read -p "Remote Directory (default: $REMOTE_DOCKER_COMPOSE_DIR): " custom_dir
+    if [ ! -z "$custom_dir" ]; then
+        REMOTE_DOCKER_COMPOSE_DIR="$custom_dir"
     fi
     
-    echo -e "${RED}SSH connection failed with both key and password authentication.${NC}"
-    echo -e "${YELLOW}Please check:${NC}"
-    echo -e "  1. Remote host is reachable: ping $REMOTE_HOST"
-    echo -e "  2. SSH service is running on port $REMOTE_PORT"
-    echo -e "  3. Username '$REMOTE_USER' exists on remote machine"
-    echo -e "  4. SSH key is set up or password is correct"
-    return 1
+    # Set SSH commands with password authentication preference
+    REMOTE_SSH="ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+    REMOTE_SCP="scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -P $REMOTE_PORT"
+    
+    echo ""
+    echo -e "${GREEN}Configuration Summary:${NC}"
+    echo -e "Host: $REMOTE_HOST"
+    echo -e "Port: $REMOTE_PORT"
+    echo -e "User: $REMOTE_USER"
+    echo -e "Directory: $REMOTE_DOCKER_COMPOSE_DIR"
+    echo ""
 }
 
-# Function to setup SSH key authentication
+# Function to check SSH connection
+check_ssh_connection() {
+    echo -e "${BLUE}Testing SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT...${NC}"
+    
+    # First check if host is reachable
+    echo -e "${BLUE}Checking if host is reachable...${NC}"
+    if ! ping -c 1 -W 3 "$REMOTE_HOST" >/dev/null 2>&1; then
+        echo -e "${RED}Warning: Host $REMOTE_HOST is not responding to ping${NC}"
+        echo -e "${YELLOW}This might be normal if ICMP is disabled, continuing with SSH test...${NC}"
+    else
+        echo -e "${GREEN}Host is reachable${NC}"
+    fi
+    
+    # Try SSH connection with password authentication
+    echo -e "${BLUE}Testing SSH connection (you will be prompted for password)...${NC}"
+    if ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o BatchMode=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection successful'"; then
+        echo -e "${GREEN}SSH connection established successfully${NC}"
+        return 0
+    else
+        echo -e "${RED}SSH connection failed.${NC}"
+        echo -e "${YELLOW}Please check:${NC}"
+        echo -e "  1. Remote host is accessible: $REMOTE_HOST"
+        echo -e "  2. SSH service is running on port $REMOTE_PORT"
+        echo -e "  3. Username '$REMOTE_USER' exists on remote machine"
+        echo -e "  4. Password is correct"
+        echo -e "  5. SSH is not blocked by firewall"
+        return 1
+    fi
+}
+
+# Function to setup SSH key authentication for passwordless deployment
 setup_ssh_keys() {
-    echo -e "${BLUE}Setting up SSH key authentication...${NC}"
+    echo -e "${BLUE}Setting up SSH key authentication for passwordless deployment...${NC}"
     
     # Check if SSH key exists
     if [ ! -f ~/.ssh/id_rsa ]; then
-        echo -e "${YELLOW}No SSH key found. Would you like to create one? (y/N)${NC}"
-        read -p "" -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo -e "${BLUE}Generating SSH key...${NC}"
-            ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" || {
-                echo -e "${RED}Failed to generate SSH key${NC}"
-                return 1
-            }
-            echo -e "${GREEN}SSH key generated successfully${NC}"
-        else
-            echo -e "${YELLOW}SSH key generation skipped.${NC}"
-            return 0
-        fi
-    fi
-    
-    # Test if key authentication works
-    echo -e "${BLUE}Testing SSH key authentication...${NC}"
-    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -o PasswordAuthentication=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH key test successful'" 2>/dev/null; then
-        echo -e "${GREEN}SSH key authentication is working${NC}"
-        return 0
-    fi
-    
-    # Key authentication failed, offer to copy key
-    echo -e "${YELLOW}SSH key not authorized on remote machine. Would you like to copy it? (y/N)${NC}"
-    read -p "" -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}Copying SSH key to remote machine (you may be prompted for password)...${NC}"
-        ssh-copy-id -o ConnectTimeout=10 -o StrictHostKeyChecking=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" && {
-            echo -e "${GREEN}SSH key copied successfully${NC}"
-            # Update SSH commands to prefer key authentication
-            REMOTE_SSH="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
-            REMOTE_SCP="scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -P $REMOTE_PORT"
-            return 0
-        } || {
-            echo -e "${RED}Failed to copy SSH key. Will use password authentication.${NC}"
+        echo -e "${BLUE}Generating SSH key for passwordless authentication...${NC}"
+        ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -q || {
+            echo -e "${RED}Failed to generate SSH key${NC}"
             return 1
         }
-    else
-        echo -e "${YELLOW}SSH key copy skipped. Will use password authentication.${NC}"
+        echo -e "${GREEN}SSH key generated successfully${NC}"
+    fi
+    
+    # Test if key authentication already works
+    echo -e "${BLUE}Testing if SSH key is already authorized...${NC}"
+    if ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -o PasswordAuthentication=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH key test successful'" 2>/dev/null; then
+        echo -e "${GREEN}SSH key authentication is already working${NC}"
+        # Update SSH commands to use key authentication
+        REMOTE_SSH="ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        REMOTE_SCP="scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -P $REMOTE_PORT"
         return 0
+    fi
+    
+    # Key authentication not working, copy the key (this will ask for password once)
+    echo -e "${BLUE}Copying SSH key to remote machine...${NC}"
+    echo -e "${YELLOW}You will be prompted for your password ONCE to set up passwordless authentication.${NC}"
+    echo -e "${YELLOW}After this, the deployment will proceed without further password prompts.${NC}"
+    
+    if ssh-copy-id -o ConnectTimeout=15 -o StrictHostKeyChecking=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" 2>/dev/null; then
+        echo -e "${GREEN}SSH key copied successfully${NC}"
+        # Update SSH commands to use key authentication
+        REMOTE_SSH="ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        REMOTE_SCP="scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -P $REMOTE_PORT"
+        
+        # Verify key authentication is working
+        if ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -o PasswordAuthentication=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH key verification successful'" 2>/dev/null; then
+            echo -e "${GREEN}Passwordless SSH authentication is now active${NC}"
+            return 0
+        else
+            echo -e "${RED}SSH key setup verification failed${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}Failed to copy SSH key${NC}"
+        echo -e "${YELLOW}Deployment will use password authentication (multiple prompts)${NC}"
+        return 1
     fi
 }
 
@@ -545,11 +593,6 @@ ask_remote_deployment() {
     echo -e "Your local application is now running at: http://localhost:${APP_PORT}"
     echo ""
     echo -e "Would you like to also deploy this application to a remote machine?"
-    echo -e "Remote Configuration:"
-    echo -e "- Host: $REMOTE_HOST"
-    echo -e "- Port: $REMOTE_PORT"
-    echo -e "- User: $REMOTE_USER"
-    echo -e "- Directory: $REMOTE_DOCKER_COMPOSE_DIR"
     echo ""
     echo -e "The deployment will:"
     echo -e "1. Copy all project files to remote machine"
@@ -563,12 +606,13 @@ ask_remote_deployment() {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Starting remote deployment...${NC}"
         
-        # Setup SSH keys to avoid password prompts
-        setup_ssh_keys
+        # Get remote configuration from user
+        get_remote_config
         
         # Check prerequisites
         if ! check_ssh_connection; then
             echo -e "${RED}Remote deployment failed due to SSH connection issues.${NC}"
+            echo -e "${YELLOW}Please verify your connection details and try again.${NC}"
             return 1
         fi
         
@@ -590,6 +634,11 @@ ask_remote_deployment() {
             echo -e "$existing_containers"
             echo -e "${YELLOW}These will be handled during deployment.${NC}"
             echo ""
+        fi
+        
+        # Setup SSH keys for passwordless deployment
+        if ! setup_ssh_keys; then
+            echo -e "${YELLOW}SSH key setup failed, deployment will use password authentication${NC}"
         fi
         
         # Setup remote directory

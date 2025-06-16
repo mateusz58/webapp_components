@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, send_file, abort
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, send_file, abort, session
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from app import db
@@ -623,21 +623,44 @@ def edit_component(id):
 
     if request.method == 'POST':
         try:
+            # Track changes for highlighting
+            changed_fields = []
+            
             # Update basic information
+            old_product_number = component.product_number
             component.product_number = request.form.get('product_number', '').strip()
+            if old_product_number != component.product_number:
+                changed_fields.append('product_number')
+            
+            old_description = component.description
             component.description = request.form.get('description', '').strip()
+            if old_description != component.description:
+                changed_fields.append('description')
+            
+            old_component_type_id = component.component_type_id
             component.component_type_id = int(request.form.get('component_type_id'))
+            if old_component_type_id != component.component_type_id:
+                changed_fields.append('component_type_id')
             
             # Handle optional supplier_id
+            old_supplier_id = component.supplier_id
             supplier_id = request.form.get('supplier_id')
             component.supplier_id = int(supplier_id) if supplier_id else None
+            if old_supplier_id != component.supplier_id:
+                changed_fields.append('supplier_id')
             
+            old_category_id = component.category_id
             component.category_id = int(request.form.get('category_id'))
+            if old_category_id != component.category_id:
+                changed_fields.append('category_id')
+            
             component.updated_at = datetime.utcnow()
 
             # Update keywords
+            old_keywords = {kw.name for kw in component.keywords}
             component.keywords.clear()
             keywords = request.form.get('keywords', '').strip()
+            new_keywords = set()
             if keywords:
                 keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
                 for keyword_name in keyword_list:
@@ -646,6 +669,10 @@ def edit_component(id):
                         keyword = Keyword(name=keyword_name)
                         db.session.add(keyword)
                     component.keywords.append(keyword)
+                    new_keywords.add(keyword_name)
+            
+            if old_keywords != new_keywords:
+                changed_fields.append('keywords')
 
             # FIXED: Update brand associations with proper handling
             # Get current brand IDs
@@ -675,19 +702,40 @@ def edit_component(id):
                         brand_id=brand_id
                     )
                     db.session.add(association)
+            
+            if brands_to_remove or brands_to_add:
+                changed_fields.append('brands')
 
             # Update properties
             component_type = ComponentType.query.get(component.component_type_id)
             if component_type:
+                old_properties = component.properties.copy() if component.properties else {}
                 component.properties = {}  # Clear existing properties
                 _process_component_properties(component, component_type.name, request.form)
+                if old_properties != component.properties:
+                    changed_fields.append('properties')
 
             # Update images with improved handling
+            old_picture_count = len(component.pictures)
             _update_component_images(component, request)
+            if old_picture_count != len(component.pictures):
+                changed_fields.append('images')
+            
+            # Process variant pictures for all variants
+            for variant in component.variants:
+                old_variant_picture_count = len(variant.variant_pictures)
+                _update_variant_images(variant, request)
+                if old_variant_picture_count != len(variant.variant_pictures):
+                    changed_fields.append('images')
 
             db.session.commit()
+            
+            # Store changed fields in session for highlighting
+            session['changed_fields'] = changed_fields
             flash('Component updated successfully!', 'success')
-            return redirect(url_for('main.component_detail', id=component.id))
+            
+            # Stay on the edit page instead of redirecting
+            return redirect(url_for('main.edit_component', id=component.id))
 
         except Exception as e:
             db.session.rollback()
@@ -716,10 +764,39 @@ def edit_component(id):
     colors = Color.query.order_by(Color.name).all()
     materials = Material.query.order_by(Material.name).all()
 
+    # NEW: Load component type properties from database  
+    component_type_properties = {}
+    print(f"DEBUG: Loading component type properties for {len(component_types)} component types")
+    for ct in component_types:
+        try:
+            ct_properties = ComponentTypeProperty.query.filter_by(component_type_id=ct.id).order_by(ComponentTypeProperty.display_order).all()
+            print(f"DEBUG: Found {len(ct_properties)} properties for {ct.name}")
+            
+            properties_list = []
+            for prop in ct_properties:
+                try:
+                    property_dict = {
+                        'property_name': str(prop.property_name) if prop.property_name else '',
+                        'property_type': str(prop.property_type) if prop.property_type else 'text',
+                        'is_required': bool(prop.is_required) if prop.is_required is not None else False,
+                        'options': list(prop.get_options()) if prop.get_options() else [],
+                        'placeholder': str(prop.get_placeholder()) if prop.get_placeholder() else '',
+                        'display_name': str(prop.property_name).replace('_', ' ').title() if prop.property_name else ''
+                    }
+                    properties_list.append(property_dict)
+                    print(f"DEBUG: Added property {property_dict['property_name']}")
+                except Exception as prop_error:
+                    print(f"ERROR: Failed to process property {prop.id}: {prop_error}")
+                    
+            component_type_properties[ct.name] = properties_list
+        except Exception as ct_error:
+            print(f"ERROR: Failed to process component type {ct.name}: {ct_error}")
+            component_type_properties[ct.name] = []
+
     # FIXED: Prepare serializable data for template
     try:
-        # Convert brands to serializable format
-        component_cached_brands = [{'id': brand.id, 'name': brand.name} for brand in component.brands]
+        # Convert brands to serializable format using brand_associations (FIXED)
+        component_cached_brands = [{'id': assoc.brand.id, 'name': assoc.brand.name} for assoc in component.brand_associations]
         available_brands = [{'id': brand.id, 'name': brand.name} for brand in brands]
 
         # Set as attributes for template access
@@ -731,6 +808,9 @@ def edit_component(id):
         component._cached_brands = []
         available_brands = [{'id': brand.id, 'name': brand.name} for brand in brands]
 
+    # Get changed fields from session for highlighting
+    changed_fields = session.pop('changed_fields', []) if 'changed_fields' in session else []
+
     return render_template('component_edit_form.html',
                            component=component,
                            component_types=component_types,
@@ -739,8 +819,10 @@ def edit_component(id):
                            colors=colors,
                            materials=materials,
                            brands=brands,
+                           component_type_properties=component_type_properties,  # NEW: Pass component type properties
                            available_brands_json=available_brands,  # FIXED: Pass serializable data
-                           component_brands_json=component_cached_brands)  # FIXED: Pass serializable data
+                           component_brands_json=component_cached_brands,  # FIXED: Pass serializable data
+                           changed_fields=changed_fields)  # NEW: Pass changed fields for highlighting
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
@@ -1818,8 +1900,32 @@ def _update_variant_images(variant, request):
             if order_key in request.form:
                 picture.picture_order = int(request.form[order_key] or picture.picture_order)
 
-    # Process new uploaded images
+    # Process new uploaded images for this specific variant
+    # Handle files with naming convention: variant_${variantId}_images
+    variant_file_key = f'variant_{variant.id}_images'
+    variant_files = request.files.getlist(variant_file_key)
+    
+    # Get current max order for this variant
     max_order = max([p.picture_order for p in variant.variant_pictures] + [0])
+    
+    for picture_file in variant_files:
+        if picture_file and picture_file.filename:
+            try:
+                file_url = save_uploaded_file(picture_file, 'variant_uploads')
+                if file_url:
+                    max_order += 1
+                    picture = Picture(
+                        variant_id=variant.id,
+                        component_id=variant.component_id,  # Ensure component_id is set
+                        picture_name=picture_file.filename,
+                        url=file_url,
+                        picture_order=max_order
+                    )
+                    db.session.add(picture)
+            except Exception as e:
+                current_app.logger.error(f"Error uploading new variant image for variant {variant.id}: {str(e)}")
+
+    # Also handle the old naming convention for backward compatibility
     for i in range(1, 11):  # Up to 10 new images
         picture_file = request.files.get(f'variant_picture_{i}')
         if picture_file and picture_file.filename:
@@ -1829,13 +1935,14 @@ def _update_variant_images(variant, request):
                     max_order += 1
                     picture = Picture(
                         variant_id=variant.id,
+                        component_id=variant.component_id,  # Ensure component_id is set
                         picture_name=picture_file.filename,
                         url=file_url,
                         picture_order=max_order
                     )
                     db.session.add(picture)
             except Exception as e:
-                current_app.logger.error(f"Error uploading new variant image {i}: {str(e)}")
+                current_app.logger.error(f"Error uploading new variant image {i} for variant {variant.id}: {str(e)}")
 
 @main.route('/api/brands/search')
 def api_search_brands():
