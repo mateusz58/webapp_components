@@ -213,6 +213,37 @@ create index idx_component_type_property_name
 create index idx_component_type_property_order
     on component_type_property (display_order);
 
+create table property
+(
+    id           serial
+        primary key,
+    property_key varchar(100) not null
+        unique,
+    display_name varchar(100) not null,
+    data_type    varchar(50)  not null,
+    description  text,
+    is_active    boolean,
+    created_at   timestamp,
+    updated_at   timestamp,
+    options      json
+);
+
+alter table property
+    owner to mpilarczyk;
+
+grant select, update, usage on sequence property_id_seq to component_user;
+
+create index idx_property_key
+    on property (property_key);
+
+create index idx_property_data_type
+    on property (data_type);
+
+create index idx_property_active
+    on property (is_active);
+
+grant delete, insert, references, select, trigger, truncate, update on property to component_user;
+
 create table supplier
 (
     id            serial
@@ -367,6 +398,9 @@ create table component_variant
     is_active    boolean   default true,
     created_at   timestamp default CURRENT_TIMESTAMP,
     updated_at   timestamp default CURRENT_TIMESTAMP,
+    variant_sku  varchar(255)
+        constraint component_variant_sku_unique
+            unique,
     unique (component_id, color_id)
 );
 
@@ -384,6 +418,9 @@ create index idx_variant_component
 
 create index idx_variant_color
     on component_variant (color_id);
+
+create index idx_component_variant_sku
+    on component_variant (variant_sku);
 
 create table component_brand
 (
@@ -464,9 +501,11 @@ create table picture
 (
     id            serial
         primary key,
-    component_id  integer
+    component_id  integer      not null
         references component,
-    picture_name  varchar(255) not null,
+    picture_name  varchar(255) not null
+        constraint picture_name_unique
+            unique,
     url           varchar(255) not null,
     picture_order integer      not null,
     variant_id    integer
@@ -475,11 +514,7 @@ create table picture
     alt_text      varchar(500),
     file_size     integer,
     is_primary    boolean   default false,
-    created_at    timestamp default CURRENT_TIMESTAMP,
-    unique (component_id, picture_order),
-    constraint picture_belongs_to_component_or_variant
-        check (((component_id IS NOT NULL) AND (variant_id IS NULL)) OR
-               ((component_id IS NULL) AND (variant_id IS NOT NULL)))
+    created_at    timestamp default CURRENT_TIMESTAMP
 );
 
 alter table picture
@@ -499,6 +534,9 @@ create index idx_picture_order
 
 create unique index component_index_unique
     on picture (variant_id, picture_order);
+
+create index idx_picture_name
+    on picture (picture_name);
 
 create table alembic_version
 (
@@ -575,6 +613,390 @@ create trigger update_component_updated_at
     on component
     for each row
 execute procedure update_updated_at_column();
+
+grant execute on function update_updated_at_column() to component_user;
+
+create function generate_variant_sku(p_component_id integer, p_color_id integer) returns character varying
+    language plpgsql
+as
+$$
+            DECLARE
+                v_supplier_code VARCHAR(50);
+                v_product_number VARCHAR(50);
+                v_color_name VARCHAR(50);
+                v_sku VARCHAR(255);
+            BEGIN
+                -- Get component details with supplier code
+                SELECT 
+                    COALESCE(s.supplier_code, '') as supplier_code,
+                    c.product_number
+                INTO v_supplier_code, v_product_number
+                FROM component_app.component c
+                LEFT JOIN component_app.supplier s ON c.supplier_id = s.id
+                WHERE c.id = p_component_id;
+                
+                -- Get color name
+                SELECT name INTO v_color_name
+                FROM component_app.color
+                WHERE id = p_color_id;
+                
+                -- Normalize product number: lowercase and replace spaces with underscores
+                v_product_number := LOWER(REPLACE(v_product_number, ' ', '_'));
+                
+                -- Normalize color name: lowercase and replace spaces with underscores
+                v_color_name := LOWER(REPLACE(v_color_name, ' ', '_'));
+                
+                -- Generate SKU based on whether supplier exists
+                IF v_supplier_code IS NOT NULL AND v_supplier_code != '' THEN
+                    -- Pattern: <supplier_code>_<product_number>_<color_name>
+                    v_sku := v_supplier_code || '_' || v_product_number || '_' || v_color_name;
+                ELSE
+                    -- Pattern: <product_number>_<color_name>
+                    v_sku := v_product_number || '_' || v_color_name;
+                END IF;
+                
+                RETURN v_sku;
+            END;
+            $$;
+
+alter function generate_variant_sku(integer, integer) owner to component_user;
+
+create function update_variant_sku() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update the variant_sku when insert or update occurs
+                IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+                    NEW.variant_sku := component_app.generate_variant_sku(NEW.component_id, NEW.color_id);
+                    NEW.updated_at := CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END IF;
+                
+                RETURN NULL;
+            END;
+            $$;
+
+alter function update_variant_sku() owner to component_user;
+
+create trigger trigger_update_variant_sku
+    before insert or update
+    on component_variant
+    for each row
+execute procedure update_variant_sku();
+
+create function update_variant_skus_on_component_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all variant SKUs when component product_number or supplier changes
+                IF TG_OP = 'UPDATE' THEN
+                    -- Check if product_number or supplier_id changed
+                    IF OLD.product_number != NEW.product_number OR 
+                       COALESCE(OLD.supplier_id, -1) != COALESCE(NEW.supplier_id, -1) THEN
+                        
+                        -- Update all variants for this component
+                        UPDATE component_app.component_variant 
+                        SET variant_sku = component_app.generate_variant_sku(component_id, color_id),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE component_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_variant_skus_on_component_change() owner to component_user;
+
+create trigger trigger_update_variant_skus_on_component_change
+    after update
+    on component
+    for each row
+execute procedure update_variant_skus_on_component_change();
+
+create function update_variant_skus_on_supplier_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all variant SKUs when supplier code changes
+                IF TG_OP = 'UPDATE' THEN
+                    IF OLD.supplier_code != NEW.supplier_code THEN
+                        -- Update all variants for components using this supplier
+                        UPDATE component_app.component_variant cv
+                        SET variant_sku = component_app.generate_variant_sku(cv.component_id, cv.color_id),
+                            updated_at = CURRENT_TIMESTAMP
+                        FROM component_app.component c
+                        WHERE cv.component_id = c.id 
+                        AND c.supplier_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_variant_skus_on_supplier_change() owner to component_user;
+
+create trigger trigger_update_variant_skus_on_supplier_change
+    after update
+    on supplier
+    for each row
+execute procedure update_variant_skus_on_supplier_change();
+
+create function update_variant_skus_on_color_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all variant SKUs when color name changes
+                IF TG_OP = 'UPDATE' THEN
+                    IF OLD.name != NEW.name THEN
+                        -- Update all variants using this color
+                        UPDATE component_app.component_variant 
+                        SET variant_sku = component_app.generate_variant_sku(component_id, color_id),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE color_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_variant_skus_on_color_change() owner to component_user;
+
+create trigger trigger_update_variant_skus_on_color_change
+    after update
+    on color
+    for each row
+execute procedure update_variant_skus_on_color_change();
+
+create function generate_picture_name(p_component_id integer DEFAULT NULL::integer, p_variant_id integer DEFAULT NULL::integer, p_picture_order integer DEFAULT 1) returns character varying
+    language plpgsql
+as
+$$
+            DECLARE
+                v_supplier_code VARCHAR(50);
+                v_product_number VARCHAR(50);
+                v_color_name VARCHAR(50);
+                v_picture_name VARCHAR(255);
+            BEGIN
+                -- Determine if this is a component or variant picture
+                IF p_variant_id IS NOT NULL THEN
+                    -- Variant picture: get component info through variant
+                    SELECT 
+                        COALESCE(s.supplier_code, '') as supplier_code,
+                        c.product_number,
+                        co.name as color_name
+                    INTO v_supplier_code, v_product_number, v_color_name
+                    FROM component_app.component_variant cv
+                    JOIN component_app.component c ON cv.component_id = c.id
+                    JOIN component_app.color co ON cv.color_id = co.id
+                    LEFT JOIN component_app.supplier s ON c.supplier_id = s.id
+                    WHERE cv.id = p_variant_id;
+                ELSIF p_component_id IS NOT NULL THEN
+                    -- Component picture: get component info directly
+                    SELECT 
+                        COALESCE(s.supplier_code, '') as supplier_code,
+                        c.product_number,
+                        'main' as color_name  -- Use 'main' for component pictures
+                    INTO v_supplier_code, v_product_number, v_color_name
+                    FROM component_app.component c
+                    LEFT JOIN component_app.supplier s ON c.supplier_id = s.id
+                    WHERE c.id = p_component_id;
+                ELSE
+                    RAISE EXCEPTION 'Either component_id or variant_id must be provided';
+                END IF;
+                
+                -- Check if we found the data
+                IF v_product_number IS NULL THEN
+                    RAISE EXCEPTION 'Component or variant not found';
+                END IF;
+                
+                -- Normalize strings: lowercase and replace spaces with underscores
+                v_product_number := LOWER(REPLACE(v_product_number, ' ', '_'));
+                v_color_name := LOWER(REPLACE(v_color_name, ' ', '_'));
+                
+                -- Generate picture name based on whether supplier exists
+                IF v_supplier_code IS NOT NULL AND v_supplier_code != '' THEN
+                    -- Pattern: <supplier_code>_<product_number>_<color_name>_<picture_order>
+                    v_picture_name := LOWER(v_supplier_code) || '_' || v_product_number || '_' || v_color_name || '_' || p_picture_order::text;
+                ELSE
+                    -- Pattern: <product_number>_<color_name>_<picture_order>
+                    v_picture_name := v_product_number || '_' || v_color_name || '_' || p_picture_order::text;
+                END IF;
+                
+                RETURN v_picture_name;
+            END;
+            $$;
+
+alter function generate_picture_name(integer, integer, integer) owner to component_user;
+
+create function update_picture_name() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update the picture_name when insert or update occurs
+                IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+                    NEW.picture_name := component_app.generate_picture_name(NEW.component_id, NEW.variant_id, NEW.picture_order);
+                    RETURN NEW;
+                END IF;
+                
+                RETURN NULL;
+            END;
+            $$;
+
+alter function update_picture_name() owner to component_user;
+
+create trigger trigger_update_picture_name
+    before insert or update
+    on picture
+    for each row
+execute procedure update_picture_name();
+
+create function update_picture_names_on_component_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all picture names when component product_number or supplier changes
+                IF TG_OP = 'UPDATE' THEN
+                    -- Check if product_number or supplier_id changed
+                    IF OLD.product_number != NEW.product_number OR 
+                       COALESCE(OLD.supplier_id, -1) != COALESCE(NEW.supplier_id, -1) THEN
+                        
+                        -- Update component pictures for this component
+                        UPDATE component_app.picture 
+                        SET picture_name = component_app.generate_picture_name(component_id, variant_id, picture_order)
+                        WHERE component_id = NEW.id;
+                        
+                        -- Update variant pictures for variants of this component
+                        UPDATE component_app.picture p
+                        SET picture_name = component_app.generate_picture_name(p.component_id, p.variant_id, p.picture_order)
+                        FROM component_app.component_variant cv
+                        WHERE p.variant_id = cv.id 
+                        AND cv.component_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_picture_names_on_component_change() owner to component_user;
+
+create trigger trigger_update_picture_names_on_component_change
+    after update
+    on component
+    for each row
+execute procedure update_picture_names_on_component_change();
+
+create function update_picture_names_on_supplier_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all picture names when supplier code changes
+                IF TG_OP = 'UPDATE' THEN
+                    IF OLD.supplier_code != NEW.supplier_code THEN
+                        -- Update component pictures for components using this supplier
+                        UPDATE component_app.picture p
+                        SET picture_name = component_app.generate_picture_name(p.component_id, p.variant_id, p.picture_order)
+                        FROM component_app.component c
+                        WHERE p.component_id = c.id 
+                        AND c.supplier_id = NEW.id;
+                        
+                        -- Update variant pictures for components using this supplier
+                        UPDATE component_app.picture p
+                        SET picture_name = component_app.generate_picture_name(p.component_id, p.variant_id, p.picture_order)
+                        FROM component_app.component_variant cv
+                        JOIN component_app.component c ON cv.component_id = c.id
+                        WHERE p.variant_id = cv.id 
+                        AND c.supplier_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_picture_names_on_supplier_change() owner to component_user;
+
+create trigger trigger_update_picture_names_on_supplier_change
+    after update
+    on supplier
+    for each row
+execute procedure update_picture_names_on_supplier_change();
+
+create function update_picture_names_on_color_change() returns trigger
+    language plpgsql
+as
+$$
+            BEGIN
+                -- Update all picture names when color name changes
+                IF TG_OP = 'UPDATE' THEN
+                    IF OLD.name != NEW.name THEN
+                        -- Update variant pictures using this color
+                        UPDATE component_app.picture p
+                        SET picture_name = component_app.generate_picture_name(p.component_id, p.variant_id, p.picture_order)
+                        FROM component_app.component_variant cv
+                        WHERE p.variant_id = cv.id 
+                        AND cv.color_id = NEW.id;
+                    END IF;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$;
+
+alter function update_picture_names_on_color_change() owner to component_user;
+
+create trigger trigger_update_picture_names_on_color_change
+    after update
+    on color
+    for each row
+execute procedure update_picture_names_on_color_change();
+
+create function ensure_picture_component_id() returns trigger
+    language plpgsql
+as
+$$
+BEGIN
+    -- If variant_id is being set, automatically set component_id
+    IF NEW.variant_id IS NOT NULL THEN
+        SELECT component_id INTO NEW.component_id
+        FROM component_app.component_variant
+        WHERE id = NEW.variant_id;
+
+        IF NEW.component_id IS NULL THEN
+            RAISE EXCEPTION 'Cannot find component for variant_id %', NEW.variant_id;
+        END IF;
+    END IF;
+
+    -- Ensure component_id is never NULL
+    IF NEW.component_id IS NULL THEN
+        RAISE EXCEPTION 'component_id cannot be NULL for pictures';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+alter function ensure_picture_component_id() owner to mpilarczyk;
+
+create trigger ensure_picture_component_id_trigger
+    before insert or update
+    on picture
+    for each row
+execute procedure ensure_picture_component_id();
+
+grant execute on function ensure_picture_component_id() to component_user;
+
+
 
 grant execute on function update_updated_at_column() to component_user;
 

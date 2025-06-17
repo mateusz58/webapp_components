@@ -1,0 +1,810 @@
+<!-- Change Summary Modal -->
+<div id="changeSummaryModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <div class="modal-header-content">
+                <div class="modal-icon">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="modal-title">Confirm Changes</h3>
+                    <p class="modal-subtitle">Review the changes you're about to apply</p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeChangeSummaryModal()">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Changes Summary -->
+            <div id="changesContainer" class="changes-container">
+                <!-- Changes will be populated here by JavaScript -->
+            </div>
+            
+            <!-- No Changes State -->
+            <div id="noChangesState" class="no-changes-state" style="display: none;">
+                <div class="no-changes-icon">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                </div>
+                <h4>No Changes Detected</h4>
+                <p>All fields have the same values as before. No update is needed.</p>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="changeSummaryLoading" class="modal-loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing changes...</p>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeChangeSummaryModal()">
+                Cancel
+            </button>
+            <button type="button" id="confirmChangesBtn" class="btn btn-primary" onclick="confirmAndSubmitChanges()">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                </svg>
+                Apply Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+}
+
+/* Modal Container */
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .modal-container {
+    transform: scale(1) translateY(0);
+}
+
+/* Modal Header */
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.modal-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.modal-subtitle {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.modal-close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 1.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+/* Changes Container */
+.changes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.change-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+}
+
+.change-item.modified {
+    border-color: #fbbf24;
+    background: #fffbeb;
+}
+
+.change-item.added {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.change-item.removed {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.change-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.change-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.change-item.modified .change-icon {
+    background: #fbbf24;
+    color: white;
+}
+
+.change-item.added .change-icon {
+    background: #10b981;
+    color: white;
+}
+
+.change-item.removed .change-icon {
+    background: #ef4444;
+    color: white;
+}
+
+.change-label {
+    font-weight: 600;
+    color: #374151;
+    text-transform: capitalize;
+}
+
+.change-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.change-value {
+    padding: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 0.875rem;
+}
+
+.change-from {
+    color: #dc2626;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.change-to {
+    color: #059669;
+    font-weight: 500;
+}
+
+.change-arrow {
+    color: #6b7280;
+    text-align: center;
+    font-size: 0.75rem;
+    margin: 0.25rem 0;
+}
+
+/* No Changes State */
+.no-changes-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.no-changes-icon {
+    margin: 0 auto 1rem;
+    color: #d1d5db;
+}
+
+.no-changes-state h4 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+    font-weight: 500;
+}
+
+.no-changes-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Modal Loading */
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modal Footer */
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: #f9fafb;
+}
+
+.modal-footer .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-footer .btn-secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #f3f4f6;
+}
+
+.modal-footer .btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.modal-footer .btn-primary:hover {
+    background: #2563eb;
+}
+
+.modal-footer .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .modal-container {
+        margin: 0.5rem;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// Change Summary Modal JavaScript
+let originalFormData = {};
+let currentFormData = {};
+let lookupMaps = {};
+
+// Initialize original form data on page load
+function initializeOriginalFormData() {
+    const form = document.getElementById('componentForm');
+    if (form) {
+        // Create lookup maps for resolving IDs to names
+        createLookupMaps();
+        
+        originalFormData = captureFormData(form);
+        console.log('Original form data captured:', originalFormData);
+    }
+}
+
+// Create lookup maps for suppliers, brands, categories, and component types
+function createLookupMaps() {
+    lookupMaps = {
+        suppliers: {},
+        brands: {},
+        categories: {},
+        component_types: {}
+    };
+    
+    // Create supplier lookup map
+    const supplierOptions = document.querySelectorAll('select[name="supplier_id"] option');
+    supplierOptions.forEach(option => {
+        if (option.value) {
+            lookupMaps.suppliers[option.value] = option.textContent.trim();
+        }
+    });
+    
+    // Create brand lookup map
+    const brandOptions = document.querySelectorAll('#brand_select option');
+    brandOptions.forEach(option => {
+        if (option.value) {
+            lookupMaps.brands[option.value] = option.textContent.trim();
+        }
+    });
+    
+    // Create category lookup map
+    const categoryOptions = document.querySelectorAll('select[name="category_id"] option');
+    categoryOptions.forEach(option => {
+        if (option.value) {
+            lookupMaps.categories[option.value] = option.textContent.trim();
+        }
+    });
+    
+    // Create component type lookup map
+    const componentTypeOptions = document.querySelectorAll('select[name="component_type_id"] option');
+    componentTypeOptions.forEach(option => {
+        if (option.value) {
+            lookupMaps.component_types[option.value] = option.textContent.trim();
+        }
+    });
+    
+    console.log('Lookup maps created:', lookupMaps);
+}
+
+// Capture current form data
+function captureFormData(form) {
+    const data = {};
+    const formData = new FormData(form);
+    
+    // Basic fields
+    data.product_number = formData.get('product_number') || '';
+    data.description = formData.get('description') || '';
+    data.component_type_id = formData.get('component_type_id') || '';
+    data.supplier_id = formData.get('supplier_id') || '';
+    data.category_id = formData.get('category_id') || '';
+    data.keywords = formData.get('keywords') || '';
+    
+    // Brands - get all selected brand IDs from hidden inputs
+    const brandInputs = form.querySelectorAll('input[type="hidden"][name="brands"]');
+    data.brands = Array.from(brandInputs).map(input => input.value).filter(value => value);
+    
+    // Properties (dynamic fields)
+    data.properties = {};
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('property_')) {
+            data.properties[key] = value;
+        }
+    }
+    
+    // Component Images count
+    const componentImages = form.querySelectorAll('input[type="file"][name^="picture_"]');
+    data.images_count = Array.from(componentImages).filter(input => input.files.length > 0).length;
+    
+    // VARIANT TRACKING - New functionality
+    data.variants = {
+        count: 0,
+        new_images: 0,
+        existing_variants: [],
+        dynamic_content_hash: ''
+    };
+    
+    // Count existing variant sections in the DOM - improved selectors
+    const variantSections = document.querySelectorAll('.variant-card, [id*="variant_"], .component-variant, [data-variant-id]');
+    data.variants.count = variantSections.length;
+    
+    // Debug logging
+    console.log(`Variant detection: Found ${data.variants.count} variants`, variantSections);
+    
+    // Track variant image uploads
+    const variantImageInputs = form.querySelectorAll('input[type="file"][id^="variant_images_"], input[name^="variant_"][name*="images"]');
+    variantImageInputs.forEach(input => {
+        if (input.files && input.files.length > 0) {
+            data.variants.new_images += input.files.length;
+        }
+    });
+    
+    // Track variant-specific form inputs and content
+    const variantInputs = form.querySelectorAll('input[name*="variant"], textarea[name*="variant"], select[name*="variant"]');
+    let variantFormData = [];
+    variantInputs.forEach(input => {
+        variantFormData.push(`${input.name}:${input.value}`);
+    });
+    
+    // Create a hash of variant-related DOM content to detect structural changes
+    const variantContainers = document.querySelectorAll('.variant-card');
+    let contentString = '';
+    variantContainers.forEach((container, index) => {
+        // Capture key identifiers and counts
+        const images = container.querySelectorAll('img, .picture-item, .miniature-item');
+        const inputs = container.querySelectorAll('input, select, textarea');
+        const fileInputs = container.querySelectorAll('input[type="file"]');
+        
+        // Check for files in file inputs
+        let fileCount = 0;
+        fileInputs.forEach(input => {
+            if (input.files) fileCount += input.files.length;
+        });
+        
+        const variantId = container.dataset.variantId || `unknown_${index}`;
+        contentString += `v${variantId}:${images.length}imgs,${inputs.length}inputs,${fileCount}files;`;
+    });
+    
+    data.variants.dynamic_content_hash = contentString;
+    data.variants.form_data_hash = variantFormData.join('|');
+    
+    // Additional debugging
+    console.log('Variant tracking data:', {
+        count: data.variants.count,
+        new_images: data.variants.new_images,
+        content_hash: data.variants.dynamic_content_hash,
+        form_hash: data.variants.form_data_hash
+    });
+    
+    return data;
+}
+
+// Helper function to resolve IDs to display names
+function resolveDisplayValue(fieldKey, value) {
+    if (!value) return value;
+    
+    switch (fieldKey) {
+        case 'supplier_id':
+            return lookupMaps.suppliers[value] || `Unknown Supplier (ID: ${value})`;
+        case 'component_type_id':
+            return lookupMaps.component_types[value] || `Unknown Type (ID: ${value})`;
+        case 'category_id':
+            return lookupMaps.categories[value] || `Unknown Category (ID: ${value})`;
+        default:
+            return value;
+    }
+}
+
+// Helper function to resolve brand IDs to names
+function resolveBrandNames(brandIds) {
+    if (!Array.isArray(brandIds) || brandIds.length === 0) return 'None';
+    
+    return brandIds.map(id => lookupMaps.brands[id] || `Unknown Brand (ID: ${id})`).join(', ');
+}
+
+// Compare form data and detect changes
+function detectChanges(original, current) {
+    const changes = [];
+    
+    // Debug logging
+    console.log('Detecting changes between:', {
+        original: original,
+        current: current
+    });
+    
+    // Compare basic fields with proper display value resolution
+    const basicFields = [
+        { key: 'product_number', label: 'Product Number', resolve: false },
+        { key: 'description', label: 'Description', resolve: false },
+        { key: 'component_type_id', label: 'Component Type', resolve: true },
+        { key: 'supplier_id', label: 'Supplier', resolve: true },
+        { key: 'category_id', label: 'Category', resolve: true },
+        { key: 'keywords', label: 'Keywords', resolve: false }
+    ];
+    
+    basicFields.forEach(field => {
+        if (original[field.key] !== current[field.key]) {
+            let fromValue = original[field.key];
+            let toValue = current[field.key];
+            
+            // Resolve IDs to display names if needed
+            if (field.resolve) {
+                fromValue = resolveDisplayValue(field.key, fromValue);
+                toValue = resolveDisplayValue(field.key, toValue);
+            }
+            
+            // Handle empty values
+            fromValue = fromValue || 'None';
+            toValue = toValue || 'None';
+            
+            changes.push({
+                type: 'modified',
+                field: field.key,
+                label: field.label,
+                from: fromValue,
+                to: toValue
+            });
+        }
+    });
+    
+    // Compare brands with name resolution
+    const originalBrands = new Set(original.brands);
+    const currentBrands = new Set(current.brands);
+    
+    if (originalBrands.size !== currentBrands.size || 
+        ![...originalBrands].every(brand => currentBrands.has(brand))) {
+        changes.push({
+            type: 'modified',
+            field: 'brands',
+            label: 'Brands',
+            from: resolveBrandNames(Array.from(originalBrands)),
+            to: resolveBrandNames(Array.from(currentBrands))
+        });
+    }
+    
+    // Compare properties
+    const originalProps = JSON.stringify(original.properties);
+    const currentProps = JSON.stringify(current.properties);
+    
+    if (originalProps !== currentProps) {
+        changes.push({
+            type: 'modified',
+            field: 'properties',
+            label: 'Properties',
+            from: 'Previous values',
+            to: 'Updated values'
+        });
+    }
+    
+    // Check for new component images
+    if (current.images_count > 0) {
+        changes.push({
+            type: 'added',
+            field: 'images',
+            label: 'Component Images',
+            from: '',
+            to: `${current.images_count} new image(s) to upload`
+        });
+    }
+    
+    // VARIANT CHANGES DETECTION - New functionality
+    
+    // Check for variant count changes (new/removed variants)
+    if (original.variants.count !== current.variants.count) {
+        const difference = current.variants.count - original.variants.count;
+        changes.push({
+            type: difference > 0 ? 'added' : 'removed',
+            field: 'variants_count',
+            label: 'Component Variants',
+            from: `${original.variants.count} variant(s)`,
+            to: `${current.variants.count} variant(s)`
+        });
+    }
+    
+    // Check for new variant images
+    if (current.variants.new_images > 0) {
+        changes.push({
+            type: 'added',
+            field: 'variant_images',
+            label: 'Variant Images',
+            from: '',
+            to: `${current.variants.new_images} new variant image(s) to upload`
+        });
+    }
+    
+    // Check for variant content/structure changes
+    if (original.variants.dynamic_content_hash !== current.variants.dynamic_content_hash) {
+        changes.push({
+            type: 'modified',
+            field: 'variant_structure',
+            label: 'Variant Content',
+            from: 'Previous variant setup',
+            to: 'Modified variant configuration'
+        });
+    }
+    
+    // Check for variant form data changes
+    if (original.variants.form_data_hash !== current.variants.form_data_hash) {
+        changes.push({
+            type: 'modified',
+            field: 'variant_data',
+            label: 'Variant Details',
+            from: 'Previous variant data',
+            to: 'Updated variant information'
+        });
+    }
+    
+    return changes;
+}
+
+// Render changes in the modal
+function renderChanges(changes) {
+    const container = document.getElementById('changesContainer');
+    const noChangesState = document.getElementById('noChangesState');
+    const confirmBtn = document.getElementById('confirmChangesBtn');
+    
+    if (changes.length === 0) {
+        container.style.display = 'none';
+        noChangesState.style.display = 'block';
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'No Changes to Apply';
+        return;
+    }
+    
+    container.style.display = 'block';
+    noChangesState.style.display = 'none';
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = `
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+        </svg>
+        Apply ${changes.length} Change${changes.length > 1 ? 's' : ''}
+    `;
+    
+    container.innerHTML = changes.map(change => `
+        <div class="change-item ${change.type}">
+            <div class="change-header">
+                <div class="change-icon">
+                    ${change.type === 'modified' ? 'M' : change.type === 'added' ? '+' : '-'}
+                </div>
+                <div class="change-label">${change.label}</div>
+            </div>
+            <div class="change-details">
+                ${change.from ? `<div class="change-value change-from">${change.from}</div>` : ''}
+                ${change.from && change.to ? '<div class="change-arrow">↓</div>' : ''}
+                <div class="change-value change-to">${change.to}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Show change summary modal
+function showChangeSummaryModal() {
+    const form = document.getElementById('componentForm');
+    const modal = document.getElementById('changeSummaryModal');
+    const loading = document.getElementById('changeSummaryLoading');
+    const container = document.getElementById('changesContainer');
+    const noChangesState = document.getElementById('noChangesState');
+    
+    // Show modal with loading state
+    modal.style.display = 'flex';
+    loading.style.display = 'flex';
+    container.style.display = 'none';
+    noChangesState.style.display = 'none';
+    
+    // Add show class for animation
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    // Simulate analysis delay and capture current data
+    setTimeout(() => {
+        currentFormData = captureFormData(form);
+        const changes = detectChanges(originalFormData, currentFormData);
+        
+        loading.style.display = 'none';
+        renderChanges(changes);
+    }, 500);
+}
+
+// Close modal
+function closeChangeSummaryModal() {
+    const modal = document.getElementById('changeSummaryModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+// Confirm and submit changes
+function confirmAndSubmitChanges() {
+    const form = document.getElementById('componentForm');
+    const confirmBtn = document.getElementById('confirmChangesBtn');
+    
+    // Show loading state
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `
+        <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+        Applying Changes...
+    `;
+    
+    // Close modal and submit form
+    closeChangeSummaryModal();
+    
+    // Submit the form
+    setTimeout(() => {
+        form.submit();
+    }, 300);
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeOriginalFormData();
+});
+
+// Export functions for global access
+window.showChangeSummaryModal = showChangeSummaryModal;
+window.closeChangeSummaryModal = closeChangeSummaryModal;
+window.confirmAndSubmitChanges = confirmAndSubmitChanges;
+</script>
