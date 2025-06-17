@@ -999,12 +999,11 @@ body {
                     </div>
 
                     <div class="form-group">
-                        <label for="supplier_id" class="form-label required">Supplier</label>
+                        <label for="supplier_id" class="form-label">Supplier</label>
                         <select 
                             id="supplier_id" 
                             name="supplier_id" 
                             class="form-select"
-                            required
                             aria-describedby="supplier_error"
                         >
                             <option value="">Select supplier...</option>
@@ -1019,12 +1018,11 @@ body {
                     </div>
 
                     <div class="form-group">
-                        <label for="category_id" class="form-label required">Category</label>
+                        <label for="category_id" class="form-label">Category</label>
                         <select 
                             id="category_id" 
                             name="category_id" 
                             class="form-select"
-                            required
                             aria-describedby="category_error"
                         >
                             <option value="">Select category...</option>
@@ -1055,43 +1053,65 @@ body {
                 </div>
             </div>
 
-            <!-- Brand Selection -->
-            <div class="form-card">
+            <!-- Brand & Subbrand Information -->
+            <div class="form-card" style="border-left: 4px solid var(--primary-color); background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
                 <div class="form-card-header">
                     <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.371 2.371 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976l2.61-3.045zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0zM1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6.5a.5.5 0 0 1-.5.5H.5a.5.5 0 0 1-.5-.5V9a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-.5-.5L8.636 3.5zM16 6.5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0-.5.5v9.5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-9.5zM1.5 4a.5.5 0 0 1 .5-.5h6V6a.5.5 0 0 0 .5.5h2v8a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V4z"/>
                     </svg>
-                    <h2 class="form-card-title">Brand Association</h2>
-                </div>
-
-                <div class="form-group">
-                    <label for="brand_select" class="form-label">Select Brands</label>
-                    <select id="brand_select" class="form-select" aria-describedby="brand_help">
-                        <option value="">Choose a brand to add...</option>
-                        {% for brand in brands %}
-                        <option value="{{ brand.id }}" data-name="{{ brand.name }}">{{ brand.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <div id="brand_help" class="form-help">You can associate this component with multiple brands</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Selected Brands</label>
-                    <div id="selected_brands" class="tags-container" role="group" aria-label="Selected brands">
-                        {% if component and component.brands %}
-                            {% for brand in component.brands %}
-                            <div class="tag" data-brand-id="{{ brand.id }}">
-                                <span>{{ brand.name }}</span>
-                                <button type="button" class="tag-remove" aria-label="Remove {{ brand.name }}">
-                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                                    </svg>
-                                </button>
-                                <input type="hidden" name="brands" value="{{ brand.id }}">
-                            </div>
-                            {% endfor %}
-                        {% endif %}
+                    <h2 class="form-card-title">Brand Information</h2>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">
+                        Associate this component with a brand and optionally a subbrand
                     </div>
+                </div>
+
+                <div class="form-grid form-grid-cols-2">
+                    <div class="form-group">
+                        <label for="brand_id" class="form-label required">Brand</label>
+                        <select id="brand_id" name="brand_id" class="form-select" required aria-describedby="brand_help" onchange="handleBrandSelection()">
+                            <option value="">Choose a brand...</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}" {% if component and component.brands and component.brands|length > 0 and component.brands[0].id == brand.id %}selected{% endif %}>{{ brand.name }}</option>
+                            {% endfor %}
+                            <option value="new">+ Create New Brand</option>
+                        </select>
+                        <div id="brand_help" class="form-help">Required: Select the main brand for this component</div>
+                    </div>
+
+                    <div class="form-group" id="subbrand_group" style="display: none;">
+                        <label for="subbrand_id" class="form-label">Subbrand</label>
+                        <select id="subbrand_id" name="subbrand_id" class="form-select" aria-describedby="subbrand_help" onchange="handleSubbrandSelection()">
+                            <option value="">Select a subbrand...</option>
+                            <option value="new">+ Create New Subbrand</option>
+                        </select>
+                        <div id="subbrand_help" class="form-help">Optional: Select or create a subbrand</div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="new_brand_input" style="display: none;">
+                    <div style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border: 2px dashed var(--primary-color); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                            <svg style="width: 24px; height: 24px; color: var(--primary-color); margin-right: 0.75rem;" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                            <div>
+                                <h4 style="margin: 0; color: var(--primary-color); font-weight: 600; font-size: 1.1rem;">Creating New Brand</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--gray-600); font-size: 0.875rem;">Enter the name for your new brand below</p>
+                            </div>
+                        </div>
+                        <label for="new_brand_name" class="form-label required" style="font-weight: 600; color: var(--gray-800);">Brand Name</label>
+                        <input type="text" id="new_brand_name" name="new_brand_name" class="form-input" placeholder="e.g., Nike, Apple, Samsung..." style="border: 2px solid var(--primary-color); font-size: 1rem; padding: 0.75rem;" />
+                        <div class="form-help" style="margin-top: 0.5rem; font-weight: 500; color: var(--primary-color);">
+                            ✓ This will create a new brand in your database
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="new_subbrand_input" style="display: none;">
+                    <label for="new_subbrand_name" class="form-label required">New Subbrand Name</label>
+                    <input type="text" id="new_subbrand_name" name="new_subbrand_name" class="form-input" placeholder="Enter new subbrand name..." />
+                    <div class="form-help">This will create a new subbrand under the selected brand</div>
+                    <div id="subbrand_error" class="form-error hidden"></div>
                 </div>
             </div>
 
@@ -1152,20 +1172,44 @@ body {
                                 <div class="form-grid form-grid-cols-2">
                                     <div class="form-group">
                                         <label class="form-label required">Color</label>
-                                        <select name="variant_color_{{ variant.id }}" class="form-select" required onchange="updateVariantSKU({{ variant.id }})">
+                                        <select name="variant_color_{{ variant.id }}" id="color_select_{{ variant.id }}" class="form-select" required onchange="handleColorSelection('{{ variant.id }}')">
                                             <option value="{{ variant.color_id }}" selected style="font-weight: 500;">
                                                 {{ variant.color.name }} (Current)
                                             </option>
                                             <optgroup label="Available Colors">
                                                 {% for color in colors %}
                                                     {% if color.id != variant.color_id %}
-                                                    <option value="{{ color.id }}">
-                                                        {{ color.name }}
-                                                    </option>
+                                                        {% set is_taken = false %}
+                                                        {% for other_variant in component.variants %}
+                                                            {% if other_variant.id != variant.id and other_variant.color_id == color.id %}
+                                                                {% set is_taken = true %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                        {% if is_taken %}
+                                                        <option value="{{ color.id }}" disabled style="color: #999; background-color: #f5f5f5;">
+                                                            {{ color.name }} (Already used)
+                                                        </option>
+                                                        {% else %}
+                                                        <option value="{{ color.id }}">
+                                                            {{ color.name }}
+                                                        </option>
+                                                        {% endif %}
                                                     {% endif %}
                                                 {% endfor %}
                                             </optgroup>
+                                            <optgroup label="New Color">
+                                                <option value="custom">+ Add New Color</option>
+                                            </optgroup>
                                         </select>
+                                        <div id="custom_color_input_{{ variant.id }}" style="display: none;" class="mt-2">
+                                            <input type="text" 
+                                                   name="variant_custom_color_{{ variant.id }}" 
+                                                   id="custom_color_{{ variant.id }}"
+                                                   class="form-input" 
+                                                   placeholder="Enter new color name..."
+                                                   onchange="updateVariantSKU('{{ variant.id }}')">
+                                            <small class="form-help">This will create a new color in the system</small>
+                                        </div>
                                         <div class="form-help">Select a different color to change the variant</div>
                                     </div>
                                     
@@ -1200,6 +1244,9 @@ body {
                                             </svg>
                                             Manage Pictures
                                         </button>
+                                    </div>
+                                    <div class="form-help" style="margin-bottom: 0.5rem; color: var(--gray-600); font-size: 0.75rem;">
+                                        <strong>Note:</strong> At least one picture is required for each variant
                                     </div>
                                     <div class="picture-miniatures" id="miniatures_display_{{ variant.id }}">
                                         {% if variant.variant_pictures %}
@@ -1260,7 +1307,7 @@ body {
                                 <div class="variant-pictures-grid" id="pictures_grid_{{ variant.id }}">
                                     {% for picture in variant.variant_pictures %}
                                     <div class="picture-item" data-picture-id="{{ picture.id }}">
-                                        <img src="{{ picture.url }}" alt="{{ picture.alt_text or 'Variant image' }}">
+                                        <img src="{{ picture.url }}" alt="{{ picture.alt_text or 'Variant image' }}" onclick="previewPicture('{{ picture.url }}', '{{ picture.picture_name }}', {{ picture.id }})" style="cursor: pointer;" title="Click to preview">
                                         <div class="picture-overlay">
                                             <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariantPicture({{ variant.id }}, {{ picture.id }})">×</button>
                                             {% if picture.is_primary %}
@@ -1270,11 +1317,9 @@ body {
                                             {% endif %}
                                         </div>
                                         <div class="picture-info">
-                                            <input type="text" 
-                                                   name="picture_alt_{{ picture.id }}" 
-                                                   value="{{ picture.alt_text or '' }}" 
-                                                   placeholder="Alt text"
-                                                   class="picture-alt-input">
+                                            <div class="picture-filename" title="{{ picture.picture_name }}">
+                                                {{ picture.picture_name }}
+                                            </div>
                                             <small>Order: {{ picture.picture_order }}</small>
                                         </div>
                                     </div>
@@ -1424,8 +1469,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const supplierSelect = document.getElementById('supplier_id');
     const categorySelect = document.getElementById('category_id');
     const descriptionTextarea = document.getElementById('description');
-    const brandSelect = document.getElementById('brand_select');
-    const selectedBrandsContainer = document.getElementById('selected_brands');
+    const brandSelect = document.getElementById('brand_id');
+    const subbrandSelect = document.getElementById('subbrand_id');
+    const subbrandGroup = document.getElementById('subbrand_group');
+    const newBrandInput = document.getElementById('new_brand_input');
+    const newSubbrandInput = document.getElementById('new_subbrand_input');
     const keywordInput = document.getElementById('keyword_input');
     const keywordTags = document.getElementById('keyword_tags');
     const keywordsHiddenInput = document.getElementById('keywords_input');
@@ -1437,7 +1485,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const validationList = document.getElementById('validationList');
 
     // State
-    let selectedBrands = new Set();
     let selectedKeywords = new Set();
     let validationErrors = {};
 
@@ -1445,11 +1492,6 @@ document.addEventListener('DOMContentLoaded', function() {
     init();
 
     function init() {
-        // Initialize existing brands
-        document.querySelectorAll('#selected_brands .tag').forEach(tag => {
-            selectedBrands.add(tag.dataset.brandId);
-        });
-
         // Initialize existing keywords
         document.querySelectorAll('#keyword_tags .tag').forEach(tag => {
             selectedKeywords.add(tag.dataset.keyword);
@@ -1500,7 +1542,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     element = document.getElementById('keyword_tags');
                     break;
                 case 'brands':
-                    element = document.getElementById('selected_brands');
+                    element = document.getElementById('brand_id');
                     break;
                 case 'properties':
                     element = document.getElementById('properties_container');
@@ -1549,8 +1591,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Brand selection
-        brandSelect.addEventListener('change', addBrand);
-        selectedBrandsContainer.addEventListener('click', handleBrandRemove);
+        brandSelect.addEventListener('change', handleBrandSelection);
+        brandSelect.addEventListener('change', () => validateField('brand_id'));
+        
+        // Subbrand validation
+        if (document.getElementById('new_subbrand_name')) {
+            document.getElementById('new_subbrand_name').addEventListener('input', validateSubbrandName);
+        }
 
         // Keyword management
         keywordInput.addEventListener('keydown', handleKeywordInput);
@@ -1603,14 +1650,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
             case 'supplier_id':
-                if (!field.value) {
-                    errorMessage = 'Supplier is required';
-                    isValid = false;
-                }
+                // Supplier is now optional - no validation needed
                 break;
             case 'category_id':
+                // Category is now optional - no validation needed
+                break;
+            case 'brand_id':
                 if (!field.value) {
-                    errorMessage = 'Category is required';
+                    errorMessage = 'Brand is required';
                     isValid = false;
                 }
                 break;
@@ -1756,27 +1803,125 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
-    function addBrand() {
-        const brandId = brandSelect.value;
-        const brandName = brandSelect.options[brandSelect.selectedIndex].text;
+    function handleBrandSelection() {
+        const brandSelect = document.getElementById('brand_id');
+        const subbrandGroup = document.getElementById('subbrand_group');
+        const subbrandSelect = document.getElementById('subbrand_id');
+        const newBrandInput = document.getElementById('new_brand_input');
+        const newSubbrandInput = document.getElementById('new_subbrand_input');
         
-        if (brandId && !selectedBrands.has(brandId)) {
-            selectedBrands.add(brandId);
+        if (brandSelect.value === 'new') {
+            // Show new brand input
+            newBrandInput.style.display = 'block';
+            document.getElementById('new_brand_name').setAttribute('required', 'required');
             
-            const tag = createTag(brandName, brandId, 'brand');
-            selectedBrandsContainer.appendChild(tag);
+            // Hide subbrand section when creating new brand
+            subbrandGroup.style.display = 'none';
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        } else if (brandSelect.value) {
+            // Hide new brand input
+            newBrandInput.style.display = 'none';
+            document.getElementById('new_brand_name').removeAttribute('required');
             
-            brandSelect.value = '';
+            // Show subbrand section and load subbrands for selected brand
+            subbrandGroup.style.display = 'block';
+            loadSubbrands(brandSelect.value);
+            
+            // Hide new subbrand input by default
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        } else {
+            // Hide both brand and subbrand inputs
+            newBrandInput.style.display = 'none';
+            subbrandGroup.style.display = 'none';
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_brand_name').removeAttribute('required');
+            document.getElementById('new_subbrand_name').removeAttribute('required');
         }
+        
+        // Update submit button state
+        updateSubmitButtonState();
     }
-
-    function handleBrandRemove(e) {
-        if (e.target.closest('.tag-remove')) {
-            const tag = e.target.closest('.tag');
-            const brandId = tag.dataset.brandId;
-            selectedBrands.delete(brandId);
-            tag.remove();
+    
+    function handleSubbrandSelection() {
+        const subbrandSelect = document.getElementById('subbrand_id');
+        const newSubbrandInput = document.getElementById('new_subbrand_input');
+        
+        if (subbrandSelect.value === 'new') {
+            // Show new subbrand input
+            newSubbrandInput.style.display = 'block';
+            document.getElementById('new_subbrand_name').setAttribute('required', 'required');
+        } else {
+            // Hide new subbrand input
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
         }
+        
+        // Update submit button state
+        updateSubmitButtonState();
+    }
+    
+    function loadSubbrands(brandId) {
+        const subbrandSelect = document.getElementById('subbrand_id');
+        
+        // Clear existing options except default and "new" option
+        subbrandSelect.innerHTML = '<option value="">Select a subbrand...</option><option value="new">+ Create New Subbrand</option>';
+        
+        // Load subbrands via AJAX
+        fetch(`/api/brand/${brandId}/subbrands`)
+            .then(response => response.json())
+            .then(subbrands => {
+                // Insert subbrands before the "new" option
+                const newOption = subbrandSelect.querySelector('option[value="new"]');
+                
+                subbrands.forEach(subbrand => {
+                    const option = document.createElement('option');
+                    option.value = subbrand.id;
+                    option.textContent = subbrand.name;
+                    subbrandSelect.insertBefore(option, newOption);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading subbrands:', error);
+            });
+    }
+    
+    function validateSubbrandName() {
+        const brandSelect = document.getElementById('brand_id');
+        const newSubbrandName = document.getElementById('new_subbrand_name').value.trim();
+        const errorElement = document.getElementById('subbrand_error');
+        
+        if (!newSubbrandName) {
+            return true; // Empty is fine, will be caught by required validation
+        }
+        
+        // Check if subbrand name already exists for this brand
+        if (brandSelect.value && brandSelect.value !== 'new') {
+            fetch(`/api/brand/${brandSelect.value}/subbrands/check`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: newSubbrandName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    errorElement.textContent = 'A subbrand with this name already exists for this brand';
+                    errorElement.classList.remove('hidden');
+                    return false;
+                } else {
+                    errorElement.classList.add('hidden');
+                    return true;
+                }
+            })
+            .catch(error => {
+                console.error('Error validating subbrand name:', error);
+            });
+        }
+        
+        return true;
     }
 
     function handleKeywordInput(e) {
@@ -1812,7 +1957,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function createTag(text, value, type) {
         const tag = document.createElement('div');
         tag.className = 'tag';
-        tag.dataset[type + (type === 'brand' ? 'Id' : '')] = value;
+        tag.dataset[type] = value;
         
         const span = document.createElement('span');
         span.textContent = text;
@@ -1825,14 +1970,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         tag.appendChild(span);
         tag.appendChild(removeBtn);
-        
-        if (type === 'brand') {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'brands';
-            hiddenInput.value = value;
-            tag.appendChild(hiddenInput);
-        }
         
         return tag;
     }
@@ -1973,6 +2110,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variant Management Functions
     let variantCount = {{ component.variants|length if component and component.variants else 0 }};
     
+    function getAvailableColorOptions() {
+        // Get all colors that are already taken by existing variants
+        const takenColors = new Set();
+        const existingVariants = document.querySelectorAll('[data-variant-id]');
+        
+        existingVariants.forEach(variant => {
+            const colorSelect = variant.querySelector('[name*="variant_color_"]');
+            if (colorSelect && colorSelect.value && colorSelect.value !== 'custom') {
+                takenColors.add(colorSelect.value);
+            }
+        });
+        
+        // Build options HTML
+        let optionsHtml = '<option value="">Select a color...</option>';
+        
+        {% for color in colors %}
+        const isTaken{{ color.id }} = takenColors.has('{{ color.id }}');
+        if (isTaken{{ color.id }}) {
+            optionsHtml += '<option value="{{ color.id }}" disabled style="color: #999; background-color: #f5f5f5;">{{ color.name }} (Already used)</option>';
+        } else {
+            optionsHtml += '<option value="{{ color.id }}">{{ color.name }}</option>';
+        }
+        {% endfor %}
+        
+        optionsHtml += '<option value="custom">+ Add New Color</option>';
+        
+        return optionsHtml;
+    }
+
     function addNewVariant() {
         const emptyState = document.getElementById('empty_variants');
         if (emptyState) {
@@ -2005,12 +2171,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="form-grid form-grid-cols-2">
                     <div class="form-group">
                         <label class="form-label required">Color</label>
-                        <select name="new_variant_color_${variantId}" class="form-select" required onchange="updateVariantSKU('${variantId}')">
-                            <option value="">Select a color...</option>
-                            {% for color in colors %}
-                            <option value="{{ color.id }}">{{ color.name }}</option>
-                            {% endfor %}
+                        <select name="new_variant_color_${variantId}" id="color_select_${variantId}" class="form-select" required onchange="handleColorSelection('${variantId}')">
+                            ${getAvailableColorOptions()}
                         </select>
+                        <div id="custom_color_input_${variantId}" style="display: none;" class="mt-2">
+                            <input type="text" 
+                                   name="new_variant_custom_color_${variantId}" 
+                                   id="custom_color_${variantId}"
+                                   class="form-input" 
+                                   placeholder="Enter new color name..."
+                                   onchange="updateVariantSKU('${variantId}')">
+                            <small class="form-help">This will create a new color in the system</small>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -2036,6 +2208,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             </svg>
                             Add Picture
                         </button>
+                    </div>
+                    <div class="form-help" style="margin-bottom: 0.5rem; color: var(--gray-600); font-size: 0.75rem;">
+                        <strong>Note:</strong> At least one picture is required for each variant
                     </div>
                     <div class="picture-miniatures" id="miniatures_display_${variantId}">
                         <div class="no-pictures" onclick="addVariantPicture('${variantId}')">
@@ -2073,10 +2248,20 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         container.appendChild(variantCard);
+        
+        // Update submit button state after adding new variant
+        updateSubmitButtonState();
     }
     
     function removeVariant(variantId) {
-        if (confirm('Are you sure you want to remove this variant and all its pictures?')) {
+        // Check if this is a new variant (not yet saved to database)
+        const isNewVariant = variantId.toString().startsWith('new_');
+        
+        // Only ask for confirmation for existing variants
+        const shouldConfirm = !isNewVariant;
+        const confirmMessage = shouldConfirm ? 'Are you sure you want to remove this variant and all its pictures?' : null;
+        
+        if (!shouldConfirm || confirm(confirmMessage)) {
             const card = document.querySelector(`[data-variant-id="${variantId}"]`);
             if (card) {
                 card.remove();
@@ -2089,6 +2274,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         emptyState.style.display = 'block';
                     }
                 }
+                
+                // Update submit button state after removing variant
+                updateSubmitButtonState();
             }
         }
     }
@@ -2110,45 +2298,144 @@ document.addEventListener('DOMContentLoaded', function() {
         var skuHelp = document.getElementById('sku_help_' + variantId);
         var skuPreview = document.getElementById('sku_preview_' + variantId);
         
-        if (colorSelect && colorSelect.value && skuInput && productNumber) {
-            var selectedOption = colorSelect.options[colorSelect.selectedIndex];
-            var colorName = selectedOption.text;
+        if (colorSelect && skuInput && productNumber) {
+            var colorName = '';
             var supplierCode = supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex].text : '';
             
-            // Generate preview SKU matching database format
-            var normalizedProductNumber = productNumber.toLowerCase().replace(/\s+/g, '_');
-            var normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '_');
-            var previewSku = supplierCode ? 
-                supplierCode.toLowerCase() + '_' + normalizedProductNumber + '_' + normalizedColorName :
-                normalizedProductNumber + '_' + normalizedColorName;
-            
-            // Store original SKU if not already stored
-            if (!skuInput.dataset.originalSku) {
-                skuInput.dataset.originalSku = skuInput.value;
+            // Handle custom color or selected color
+            if (colorSelect.value === 'custom') {
+                var customColorInput = document.getElementById('custom_color_' + variantId);
+                colorName = customColorInput ? customColorInput.value : 'custom';
+            } else if (colorSelect.value) {
+                var selectedOption = colorSelect.options[colorSelect.selectedIndex];
+                colorName = selectedOption.text;
             }
             
-            // If color changed, show preview
-            if (colorSelect.value !== skuInput.dataset.originalColorId) {
+            if (colorName) {
+                // Generate preview SKU matching database format
+                var normalizedProductNumber = productNumber.toLowerCase().replace(/\s+/g, '_');
+                var normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '_');
+                var previewSku = supplierCode ? 
+                    supplierCode.toLowerCase() + '_' + normalizedProductNumber + '_' + normalizedColorName :
+                    normalizedProductNumber + '_' + normalizedColorName;
+                
+                // Store original SKU if not already stored
+                if (!skuInput.dataset.originalSku) {
+                    skuInput.dataset.originalSku = skuInput.value;
+                }
+                
+                // Always show preview for new variants or when color changes
                 skuInput.value = previewSku;
                 skuInput.style.color = 'var(--warning-color)';
-                skuHelp.style.display = 'none';
-                skuPreview.style.display = 'inline';
-            } else {
-                // Reset to original SKU
-                skuInput.value = skuInput.dataset.originalSku;
-                skuInput.style.color = '';
-                skuHelp.style.display = 'inline';
-                skuPreview.style.display = 'none';
+                if (skuHelp) skuHelp.style.display = 'none';
+                if (skuPreview) skuPreview.style.display = 'inline';
+                
+                // Update title
+                if (titleElement) {
+                    titleElement.textContent = colorName + ' - ' + previewSku;
+                }
+                
+                // Store current color selection for comparison
+                skuInput.dataset.originalColorId = colorSelect.value;
             }
-            
-            // Update title
-            if (titleElement) {
-                titleElement.textContent = colorName + ' - ' + skuInput.value;
-            }
-            
-            // Store current color ID for comparison
-            skuInput.dataset.originalColorId = colorSelect.value;
         }
+    }
+    
+    function handleColorSelection(variantId) {
+        const colorSelect = document.getElementById(`color_select_${variantId}`);
+        const customInput = document.getElementById(`custom_color_input_${variantId}`);
+        
+        if (colorSelect.value === 'custom') {
+            // Show custom color input
+            customInput.style.display = 'block';
+            colorSelect.removeAttribute('required');
+            document.getElementById(`custom_color_${variantId}`).setAttribute('required', 'required');
+        } else {
+            // Hide custom color input
+            customInput.style.display = 'none';
+            colorSelect.setAttribute('required', 'required');
+            document.getElementById(`custom_color_${variantId}`).removeAttribute('required');
+            
+            // Check for duplicate color selection
+            if (colorSelect.value && isDuplicateColor(variantId, colorSelect.value)) {
+                alert('This color is already used by another variant of this component. Please select a different color.');
+                colorSelect.value = '';
+                return;
+            }
+        }
+        
+        // Update SKU preview
+        updateVariantSKU(variantId);
+        
+        // Update submit button state
+        updateSubmitButtonState();
+    }
+    
+    function isDuplicateColor(currentVariantId, colorId) {
+        // Check existing variants for duplicate colors
+        const existingVariants = document.querySelectorAll('[data-variant-id]');
+        
+        for (let variant of existingVariants) {
+            const variantId = variant.dataset.variantId;
+            if (variantId === currentVariantId) continue; // Skip current variant
+            
+            const colorSelect = variant.querySelector('[name*="variant_color_"]');
+            if (colorSelect && colorSelect.value === colorId) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    function validateVariantBeforeSubmit(variantId) {
+        // Check if variant has at least one picture
+        const picturesGrid = document.getElementById(`pictures_grid_${variantId}`);
+        const pictures = picturesGrid ? picturesGrid.querySelectorAll('.picture-item') : [];
+        
+        if (pictures.length === 0) {
+            alert('Each variant must have at least one picture. Please add a picture before saving.');
+            return false;
+        }
+        
+        // Check color selection
+        const colorSelect = document.getElementById(`color_select_${variantId}`);
+        const customColorInput = document.getElementById(`custom_color_${variantId}`);
+        
+        if (colorSelect.value === 'custom') {
+            if (!customColorInput.value.trim()) {
+                alert('Please enter a name for the new color.');
+                customColorInput.focus();
+                return false;
+            }
+            
+            // Check if custom color name already exists
+            if (isColorNameExists(customColorInput.value.trim())) {
+                alert('A color with this name already exists. Please choose a different name.');
+                customColorInput.focus();
+                return false;
+            }
+        } else if (!colorSelect.value) {
+            alert('Please select a color for this variant.');
+            colorSelect.focus();
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function isColorNameExists(colorName) {
+        // Check against existing colors in the dropdown
+        const colorSelects = document.querySelectorAll('[name*="variant_color_"]');
+        if (colorSelects.length > 0) {
+            const options = colorSelects[0].querySelectorAll('option');
+            for (let option of options) {
+                if (option.textContent.toLowerCase().trim() === colorName.toLowerCase().trim() && option.value !== 'custom') {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     function handleVariantImages(variantId, files) {
@@ -2205,17 +2492,15 @@ document.addEventListener('DOMContentLoaded', function() {
         pictureDiv.dataset.order = nextOrder;
         
         pictureDiv.innerHTML = `
-            <img src="${picture.url}" alt="${picture.name}">
+            <img src="${picture.url}" alt="${picture.name}" onclick="previewPicture('${picture.url}', '${filename}', '${pictureDiv.dataset.pictureId}')" style="cursor: pointer;" title="Click to preview">
             <div class="picture-overlay">
                 <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariantPicture('${variantId}', '${pictureDiv.dataset.pictureId}')">×</button>
                 <button type="button" class="btn-icon btn-icon-primary" onclick="setPrimaryVariantPicture('${variantId}', '${pictureDiv.dataset.pictureId}')">★</button>
             </div>
             <div class="picture-info">
-                <input type="text" 
-                       name="new_picture_alt_${pictureDiv.dataset.pictureId}" 
-                       value="${filename}"
-                       placeholder="Alt text"
-                       class="picture-alt-input">
+                <div class="picture-filename" title="${filename}">
+                    ${filename}
+                </div>
                 <small>Order: ${nextOrder} - New picture</small>
             </div>
         `;
@@ -2238,6 +2523,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update miniatures (will now show all pictures, not just the last one)
         updateVariantMiniatures(variantId);
+        
+        // Update submit button state after adding picture
+        updateSubmitButtonState();
     }
     
     function updateVariantMiniatures(variantId) {
@@ -2344,22 +2632,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function deleteVariantPicture(variantId, pictureId) {
         if (confirm('Are you sure you want to delete this picture?')) {
-            // For existing pictures, mark for deletion
-            const pictureItem = document.querySelector(`[data-picture-id="${pictureId}"]`);
-            if (pictureItem) {
-                // Add hidden input to mark for deletion
-                const deleteInput = document.createElement('input');
-                deleteInput.type = 'hidden';
-                deleteInput.name = 'delete_pictures';
-                deleteInput.value = pictureId;
-                document.getElementById('component_form').appendChild(deleteInput);
-                
-                // Remove from grid
-                pictureItem.remove();
-                
-                // Update miniatures
-                updateVariantMiniatures(variantId);
+            // Check if this is a new picture (not yet saved to database)
+            if (pictureId.toString().startsWith('new_')) {
+                // Just remove from DOM for new pictures
+                const pictureItem = document.querySelector(`[data-picture-id="${pictureId}"]`);
+                if (pictureItem) {
+                    pictureItem.remove();
+                    updateVariantMiniatures(variantId);
+                    updateSubmitButtonState();
+                }
+                return;
             }
+            
+            // For existing pictures, call backend API to delete from database
+            fetch(`/api/picture/${pictureId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from DOM on success
+                    const pictureItem = document.querySelector(`[data-picture-id="${pictureId}"]`);
+                    if (pictureItem) {
+                        pictureItem.remove();
+                        updateVariantMiniatures(variantId);
+                        updateSubmitButtonState();
+                    }
+                    console.log('Picture deleted successfully');
+                } else {
+                    alert('Failed to delete picture: ' + (data.error || 'Unknown error'));
+                    console.error('Delete failed:', data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting picture: ' + error.message);
+                console.error('Delete error:', error);
+            });
         }
     }
     
@@ -2372,11 +2683,44 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!pictureItem) return;
         
         if (confirm('Remove this picture?')) {
-            // Remove from grid
-            pictureItem.remove();
+            // Check if this is a new picture (not yet saved to database)
+            if (pictureId.toString().startsWith('new_')) {
+                // Just remove from DOM for new pictures
+                pictureItem.remove();
+                updateVariantMiniatures(variantId);
+                updateSubmitButtonState();
+                return;
+            }
             
-            // Update miniatures
-            updateVariantMiniatures(variantId);
+            // For existing pictures, call backend API to delete from database
+            fetch(`/api/picture/${pictureId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from grid on success
+                    pictureItem.remove();
+                    
+                    // Update miniatures
+                    updateVariantMiniatures(variantId);
+                    
+                    // Update submit button state
+                    updateSubmitButtonState();
+                    
+                    console.log('Picture deleted successfully');
+                } else {
+                    alert('Failed to delete picture: ' + (data.error || 'Unknown error'));
+                    console.error('Delete failed:', data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting picture: ' + error.message);
+                console.error('Delete error:', error);
+            });
         }
     }
     
@@ -2422,8 +2766,287 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add event listener for the add variant button
     document.getElementById('add_variant_btn').addEventListener('click', addNewVariant);
+    
+    // Add form validation
+    document.getElementById('componentForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent default submission
+        
+        // Validate all variants
+        const variants = document.querySelectorAll('[data-variant-id]');
+        let isValid = true;
+        let errors = [];
+        
+        for (let variant of variants) {
+            const variantId = variant.dataset.variantId;
+            if (!validateVariantBeforeSubmit(variantId)) {
+                isValid = false;
+                errors.push(`Variant ${variantId} is incomplete`);
+            }
+        }
+        
+        // Show validation summary if there are errors
+        if (!isValid) {
+            const validationSummary = document.getElementById('validationSummary');
+            const validationList = document.getElementById('validationList');
+            
+            if (validationSummary && validationList) {
+                validationList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                validationSummary.classList.remove('hidden');
+                validationSummary.scrollIntoView({ behavior: 'smooth' });
+            }
+            return false;
+        }
+        
+        // Hide validation summary if all is valid
+        const validationSummary = document.getElementById('validationSummary');
+        if (validationSummary) {
+            validationSummary.classList.add('hidden');
+        }
+        
+        // If all validations pass, submit the form
+        this.submit();
+    });
+    
+    // Add to global scope
+    window.handleColorSelection = handleColorSelection;
+    window.validateVariantBeforeSubmit = validateVariantBeforeSubmit;
+    window.handleBrandSelection = handleBrandSelection;
+    window.handleSubbrandSelection = handleSubbrandSelection;
+    window.validateSubbrandName = validateSubbrandName;
+    
+    // Button State Management
+    let originalFormState = null;
+    let isFormChanged = false;
+    
+    function captureOriginalFormState() {
+        const form = document.getElementById('componentForm');
+        if (!form) return;
+        
+        const formData = new FormData(form);
+        originalFormState = {};
+        
+        // Capture all form values
+        for (let [key, value] of formData.entries()) {
+            if (originalFormState[key]) {
+                // Handle multiple values (like checkboxes or multiple selects)
+                if (!Array.isArray(originalFormState[key])) {
+                    originalFormState[key] = [originalFormState[key]];
+                }
+                originalFormState[key].push(value);
+            } else {
+                originalFormState[key] = value;
+            }
+        }
+        
+        // Capture variant picture counts
+        const variants = document.querySelectorAll('[data-variant-id]');
+        variants.forEach(variant => {
+            const variantId = variant.dataset.variantId;
+            const pictures = variant.querySelectorAll('.picture-item');
+            originalFormState[`variant_${variantId}_picture_count`] = pictures.length;
+        });
+    }
+    
+    function checkFormChanges() {
+        if (!originalFormState) return false;
+        
+        const form = document.getElementById('componentForm');
+        if (!form) return false;
+        
+        const currentFormData = new FormData(form);
+        const currentState = {};
+        
+        // Capture current form values
+        for (let [key, value] of currentFormData.entries()) {
+            if (currentState[key]) {
+                if (!Array.isArray(currentState[key])) {
+                    currentState[key] = [currentState[key]];
+                }
+                currentState[key].push(value);
+            } else {
+                currentState[key] = value;
+            }
+        }
+        
+        // Check variant picture counts
+        const variants = document.querySelectorAll('[data-variant-id]');
+        variants.forEach(variant => {
+            const variantId = variant.dataset.variantId;
+            const pictures = variant.querySelectorAll('.picture-item');
+            currentState[`variant_${variantId}_picture_count`] = pictures.length;
+        });
+        
+        // Compare states
+        for (let key in originalFormState) {
+            if (JSON.stringify(originalFormState[key]) !== JSON.stringify(currentState[key])) {
+                return true;
+            }
+        }
+        
+        for (let key in currentState) {
+            if (!(key in originalFormState)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    function validateAllVariantsHavePictures() {
+        const variants = document.querySelectorAll('[data-variant-id]');
+        
+        for (let variant of variants) {
+            const variantId = variant.dataset.variantId;
+            const picturesGrid = document.getElementById(`pictures_grid_${variantId}`);
+            const pictures = picturesGrid ? picturesGrid.querySelectorAll('.picture-item') : [];
+            
+            if (pictures.length === 0) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    function updateSubmitButtonState() {
+        const submitBtn = document.getElementById('submit_btn');
+        if (!submitBtn) return;
+        
+        const hasChanges = checkFormChanges();
+        const allVariantsHavePictures = validateAllVariantsHavePictures();
+        
+        const shouldEnable = hasChanges && allVariantsHavePictures;
+        
+        if (shouldEnable) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.title = '';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+            
+            if (!hasChanges && !allVariantsHavePictures) {
+                submitBtn.title = 'No changes made and some variants lack pictures';
+            } else if (!hasChanges) {
+                submitBtn.title = 'No changes have been made';
+            } else if (!allVariantsHavePictures) {
+                submitBtn.title = 'All variants must have at least one picture';
+            }
+        }
+    }
+    
+    // Initialize form state tracking
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            captureOriginalFormState();
+            updateSubmitButtonState();
+        }, 100);
+        
+        // Add change listeners to form
+        const form = document.getElementById('componentForm');
+        if (form) {
+            form.addEventListener('input', updateSubmitButtonState);
+            form.addEventListener('change', updateSubmitButtonState);
+        }
+        
+        // Set up mutation observer to watch for variant changes
+        const variantsContainer = document.getElementById('variants_container');
+        if (variantsContainer) {
+            const observer = new MutationObserver(updateSubmitButtonState);
+            observer.observe(variantsContainer, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['data-picture-id']
+            });
+        }
+    });
+    
+    // Picture Preview Function
+    function previewPicture(imageUrl, imageName, pictureId) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('picturePreviewModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'picturePreviewModal';
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="picturePreviewTitle">Picture Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img id="picturePreviewImage" src="" alt="" class="img-fluid" style="max-height: 70vh;">
+                            <div class="mt-3">
+                                <strong>Filename:</strong> <span id="picturePreviewFilename"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Set image and filename
+        document.getElementById('picturePreviewImage').src = imageUrl;
+        document.getElementById('picturePreviewImage').alt = imageName;
+        document.getElementById('picturePreviewFilename').textContent = imageName;
+        document.getElementById('picturePreviewTitle').textContent = `Picture Preview - ${imageName}`;
+        
+        // Show modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+    
+    // Add to global scope
+    window.previewPicture = previewPicture;
+
 });
 </script>
+
+<!-- Picture Preview Modal CSS -->
+<style>
+.picture-filename {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    background: var(--gray-50);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.picture-filename:hover {
+    overflow: visible;
+    white-space: normal;
+    z-index: 10;
+    position: relative;
+}
+
+#picturePreviewModal .modal-body {
+    padding: 2rem;
+}
+
+#picturePreviewModal .modal-dialog {
+    max-width: 90vw;
+}
+
+#picturePreviewImage {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+</style>
 
 <!-- Include Change Summary Modal (only for edit mode) -->
 {% if component %}

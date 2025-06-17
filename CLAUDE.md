@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Component Management System - Architecture Summary
+
+This is a comprehensive Flask-based web application for managing manufacturing components, their variants, suppliers, brands, and associated pictures. The system supports complex component lifecycle management with approval workflows.
+
 ## Common Development Commands
 
 ### Application Management
@@ -24,49 +28,115 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture Overview
 
 ### Core Structure
-- **Flask Application**: Main web application using Flask framework
-- **Database**: PostgreSQL with custom schema `component_app`
+- **Flask Application**: Main web application using Flask framework with Blueprint architecture
+- **Database**: PostgreSQL with custom schema `component_app` 
 - **Containerization**: Docker-based deployment with docker-compose
 - **Modular Design**: Blueprint-based routing with separation of concerns
 
-### Key Components
-- **Models**: SQLAlchemy models in `app/models.py` with custom schema support
-- **Routes**: Multiple blueprint modules:
-  - `app/routes.py` - Main legacy routes
-  - `app/web/supplier_routes.py` - Supplier web interface
-  - `app/api/supplier_api.py` - Supplier API endpoints
-  - `app/brand_routes.py` - Brand management routes
-- **Services**: Business logic in `app/services/`
-- **Repositories**: Data access layer in `app/repositories/`
+### Application Structure
 
-### Database Schema
-- Uses PostgreSQL with custom schema `component_app`
-- All models inherit from `Base` class which sets the schema
-- Relationships include: Components, Suppliers, Categories, Colors, Materials, Pictures, Brands, Subbrands, Variants
-- Association tables for many-to-many relationships (keywords, component-brand)
+#### Flask App Initialization (`app/__init__.py`)
+- Factory pattern with `create_app()` function
+- SQLAlchemy with custom schema support (`component_app`)
+- Flask-Migrate for database migrations
+- Blueprint registration for modular routing
+- Custom Jinja2 filters and template functions
+- File upload directory management
 
-### File Structure Patterns
-- Static files organized by type: `app/static/css/`, `app/static/js/`
-- Templates use Jinja2 with base template inheritance
-- Utilities split between `app/utils/` (new modular) and legacy files
-- Migrations handled by Flask-Migrate in `component_app` schema
+#### Database Models (`app/models.py`)
+**Core Models:**
+- `Component` - Main product entity with flexible JSON properties
+- `ComponentVariant` - Color variants of components with auto-generated SKUs
+- `ComponentType` - Categories of components (with dynamic properties)
+- `Supplier` - Supplier management
+- `Brand`/`Subbrand` - Brand hierarchy
+- `Category`, `Color`, `Material` - Reference data
+- `Picture` - Image management with automatic naming
+- `Keyword` - Tagging system
+
+**Key Features:**
+- Auto-generated SKUs and picture names via database triggers
+- Complex approval workflow (Proto → SMS → PPS status tracking)
+- JSON properties for flexible component attributes
+- Automatic timestamp management via database triggers
+- Many-to-many relationships (component-brand, component-keyword)
+
+#### Routing Architecture
+- **Main Routes** (`app/routes.py`): Legacy main application routes
+- **Supplier Routes** (`app/web/supplier_routes.py`): Web interface for supplier management
+- **Supplier API** (`app/api/supplier_api.py`): REST API endpoints
+- **Brand Routes** (`app/brand_routes.py`): Brand and subbrand management
+
+#### Services & Repositories
+- **Services** (`app/services/`): Business logic layer
+  - `csv_service.py` - Bulk data import/export
+  - `supplier_service.py` - Supplier operations
+- **Repositories** (`app/repositories/`): Data access layer
+  - `supplier_repository.py` - Supplier data operations
+- **Utils** (`app/utils/`): Utility functions
+  - `database.py`, `file_handling.py`, `response.py`, `validators.py`
+
+### Frontend Architecture
+
+#### Template System
+- **Base Template** (`templates/base.html`): Modern responsive design
+- Uses Bootstrap 5.3.2 + Alpine.js for interactivity
+- Lucide icons and Inter font for modern UI
+- Responsive navigation with component-based structure
+
+#### Static Assets
+- **CSS Architecture**: Modular CSS with imports
+  - `base/` - Core styles (variables, reset, animations, utilities, responsive)
+  - `components/` - Reusable UI components (buttons, forms, cards, etc.)
+  - `pages/` - Page-specific styles
+- **JavaScript**: Modern ES6+ with utilities
+  - `components/` - Reusable JS components
+  - `utils/` - Common utilities (API, validation)
+  - `pages/` - Page-specific functionality
+
+### Database Schema (`component_app`)
+
+#### Core Tables
+- **component** - Main products with JSON properties, approval status tracking
+- **component_variant** - Color variations with auto-generated SKUs
+- **component_type** - Product categories with dynamic property definitions
+- **supplier** - Supplier information with unique codes
+- **brand/subbrand** - Brand hierarchy
+- **picture** - Image management with automatic naming system
+- **color/material/category** - Reference data tables
+
+#### Key Database Features
+- **Auto-Generated Fields**: SKUs and picture names via PostgreSQL functions
+- **Status Tracking**: Three-stage approval process (Proto/SMS/PPS)
+- **Flexible Properties**: JSON-based component attributes
+- **Association Tables**: Many-to-many relationships
+- **Database Triggers**: Automatic updates for timestamps, SKUs, and naming
 
 ### Configuration
-- Environment-based configuration in `config.py`
-- Database connection points to external PostgreSQL server
-- File uploads stored in `app/static/uploads/`
-- Port 6002 for application access
+- **Database**: PostgreSQL connection string: `postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database`
+- **Schema**: All tables use `component_app` schema
+- **File Uploads**: Stored in `app/static/uploads/` with 16MB limit
+- **Port**: Application runs on port 6002
+- **Security**: SECRET_KEY configuration, secure file handling
 
-### CSV Import System
-- Bulk operations via CSV with semicolon delimiter
-- Supports component and picture data import
-- Processing handled by `app/services/csv_service.py`
+### Key Features
+1. **Component Lifecycle Management**: Complete product lifecycle with approval workflows
+2. **Variant Management**: Color variants with automatic SKU generation
+3. **Brand Association**: Many-to-many component-brand relationships
+4. **Picture Management**: Automatic naming and organization system
+5. **CSV Import/Export**: Bulk data operations
+6. **Search & Filtering**: Advanced filtering with pagination
+7. **Responsive UI**: Modern, mobile-friendly interface
+8. **Performance Optimization**: Efficient queries with pagination and caching
 
-## Important Notes
+## Important Development Notes
 - Database uses custom schema `component_app` - ensure all models inherit from `Base`
-- File uploads limited to 16MB with thumbnail generation
-- Application runs on port 6002 by default
-- Uses external PostgreSQL database, not containerized
+- File uploads limited to 16MB with automatic optimization
+- Application runs on port 6002 by default via Docker
+- Uses external PostgreSQL database (not containerized)
+- All database changes should use Flask-Migrate migrations
+- SKUs and picture names are auto-generated by database triggers - don't manually set them
+- Always use database functions for complex operations (SKU generation, etc.)
 
 
 Integrate with Version Control: Always use Claude Code in conjunction with a version control system (like Git). This helps mitigate the risk of Claude becoming "overly ambitious" and introducing breaking changes that are difficult to roll back

@@ -198,10 +198,21 @@ check_ssh_connection() {
         echo -e "${GREEN}Host is reachable${NC}"
     fi
     
-    # Try SSH connection with password authentication
-    echo -e "${BLUE}Testing SSH connection (you will be prompted for password)...${NC}"
+    # Try SSH connection with key authentication first
+    echo -e "${BLUE}Testing SSH connection with key authentication...${NC}"
+    if ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -o PasswordAuthentication=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH key connection successful'" 2>/dev/null; then
+        echo -e "${GREEN}SSH key authentication is working${NC}"
+        # Update SSH commands to use key authentication
+        REMOTE_SSH="ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        REMOTE_SCP="scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -P $REMOTE_PORT"
+        return 0
+    fi
+    
+    # If key authentication fails, try password authentication for initial test
+    echo -e "${BLUE}Key authentication failed, testing with password authentication...${NC}"
     if ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o BatchMode=no -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection successful'"; then
-        echo -e "${GREEN}SSH connection established successfully${NC}"
+        echo -e "${GREEN}SSH connection established successfully with password${NC}"
+        echo -e "${YELLOW}Will attempt to set up key authentication to avoid multiple password prompts...${NC}"
         return 0
     else
         echo -e "${RED}SSH connection failed.${NC}"
@@ -265,9 +276,22 @@ setup_ssh_keys() {
     fi
 }
 
+# Function to ensure SSH commands are configured for key authentication
+ensure_ssh_key_config() {
+    # Ensure SSH commands are configured for key authentication
+    if [[ "$REMOTE_SSH" != *"PreferredAuthentications=publickey"* ]]; then
+        echo -e "${YELLOW}Updating SSH commands to use key authentication...${NC}"
+        REMOTE_SSH="ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        REMOTE_SCP="scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -P $REMOTE_PORT"
+    fi
+}
+
 # Function to check Docker on remote machine
 check_remote_docker() {
     echo -e "${BLUE}Checking Docker installation on remote machine...${NC}"
+    
+    # Ensure SSH commands are configured for key authentication
+    ensure_ssh_key_config
     
     # Check if Docker is installed
     if ! $REMOTE_SSH "which docker" >/dev/null 2>&1; then
@@ -300,6 +324,9 @@ check_remote_docker() {
 check_remote_docker_compose() {
     echo -e "${BLUE}Checking Docker Compose on remote machine...${NC}"
     
+    # Ensure SSH commands are configured for key authentication
+    ensure_ssh_key_config
+    
     # Check for docker-compose command
     if $REMOTE_SSH "docker-compose --version" >/dev/null 2>&1; then
         compose_version=$($REMOTE_SSH "docker-compose --version" 2>/dev/null)
@@ -324,6 +351,9 @@ check_remote_docker_compose() {
 # Function to copy project files to remote machine
 copy_project_files() {
     echo -e "${BLUE}Copying project files to remote machine...${NC}"
+    
+    # Ensure SSH commands are configured for key authentication
+    ensure_ssh_key_config
     
     # Debug: Show current directory and check for required files
     echo -e "${BLUE}Current directory: $(pwd)${NC}"
@@ -441,6 +471,9 @@ EOF
 copy_docker_images() {
     echo -e "${BLUE}Copying Docker images to remote machine...${NC}"
     
+    # Ensure SSH commands are configured for key authentication
+    ensure_ssh_key_config
+    
     # Save Docker images locally
     local image_tar="webapp_images_$(date +%Y%m%d_%H%M%S).tar"
     
@@ -475,6 +508,9 @@ copy_docker_images() {
 # Function to deploy on remote machine
 deploy_on_remote() {
     echo -e "${BLUE}Deploying application on remote machine...${NC}"
+    
+    # Ensure SSH commands are configured for key authentication
+    ensure_ssh_key_config
     
     # Set the docker-compose command based on what's available
     local compose_cmd="docker-compose"
@@ -616,6 +652,26 @@ ask_remote_deployment() {
             return 1
         fi
         
+        # Setup SSH keys for passwordless deployment - MANDATORY
+        echo -e "${BLUE}Setting up SSH key authentication (required for deployment)...${NC}"
+        if ! setup_ssh_keys; then
+            echo -e "${RED}SSH key setup failed. Deployment cannot proceed.${NC}"
+            echo -e "${YELLOW}Please ensure:${NC}"
+            echo -e "  1. Your password is correct"
+            echo -e "  2. SSH key generation is working"
+            echo -e "  3. Remote machine allows SSH key authentication"
+            return 1
+        fi
+        
+        # Verify key authentication is working before proceeding
+        echo -e "${BLUE}Verifying SSH key authentication...${NC}"
+        if ! $REMOTE_SSH "echo 'SSH key authentication verified'" 2>/dev/null; then
+            echo -e "${RED}SSH key authentication verification failed${NC}"
+            echo -e "${YELLOW}Deployment cannot proceed without working key authentication${NC}"
+            return 1
+        fi
+        echo -e "${GREEN}SSH key authentication verified successfully${NC}"
+        
         if ! check_remote_docker; then
             echo -e "${RED}Remote deployment failed - Docker not installed on remote machine.${NC}"
             return 1
@@ -626,23 +682,10 @@ ask_remote_deployment() {
             return 1
         fi
         
-        # Check for existing containers before starting deployment
-        echo -e "${BLUE}Checking for existing containers on remote machine...${NC}"
-        existing_containers=$($REMOTE_SSH "docker ps -a --filter name=component_app --format '{{.Names}} ({{.Status}})'" 2>/dev/null || echo "")
-        if [ -n "$existing_containers" ]; then
-            echo -e "${YELLOW}Found existing containers that may conflict:${NC}"
-            echo -e "$existing_containers"
-            echo -e "${YELLOW}These will be handled during deployment.${NC}"
-            echo ""
-        fi
-        
-        # Setup SSH keys for passwordless deployment
-        if ! setup_ssh_keys; then
-            echo -e "${YELLOW}SSH key setup failed, deployment will use password authentication${NC}"
-        fi
-        
         # Setup remote directory
         echo -e "${BLUE}Setting up remote directory...${NC}"
+        # Ensure SSH commands are configured for key authentication
+        ensure_ssh_key_config
         $REMOTE_SSH "mkdir -p $REMOTE_DOCKER_COMPOSE_DIR" || {
             echo -e "${RED}Failed to create remote directory${NC}"
             return 1

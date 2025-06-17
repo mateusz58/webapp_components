@@ -728,6 +728,120 @@ def edit_component(id):
                 if old_variant_picture_count != len(variant.variant_pictures):
                     changed_fields.append('images')
 
+            # Process existing variant color changes
+            for variant in component.variants:
+                color_key = f'variant_color_{variant.id}'
+                custom_color_key = f'variant_custom_color_{variant.id}'
+                
+                if color_key in request.form:
+                    color_value = request.form[color_key]
+                    
+                    # Handle custom color for existing variant
+                    if color_value == 'custom' and custom_color_key in request.form:
+                        custom_color_name = request.form[custom_color_key].strip()
+                        
+                        if custom_color_name:
+                            # Check if color already exists
+                            existing_color = Color.query.filter_by(name=custom_color_name).first()
+                            if existing_color:
+                                new_color_id = existing_color.id
+                            else:
+                                # Create new color
+                                new_color = Color(name=custom_color_name)
+                                db.session.add(new_color)
+                                db.session.flush()  # Get the ID
+                                new_color_id = new_color.id
+                                current_app.logger.info(f"Created new color: {custom_color_name}")
+                            
+                            # Update variant color if it's different
+                            if variant.color_id != new_color_id:
+                                # Check if another variant already uses this color
+                                existing_variant = ComponentVariant.query.filter_by(
+                                    component_id=component.id,
+                                    color_id=new_color_id
+                                ).filter(ComponentVariant.id != variant.id).first()
+                                
+                                if not existing_variant:
+                                    variant.color_id = new_color_id
+                                    changed_fields.append('variants')
+                    
+                    # Handle existing color selection
+                    elif color_value != 'custom' and color_value != str(variant.color_id):
+                        try:
+                            new_color_id = int(color_value)
+                            
+                            # Check if another variant already uses this color
+                            existing_variant = ComponentVariant.query.filter_by(
+                                component_id=component.id,
+                                color_id=new_color_id
+                            ).filter(ComponentVariant.id != variant.id).first()
+                            
+                            if not existing_variant:
+                                variant.color_id = new_color_id
+                                changed_fields.append('variants')
+                        except ValueError:
+                            continue
+
+            # Process new variants
+            new_variant_count = 0
+            for key in request.form.keys():
+                if key.startswith('new_variant_color_'):
+                    variant_id = key.replace('new_variant_color_', '')
+                    color_value = request.form[key]
+                    
+                    if color_value:  # Only process if a color is selected
+                        try:
+                            # Handle custom color creation
+                            if color_value == 'custom':
+                                custom_color_key = f'new_variant_custom_color_{variant_id}'
+                                custom_color_name = request.form.get(custom_color_key, '').strip()
+                                
+                                if custom_color_name:
+                                    # Check if color already exists
+                                    existing_color = Color.query.filter_by(name=custom_color_name).first()
+                                    if existing_color:
+                                        color_id = existing_color.id
+                                    else:
+                                        # Create new color
+                                        new_color = Color(name=custom_color_name)
+                                        db.session.add(new_color)
+                                        db.session.flush()  # Get the ID
+                                        color_id = new_color.id
+                                        current_app.logger.info(f"Created new color: {custom_color_name}")
+                                else:
+                                    continue  # Skip if no custom color name provided
+                            else:
+                                color_id = int(color_value)
+                            
+                            # Check if variant with this color already exists
+                            existing_variant = ComponentVariant.query.filter_by(
+                                component_id=component.id,
+                                color_id=color_id
+                            ).first()
+                            
+                            if not existing_variant:
+                                # Create new variant
+                                new_variant = ComponentVariant(
+                                    component_id=component.id,
+                                    color_id=color_id,
+                                    is_active=True
+                                )
+                                db.session.add(new_variant)
+                                db.session.flush()  # Get the ID
+                                
+                                # Process variant images
+                                _update_variant_images(new_variant, request)
+                                
+                                new_variant_count += 1
+                                current_app.logger.info(f"Created new variant for component {component.id} with color {color_id}")
+                                
+                        except Exception as e:
+                            current_app.logger.error(f"Error creating new variant: {str(e)}")
+                            continue
+            
+            if new_variant_count > 0:
+                changed_fields.append('variants')
+
             db.session.commit()
             
             # Store changed fields in session for highlighting
@@ -1519,6 +1633,36 @@ def api_export_suppliers():
     except Exception as e:
         current_app.logger.error(f"Error exporting suppliers: {str(e)}")
         return jsonify({'error': 'Export failed'}), 500
+
+@main.route('/api/picture/<int:picture_id>/delete', methods=['DELETE'])
+def api_delete_picture(picture_id):
+    """API endpoint to delete an individual picture."""
+    try:
+        # Find the picture
+        picture = Picture.query.get_or_404(picture_id)
+        
+        # Store info for response
+        variant_id = picture.variant_id
+        component_id = picture.component_id
+        
+        # Delete the picture record from database
+        db.session.delete(picture)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Picture deleted successfully',
+            'variant_id': variant_id,
+            'component_id': component_id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting picture {picture_id}: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': f'Failed to delete picture: {str(e)}'
+        }), 500
 
 @main.route('/suppliers')
 def suppliers():
