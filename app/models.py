@@ -501,7 +501,6 @@ class ComponentVariant(Base):
     component_id = db.Column(db.Integer, db.ForeignKey('component_app.component.id'), nullable=False)
     color_id = db.Column(db.Integer, db.ForeignKey('component_app.color.id'), nullable=False)
     variant_name = db.Column(db.String(100))  # e.g., "Silver", "Deep Black"
-    description = db.Column(db.Text)  # variant-specific description
     is_active = db.Column(db.Boolean, default=True)
     
     # Automatically generated SKU: <supplier_code>_<product_number>_<color_name> or <product_number>_<color_name>
@@ -526,8 +525,13 @@ class ComponentVariant(Base):
         return f'<ComponentVariant {self.component.product_number}-{self.color.name}>'
     
     def get_display_name(self):
-        """Get display name for the variant"""
-        return self.variant_name or self.color.name
+        """Get display name for the variant - shows color name and SKU"""
+        sku_info = f" ({self.variant_sku})" if self.variant_sku else ""
+        return f"{self.color.name}{sku_info}"
+    
+    def get_color_display_name(self):
+        """Get just the color name for display"""
+        return self.color.name
     
     def get_full_product_number(self):
         """Get full product number including variant"""

@@ -562,15 +562,6 @@
                             {% endif %}
                         </div>
                     </div>
-
-                    <div class="mb-0">
-                        <label class="form-label form-label-modern">Description</label>
-                        <textarea class="form-control form-control-modern"
-                                  name="description"
-                                  rows="3"
-                                  x-model="formData.description"
-                                  placeholder="Optional description for this color variant...">{{ variant.description if variant else '' }}</textarea>
-                    </div>
                 </div>
 
                 <!-- Color Selection -->
@@ -784,8 +775,7 @@
             dragOver: false,
             images: [],
             formData: {
-                variantName: '{{ variant.variant_name if variant else "" }}',
-                description: '{{ variant.description if variant else "" }}'
+                variantName: '{{ variant.variant_name if variant else "" }}'
             },
 
             init() {
@@ -870,8 +860,7 @@
                 this.selectedColor = {{ variant.color_id if variant else 'null' }};
                 this.images = [];
                 this.formData = {
-                    variantName: '{{ variant.variant_name if variant else "" }}',
-                    description: '{{ variant.description if variant else "" }}'
+                    variantName: '{{ variant.variant_name if variant else "" }}'
                 };
 
                 // Reset form visually

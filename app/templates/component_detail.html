@@ -346,36 +346,85 @@
         border-radius: var(--border-radius-lg);
         box-shadow: var(--shadow-md);
         overflow: hidden;
+        position: relative;
     }
 
     .nav-tabs-modern {
         background: #f8fafc;
         border: none;
         padding: 0.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 10;
+    }
+
+    .nav-tabs-modern .nav-item {
+        margin-bottom: 0;
+        position: relative;
+    }
+
+    /* Ensure tab text is always visible */
+    .nav-tabs-modern .nav-link,
+    .nav-tabs-modern .nav-link:visited,
+    .nav-tabs-modern .nav-link:link {
+        color: #64748b !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     .nav-tabs-modern .nav-link {
         border: none;
         border-radius: var(--border-radius);
-        color: var(--color-secondary);
         font-weight: 500;
         padding: 0.75rem 1.5rem;
         margin-right: 0.25rem;
         transition: all 0.2s ease;
+        background: transparent;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        position: relative;
+        z-index: 1;
     }
 
     .nav-tabs-modern .nav-link:hover {
         background: white;
-        color: var(--color-primary);
+        color: #3b82f6 !important;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
     }
 
     .nav-tabs-modern .nav-link.active {
-        background: var(--color-primary);
-        color: white;
+        background: #3b82f6;
+        color: white !important;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .nav-tabs-modern .nav-link.active:hover {
+        background: #2563eb;
+        color: white !important;
     }
 
     .tab-content-modern {
         padding: 2rem;
+        min-height: 200px;
+    }
+
+    .tab-pane {
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tab-pane.show.active {
+        display: block;
+        opacity: 1;
     }
 
     /* Action buttons */
@@ -624,7 +673,7 @@
                              :class="{ 'active': selectedVariant === null }"
                              @click="selectVariant(null)">
                             <div class="variant-chip-color" style="background: linear-gradient(135deg, #e2e8f0, #cbd5e1);"></div>
-                            <span>Main ({{ component.pictures|length }})</span>
+                            <span>Component Images ({{ component.pictures|length }})</span>
                         </div>
 
                         <!-- Variant Chips -->
@@ -634,16 +683,12 @@
                              @click="selectVariant({{ variant.id }})">
                             <div class="variant-chip-color"
                                  style="background: {{ variant.color.hex_code or '#ccc' }}"></div>
-                            <span>{{ variant.get_display_name() }} ({{ variant.variant_pictures|length }})</span>
+                            <span>{{ variant.get_color_display_name() }} ({{ variant.variant_pictures|length }})</span>
+                            {% if variant.variant_sku %}
+                            <small class="text-muted d-block">{{ variant.variant_sku }}</small>
+                            {% endif %}
                         </div>
                         {% endfor %}
-
-                        <!-- Add New Variant -->
-                        <a href="{{ url_for('main.new_variant', id=component.id) }}"
-                           class="variant-chip" style="border-style: dashed;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                            <span>Add Variant</span>
-                        </a>
                     </div>
                 </div>
                 {% endif %}
@@ -866,29 +911,41 @@
                 </div>
             </div>
 
-            <!-- Information Tabs (keeping original structure) -->
+            <!-- Information Tabs -->
             <div class="info-tabs">
                 <ul class="nav nav-tabs nav-tabs-modern" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic-info" type="button">
+                        <button class="nav-link" 
+                                :class="{ 'active': activeTab === 'basic-info' }"
+                                @click="selectTab('basic-info')"
+                                type="button">
                             <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
                             Basic Info
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#properties" type="button">
+                        <button class="nav-link"
+                                :class="{ 'active': activeTab === 'properties' }"
+                                @click="selectTab('properties')"
+                                type="button">
                             <i data-lucide="settings" class="me-2" style="width: 16px; height: 16px;"></i>
                             Properties
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#keywords" type="button">
+                        <button class="nav-link"
+                                :class="{ 'active': activeTab === 'keywords' }"
+                                @click="selectTab('keywords')"
+                                type="button">
                             <i data-lucide="tag" class="me-2" style="width: 16px; height: 16px;"></i>
                             Keywords
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#variants" type="button">
+                        <button class="nav-link"
+                                :class="{ 'active': activeTab === 'variants' }"
+                                @click="selectTab('variants')"
+                                type="button">
                             <i data-lucide="palette" class="me-2" style="width: 16px; height: 16px;"></i>
                             Variants ({{ component.variants|length }})
                         </button>
@@ -897,48 +954,48 @@
 
                 <div class="tab-content tab-content-modern">
                     <!-- Basic Info Tab -->
-                    <div class="tab-pane fade show active" id="basic-info">
+                    <div class="tab-pane fade" :class="{ 'show active': activeTab === 'basic-info' }" id="basic-info" role="tabpanel">
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label class="form-label fw-bold">Product Number</label>
-                                    <p class="text-muted">{{ component.product_number }}</p>
+                                    <p class="text-muted mb-0">{{ component.product_number }}</p>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label class="form-label fw-bold">Component Type</label>
-                                    <p class="text-muted">{{ component.component_type.name }}</p>
+                                    <p class="text-muted mb-0">{{ component.component_type.name }}</p>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label class="form-label fw-bold">Supplier</label>
-                                    <p class="text-muted">{{ component.supplier.supplier_code }}</p>
+                                    <p class="text-muted mb-0">{{ component.supplier.supplier_code }}</p>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label class="form-label fw-bold">Category</label>
-                                    <p class="text-muted">{{ component.category.name }}</p>
+                                    <p class="text-muted mb-0">{{ component.category.name }}</p>
                                 </div>
                             </div>
                         </div>
 
                         {% if component.description %}
-                        <div class="mb-3">
+                        <div class="mb-0">
                             <label class="form-label fw-bold">Description</label>
-                            <p class="text-muted">{{ component.description }}</p>
+                            <p class="text-muted mb-0">{{ component.description }}</p>
                         </div>
                         {% endif %}
                     </div>
 
                     <!-- Properties Tab -->
-                    <div class="tab-pane fade" id="properties">
+                    <div class="tab-pane fade" :class="{ 'show active': activeTab === 'properties' }" id="properties" role="tabpanel">
                         {% if component.properties %}
-                        <div class="row">
+                        <div class="row g-4">
                             {% for key, prop in component.properties.items() %}
-                            <div class="col-md-6 mb-3">
-                                <div class="p-3 bg-light rounded">
-                                    <label class="form-label fw-bold">{{ key|title }}</label>
+                            <div class="col-md-6">
+                                <div class="p-4 bg-light rounded h-100">
+                                    <label class="form-label fw-bold mb-3">{{ key|title }}</label>
                                     {% if prop.value is iterable and prop.value is not string %}
-                                    <div class="d-flex flex-wrap gap-1">
+                                    <div class="d-flex flex-wrap gap-2">
                                         {% for value in prop.value %}
                                         <span class="badge bg-primary">{{ value }}</span>
                                         {% endfor %}
@@ -959,7 +1016,7 @@
                     </div>
 
                     <!-- Keywords Tab -->
-                    <div class="tab-pane fade" id="keywords">
+                    <div class="tab-pane fade" :class="{ 'show active': activeTab === 'keywords' }" id="keywords" role="tabpanel">
                         {% if component.keywords %}
                         <div class="d-flex flex-wrap gap-2">
                             {% for keyword in component.keywords %}
@@ -975,25 +1032,25 @@
                     </div>
 
                     <!-- Variants Tab -->
-                    <div class="tab-pane fade" id="variants">
+                    <div class="tab-pane fade" :class="{ 'show active': activeTab === 'variants' }" id="variants" role="tabpanel">
                         {% if component.variants %}
-                        <div class="row">
+                        <div class="row g-4">
                             {% for variant in component.variants %}
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center mb-3">
                                             <div class="variant-color-swatch me-3"
                                                  style="background: {{ variant.color.hex_code or '#ccc' }}"></div>
                                             <div>
-                                                <h6 class="mb-0">{{ variant.get_display_name() }}</h6>
+                                                <h6 class="mb-0">{{ variant.get_color_display_name() }}</h6>
+                                                {% if variant.variant_sku %}
+                                                <small class="text-muted">{{ variant.variant_sku }}</small>
+                                                {% else %}
                                                 <small class="text-muted">{{ variant.color.name }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
-
-                                        {% if variant.description %}
-                                        <p class="text-muted small mb-2">{{ variant.description }}</p>
-                                        {% endif %}
 
                                         <div class="d-flex justify-content-between align-items-center">
                                             <small class="text-muted">
@@ -1036,12 +1093,6 @@
                         Edit Component
                     </a>
 
-                    <a href="{{ url_for('main.new_variant', id=component.id) }}"
-                       class="btn btn-success-modern btn-modern">
-                        <i data-lucide="palette" class="me-2" style="width: 18px; height: 18px;"></i>
-                        Add Color Variant
-                    </a>
-
                     <button class="btn btn-warning-modern btn-modern" @click="duplicateComponent()">
                         <i data-lucide="copy" class="me-2" style="width: 18px; height: 18px;"></i>
                         Duplicate
@@ -1054,23 +1105,6 @@
                         Back to List
                     </a>
                 </div>
-
-                <!-- Quick Color Preview -->
-                {% if component.variants %}
-                <div class="mt-4">
-                    <h6 class="fw-bold mb-3">Available Colors</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for variant in component.variants %}
-                        <div class="position-relative"
-                             style="cursor: pointer;"
-                             @click="selectVariant({{ variant.id }})"
-                             title="{{ variant.get_display_name() }}">
-                            <div style="width: 30px; height: 30px; background: {{ variant.color.hex_code or '#ccc' }}; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -1103,7 +1137,8 @@
         <!-- Image Info -->
         <div class="lightbox-info">
             <div class="fw-bold" x-text="currentImages[lightboxIndex]?.name"></div>
-            <div class="small opacity-75" x-text="`${lightboxIndex + 1} of ${currentImages.length}`"></div>
+            <div class="small opacity-75" x-text="`Order: ${currentImages[lightboxIndex]?.order} • ${lightboxIndex + 1} of ${currentImages.length}`"></div>
+            <div x-show="currentImages[lightboxIndex]?.altText" class="small opacity-75 mt-1" x-text="currentImages[lightboxIndex]?.altText"></div>
         </div>
     </div>
 
@@ -1143,6 +1178,7 @@
             lightboxIndex: 0,
             selectedVariant: null,
             currentImageIndex: 0,
+            activeTab: 'basic-info',
 
             // Component data from server
             componentImages: [
@@ -1160,17 +1196,18 @@
                 {% for variant in component.variants %}
                     {
                         id: {{ variant.id }},
-                        name: '{{ variant.get_display_name() }}',
+                        name: '{{ variant.get_color_display_name() }}',
                         colorName: '{{ variant.color.name }}',
                         colorHex: '{{ variant.color.hex_code or "#ccc" }}',
-                        description: '{{ variant.description or "" }}',
+                        sku: '{{ variant.variant_sku or "" }}',
                         images: [
                             {% for picture in variant.variant_pictures|sort(attribute='picture_order') %}
                                 {
                                     id: {{ picture.id }},
                                     name: '{{ picture.picture_name }}',
                                     url: '{{ picture.url }}',
-                                    order: {{ picture.picture_order }}
+                                    order: {{ picture.picture_order }},
+                                    altText: '{{ picture.alt_text or "" }}'
                                 }{% if not loop.last %},{% endif %}
                             {% endfor %}
                         ]
@@ -1189,13 +1226,14 @@
 
             get currentVariant() {
                 if (this.selectedVariant === null) {
-                    return { name: 'Main Component' };
+                    return { name: 'Component Images' };
                 }
                 return this.variants.find(v => v.id === this.selectedVariant);
             },
 
             init() {
                 this.currentImageIndex = 0;
+                console.log('Component Detail initialized with activeTab:', this.activeTab);
 
                 // Keyboard navigation
                 document.addEventListener('keydown', (e) => {
@@ -1260,6 +1298,11 @@
                           }
                       });
                 }
+            },
+
+            selectTab(tabName) {
+                console.log('Switching to tab:', tabName);
+                this.activeTab = tabName;
             }
         }
     }

@@ -327,7 +327,7 @@ def index():
 
                 component_variants[row.component_id].append({
                     'id': row.id,
-                    'name': row.variant_name or row.color_name,
+                    'name': row.color_name,  # Use color name instead of variant name
                     'color_id': row.color_id,
                     'color_name': row.color_name,
                     'picture_url': picture_url
@@ -954,7 +954,6 @@ def new_variant(id):
         try:
             color_id = request.form.get('color_id')
             variant_name = request.form.get('variant_name', '').strip()
-            description = request.form.get('description', '').strip()
 
             if not color_id:
                 flash('Please select a color for the variant.', 'danger')
@@ -975,7 +974,6 @@ def new_variant(id):
                 component_id=component.id,
                 color_id=int(color_id),
                 variant_name=variant_name if variant_name else None,
-                description=description if description else None,
                 is_active=True
             )
 
@@ -1020,12 +1018,10 @@ def edit_variant(component_id, variant_id):
     if request.method == 'POST':
         try:
             variant_name = request.form.get('variant_name', '').strip()
-            description = request.form.get('description', '').strip()
             is_active = 'is_active' in request.form
 
             # Update variant details
             variant.variant_name = variant_name if variant_name else None
-            variant.description = description if description else None
             variant.is_active = is_active
             variant.updated_at = datetime.utcnow()
 
