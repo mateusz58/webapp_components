@@ -113,9 +113,7 @@ def index():
         component_type_ids = [int(id) for id in component_type_ids if id.isdigit()]
         current_app.logger.info(f"Processed component_type_ids: {component_type_ids}")
 
-        category_ids = request.args.getlist('category_id')
-        current_app.logger.info(f"Raw category_ids from request: {category_ids}")
-        category_ids = [int(id) for id in category_ids if id.isdigit()]
+        # Category filtering removed - using many-to-many relationship
 
         supplier_ids = request.args.getlist('supplier_id')
         current_app.logger.info(f"Raw supplier_ids from request: {supplier_ids}")
@@ -137,7 +135,7 @@ def index():
         query = Component.query.options(
             joinedload(Component.component_type),
             joinedload(Component.supplier),
-            joinedload(Component.category),
+            # joinedload(Component.category) removed - now many-to-many
             joinedload(Component.pictures),
             joinedload(Component.keywords)
         )
@@ -162,7 +160,7 @@ def index():
                     Component.supplier_id.isnot(None),
                     Component.supplier.has(Supplier.supplier_code.ilike(f'%{search}%'))
                 ),
-                Component.category.has(Category.name.ilike(f'%{search}%')),
+                # Category search removed - now many-to-many
                 Component.component_type.has(ComponentType.name.ilike(f'%{search}%')),
                 Component.id.in_(keyword_subquery)  # Add keyword search
             )
@@ -172,9 +170,7 @@ def index():
         if component_type_ids:
             filters.append(Component.component_type_id.in_(component_type_ids))
 
-        # UPDATED: Multi-select category filter
-        if category_ids:
-            filters.append(Component.category_id.in_(category_ids))
+        # Category filtering removed - now using many-to-many relationship
 
         # UPDATED: Multi-select supplier filter
         if supplier_ids:
@@ -220,9 +216,8 @@ def index():
 
         # Filter out components with missing required relationships BEFORE pagination
         query = query.filter(
-            Component.component_type_id.isnot(None),
-            Component.category_id.isnot(None)
-            # supplier_id is now optional, so we don't filter it out
+            Component.component_type_id.isnot(None)
+            # category is now many-to-many, supplier_id is optional
         )
 
         # Apply sorting
@@ -339,7 +334,8 @@ def index():
         # Get filter options - only show options that have components
         component_types_with_components = db.session.query(ComponentType).join(Component).distinct().order_by(ComponentType.name).all()
         suppliers_with_components = db.session.query(Supplier).join(Component).distinct().order_by(Supplier.supplier_code).all()
-        categories_with_components = db.session.query(Category).join(Component).distinct().order_by(Category.name).all()
+        # Categories removed from filters - now many-to-many relationship
+        categories_with_components = []
         brands_with_components = db.session.query(Brand).join(ComponentBrand).join(Component).distinct().order_by(Brand.name).all()
 
         # Get statistics
@@ -384,7 +380,6 @@ def index():
             pagination_info=pagination_info,
             current_filters={
                 'component_type_ids': component_type_ids,
-                'category_ids': category_ids,
                 'supplier_ids': supplier_ids,
                 'brand_ids': brand_ids,
                 'status': status,
@@ -396,7 +391,24 @@ def index():
 
     except Exception as e:
         flash(f'An error occurred while loading components: {str(e)}', 'error')
-        return render_template('index.html', components=None)
+        return render_template('index.html', 
+                             components=None,
+                             component_types=[],
+                             categories=[],
+                             suppliers=[],
+                             brands=[],
+                             brands_count=0,
+                             search='',
+                             pagination_info={'total': 0, 'page': 1, 'per_page': 20, 'pages': 0},
+                             current_filters={
+                                 'component_type_ids': [],
+                                 'supplier_ids': [],
+                                 'brand_ids': [],
+                                 'status': '',
+                                 'recent': '',
+                                 'sort_by': 'created_at',
+                                 'sort_order': 'desc'
+                             })
 
 @main.route('/component/<int:id>')
 def component_detail(id):
@@ -405,7 +417,7 @@ def component_detail(id):
         component = Component.query.options(
             db.joinedload(Component.component_type),
             db.joinedload(Component.supplier),
-            db.joinedload(Component.category),
+            # db.joinedload(Component.category) removed - now many-to-many
             db.joinedload(Component.keywords),
             db.joinedload(Component.pictures),
             db.joinedload(Component.variants).joinedload(ComponentVariant.color),
@@ -431,18 +443,18 @@ def new_component():
             component_type_id = request.form.get('component_type_id')
             supplier_id = request.form.get('supplier_id')  # Now optional
 
-            # FIXED: Get or create default category
+            # Handle category - now many-to-many
             category_id = request.form.get('category_id')
-            if not category_id:
+            selected_category = None
+            if category_id:
+                selected_category = Category.query.get(int(category_id))
+            if not selected_category:
                 # Try to find or create a default category
-                default_category = Category.query.filter_by(name='Uncategorized').first()
-                if not default_category:
-                    default_category = Category(name='Uncategorized')
-                    db.session.add(default_category)
+                selected_category = Category.query.filter_by(name='Uncategorized').first()
+                if not selected_category:
+                    selected_category = Category(name='Uncategorized')
+                    db.session.add(selected_category)
                     db.session.flush()
-                category_id = default_category.id
-            else:
-                category_id = int(category_id)
 
             # Validate required fields (only product_number and component_type_id are required)
             if not all([product_number, component_type_id]):
@@ -482,11 +494,15 @@ def new_component():
                 description=description,
                 component_type_id=int(component_type_id),
                 supplier_id=supplier_id,  # Can be None
-                category_id=category_id  # Now guaranteed to have a value
+                # category_id removed - now using many-to-many relationship
             )
 
             db.session.add(component)
             db.session.flush()  # Get the ID
+
+            # Add category relationship (many-to-many)
+            if selected_category:
+                component.categories.append(selected_category)
 
             # Process keywords (optional)
             keywords = request.form.get('keywords', '').strip()
@@ -649,10 +665,25 @@ def edit_component(id):
             if old_supplier_id != component.supplier_id:
                 changed_fields.append('supplier_id')
             
-            old_category_id = component.category_id
-            component.category_id = int(request.form.get('category_id'))
-            if old_category_id != component.category_id:
-                changed_fields.append('category_id')
+            # Handle category changes (many-to-many)
+            old_category_ids = {cat.id for cat in component.categories}
+            category_ids = request.form.getlist('category_ids')
+            new_category_ids = {int(cat_id) for cat_id in category_ids if cat_id}
+            
+            if old_category_ids != new_category_ids:
+                # Remove categories that are no longer selected
+                for category in component.categories:
+                    if category.id not in new_category_ids:
+                        component.remove_category(category)
+                
+                # Add new categories
+                for category_id in new_category_ids:
+                    if category_id not in old_category_ids:
+                        category = Category.query.get(category_id)
+                        if category:
+                            component.add_category(category)
+                
+                changed_fields.append('categories')
             
             component.updated_at = datetime.utcnow()
 
@@ -826,6 +857,8 @@ def edit_component(id):
                                     color_id=color_id,
                                     is_active=True
                                 )
+                                # Store the temporary ID for image processing
+                                new_variant.temp_id = variant_id
                                 db.session.add(new_variant)
                                 db.session.flush()  # Get the ID
                                 
@@ -937,6 +970,49 @@ def edit_component(id):
                            available_brands_json=available_brands,  # FIXED: Pass serializable data
                            component_brands_json=component_cached_brands,  # FIXED: Pass serializable data
                            changed_fields=changed_fields)  # NEW: Pass changed fields for highlighting
+
+@main.route('/api/categories', methods=['POST'])
+def create_category():
+    """API endpoint to create a new category"""
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify({'success': False, 'error': 'Category name is required'}), 400
+        
+        category_name = data['name'].strip()
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name cannot be empty'}), 400
+        
+        # Check if category already exists (case-insensitive)
+        existing_category = Category.query.filter(db.func.lower(Category.name) == category_name.lower()).first()
+        if existing_category:
+            return jsonify({
+                'success': False, 
+                'error': f'Category "{existing_category.name}" already exists',
+                'existing_category': {
+                    'id': existing_category.id,
+                    'name': existing_category.name
+                }
+            }), 409
+        
+        # Create new category
+        new_category = Category(name=category_name)
+        db.session.add(new_category)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Category "{category_name}" created successfully',
+            'category': {
+                'id': new_category.id,
+                'name': new_category.name
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating category: {str(e)}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @main.route('/component/delete/<int:id>', methods=['POST'])
 def delete_component(id):
@@ -1302,12 +1378,16 @@ def api_duplicate_component(component_id):
             description=f"Copy of {original.description}" if original.description else None,
             component_type_id=original.component_type_id,
             supplier_id=original.supplier_id,
-            category_id=original.category_id,
+            # category_id removed - will copy categories after creation
             properties=original.properties.copy() if original.properties else {}
         )
 
         db.session.add(new_component)
         db.session.flush()
+
+        # Copy categories (many-to-many)
+        for category in original.categories:
+            new_component.categories.append(category)
 
         # Copy keywords
         for keyword in original.keywords:
@@ -1333,7 +1413,7 @@ def api_export_component(component_id):
         component = Component.query.options(
             db.joinedload(Component.component_type),
             db.joinedload(Component.supplier),
-            db.joinedload(Component.category),
+            # db.joinedload(Component.category) removed - now many-to-many
             db.joinedload(Component.keywords),
             db.joinedload(Component.pictures),
             db.joinedload(Component.variants)
@@ -1344,7 +1424,7 @@ def api_export_component(component_id):
             'description': component.description,
             'component_type': component.component_type.name,
             'supplier_code': component.supplier.supplier_code,
-            'category_name': component.category.name,
+            'categories': [cat.name for cat in component.categories],
             'keywords': [k.name for k in component.keywords],
             'properties': component.properties,
             'pictures': [{
@@ -1465,7 +1545,7 @@ def api_export_components():
                 'description': component.description,
                 'component_type': component.component_type.name,
                 'supplier': component.supplier.supplier_code,
-                'category': component.category.name,
+                'categories': [cat.name for cat in component.categories],
                 'properties': component.properties,
                 'keywords': [k.name for k in component.keywords],
                 'variants_count': len(component.variants),
@@ -2041,9 +2121,35 @@ def _update_variant_images(variant, request):
                 picture.picture_order = int(request.form[order_key] or picture.picture_order)
 
     # Process new uploaded images for this specific variant
-    # Handle files with naming convention: variant_${variantId}_images
-    variant_file_key = f'variant_{variant.id}_images'
-    variant_files = request.files.getlist(variant_file_key)
+    # Handle files with naming convention: variant_images_${variantId}[]
+    # Try multiple naming conventions for compatibility
+    variant_file_keys = [
+        f'variant_images_{variant.id}[]',  # New VariantManager format
+        f'variant_images_{variant.id}',    # Alternative format
+        f'variant_{variant.id}_images'     # Old format
+    ]
+    
+    variant_files = []
+    for key in variant_file_keys:
+        files = request.files.getlist(key)
+        if files:
+            variant_files = files
+            current_app.logger.info(f"Found variant files with key: {key}")
+            break
+    
+    # If no files found with real ID, check if this variant has a temp_id attribute
+    if not variant_files and hasattr(variant, 'temp_id'):
+        temp_variant_keys = [
+            f'variant_images_{variant.temp_id}[]',
+            f'variant_images_{variant.temp_id}',
+            f'variant_{variant.temp_id}_images'
+        ]
+        for key in temp_variant_keys:
+            files = request.files.getlist(key)
+            if files:
+                variant_files = files
+                current_app.logger.info(f"Found temp variant files with key: {key}")
+                break
     
     # Get current max order for this variant
     max_order = max([p.picture_order for p in variant.variant_pictures] + [0])
@@ -2110,6 +2216,25 @@ def api_search_brands():
     except Exception as e:
         current_app.logger.error(f"Error in brand search: {str(e)}")
         return jsonify({'error': 'Search failed'}), 500
+
+
+@main.route('/api/brands/<int:brand_id>/subbrands')
+def api_get_subbrands(brand_id):
+    """API endpoint to get subbrands for a specific brand."""
+    try:
+        brand = Brand.query.get_or_404(brand_id)
+        
+        subbrands = [{
+            'id': subbrand.id,
+            'name': subbrand.name,
+            'brand_id': subbrand.brand_id
+        } for subbrand in brand.subbrands]
+        
+        return jsonify(subbrands)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting subbrands for brand {brand_id}: {str(e)}")
+        return jsonify({'error': 'Failed to load subbrands'}), 500
 
 def get_brands_list(self):
     """Get brands for this component (with caching support)"""

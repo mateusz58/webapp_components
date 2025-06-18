@@ -93,14 +93,24 @@ class Supplier(Base):
     def __repr__(self):
         return f'<Supplier {self.supplier_code}>'
 
+# Association table for many-to-many category-component relationship
+component_category = db.Table('component_category',
+    db.Column('id', db.Integer, primary_key=True),
+    db.Column('component_id', db.Integer, db.ForeignKey('component_app.component.id'), nullable=False),
+    db.Column('category_id', db.Integer, db.ForeignKey('component_app.category.id'), nullable=False),
+    db.UniqueConstraint('component_id', 'category_id'),
+    schema='component_app'
+)
+
 class Category(Base):
     __tablename__ = 'category'
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     
-    # Relationship to components  
-    components = db.relationship('Component', backref='category', lazy=True)
+    # Many-to-many relationship to components
+    components = db.relationship('Component', secondary=component_category, lazy='subquery',
+                                backref=db.backref('categories', lazy=True))
 
     def __repr__(self):
         return f'<Category {self.name}>'
@@ -195,6 +205,7 @@ keyword_component = db.Table('keyword_component',
     schema='component_app'
 )
 
+
 class ComponentBrand(Base):
     """Association object for Component-Brand many-to-many relationship with additional fields"""
     __tablename__ = 'component_brand'
@@ -227,7 +238,7 @@ class Component(Base):
     # MANDATORY foreign keys (all components must have these)
     component_type_id = db.Column(db.Integer, db.ForeignKey('component_app.component_type.id'), nullable=False)
     supplier_id = db.Column(db.Integer, db.ForeignKey('component_app.supplier.id'), nullable=True)  # Now optional
-    category_id = db.Column(db.Integer, db.ForeignKey('component_app.category.id'), nullable=False)
+    # category_id removed - now using many-to-many relationship via component_category table
     
     # STATUS TRACKING (Product-wide status - applies to all variants)
     proto_status = db.Column(db.String(20), default='pending')  # 'pending', 'ok', 'not_ok'
@@ -345,6 +356,70 @@ class Component(Base):
     def has_brand(self, brand_name):
         """Check if component has a specific brand"""
         return any(brand.name == brand_name for brand in self.brands)
+
+    def test_method(self):
+        """Test method to verify class loading"""
+        return "test_method_works"
+
+    # Category management methods (many-to-many)
+    def add_category(self, category):
+        """Add a category to this component (many-to-many)"""
+        from sqlalchemy import text
+        # Check if association already exists
+        existing = db.session.execute(text("""
+            SELECT 1 FROM component_app.component_category 
+            WHERE component_id = :comp_id AND category_id = :cat_id
+        """), {'comp_id': self.id, 'cat_id': category.id}).fetchone()
+        
+        if not existing:
+            db.session.execute(text("""
+                INSERT INTO component_app.component_category (component_id, category_id)
+                VALUES (:comp_id, :cat_id)
+            """), {'comp_id': self.id, 'cat_id': category.id})
+            return True
+        return False
+
+    def remove_category(self, category):
+        """Remove a category from this component (many-to-many)"""
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            DELETE FROM component_app.component_category 
+            WHERE component_id = :comp_id AND category_id = :cat_id
+        """), {'comp_id': self.id, 'cat_id': category.id})
+        return result.rowcount > 0
+
+    def get_categories(self):
+        """Get all categories for this component (many-to-many)"""
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT c.id, c.name 
+            FROM component_app.category c
+            JOIN component_app.component_category cc ON c.id = cc.category_id
+            WHERE cc.component_id = :comp_id
+            ORDER BY c.name
+        """), {'comp_id': self.id})
+        
+        # Create Category objects from the results
+        categories = []
+        for row in result.fetchall():
+            cat = Category()
+            cat.id = row[0]
+            cat.name = row[1]
+            categories.append(cat)
+        return categories
+
+    @property
+    def categories(self):
+        """Get all categories for this component (many-to-many)"""
+        return self.get_categories()
+
+    def get_category_names(self):
+        """Get list of category names for this component"""
+        return [category.name for category in self.get_categories()]
+
+    def has_category(self, category_name):
+        """Check if component has a specific category"""
+        return any(category.name == category_name for category in self.get_categories())
 
     # Variant management methods
     def create_variant(self, color_id, variant_name=None, description=None):
@@ -744,3 +819,59 @@ def get_brands_for_component(component_id):
     return db.session.query(Brand).join(ComponentBrand).filter(
         ComponentBrand.component_id == component_id
     ).all()
+
+# Helper functions for many-to-many category management
+def get_categories_for_component(component_id):
+    """Get all categories for a specific component (many-to-many)"""
+    from sqlalchemy import text
+    result = db.session.execute(text("""
+        SELECT c.id, c.name 
+        FROM component_app.category c
+        JOIN component_app.component_category cc ON c.id = cc.category_id
+        WHERE cc.component_id = :comp_id
+        ORDER BY c.name
+    """), {'comp_id': component_id})
+    
+    categories = []
+    for row in result.fetchall():
+        cat = Category()
+        cat.id = row[0]
+        cat.name = row[1]
+        categories.append(cat)
+    return categories
+
+def add_category_to_component(component_id, category_id):
+    """Add a category to a component (many-to-many)"""
+    from sqlalchemy import text
+    try:
+        # Check if association already exists
+        existing = db.session.execute(text("""
+            SELECT 1 FROM component_app.component_category 
+            WHERE component_id = :comp_id AND category_id = :cat_id
+        """), {'comp_id': component_id, 'cat_id': category_id}).fetchone()
+        
+        if not existing:
+            db.session.execute(text("""
+                INSERT INTO component_app.component_category (component_id, category_id)
+                VALUES (:comp_id, :cat_id)
+            """), {'comp_id': component_id, 'cat_id': category_id})
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def remove_category_from_component(component_id, category_id):
+    """Remove a category from a component (many-to-many)"""
+    from sqlalchemy import text
+    try:
+        result = db.session.execute(text("""
+            DELETE FROM component_app.component_category 
+            WHERE component_id = :comp_id AND category_id = :cat_id
+        """), {'comp_id': component_id, 'cat_id': category_id})
+        db.session.commit()
+        return result.rowcount > 0
+    except Exception as e:
+        db.session.rollback()
+        raise e

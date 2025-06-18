@@ -1,0 +1,229 @@
+<!-- Essential Information Section -->
+<div class="form-card">
+    <div class="form-card-header">
+        <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+        </svg>
+        <h2 class="form-card-title">Essential Information</h2>
+    </div>
+
+    <div class="form-grid form-grid-cols-2">
+        <div class="form-group">
+            <label for="product_number" class="form-label required">Product Number</label>
+            <input 
+                type="text" 
+                id="product_number" 
+                name="product_number" 
+                class="form-input"
+                value="{{ component.product_number if component else '' }}"
+                required
+                aria-describedby="product_number_help product_number_error"
+            >
+            <div id="product_number_help" class="form-help">Unique identifier (e.g., F-WL001, S-WL0001)</div>
+            <div id="product_number_error" class="form-error hidden"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="component_type_id" class="form-label required">Component Type</label>
+            <select 
+                id="component_type_id" 
+                name="component_type_id" 
+                class="form-select"
+                required
+                aria-describedby="component_type_help component_type_error"
+            >
+                <option value="">Select component type...</option>
+                {% for component_type in component_types %}
+                <option value="{{ component_type.id }}" 
+                        {% if component and component.component_type_id == component_type.id %}selected{% endif %}>
+                    {{ component_type.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <div id="component_type_help" class="form-help">Categorizes the component for organization</div>
+            <div id="component_type_error" class="form-error hidden"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="supplier_id" class="form-label">Supplier</label>
+            <select 
+                id="supplier_id" 
+                name="supplier_id" 
+                class="form-select"
+                aria-describedby="supplier_help supplier_error"
+            >
+                <option value="">Select supplier...</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}" 
+                        {% if component and component.supplier_id == supplier.id %}selected{% endif %}>
+                    {{ supplier.supplier_code }}
+                </option>
+                {% endfor %}
+            </select>
+            <div id="supplier_help" class="form-help">Optional supplier for this component</div>
+            <div id="supplier_error" class="form-error hidden"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="categories" class="form-label">Categories</label>
+            <div class="category-selector" id="categorySelector">
+                <div class="category-input-container">
+                    <div class="category-search-wrapper">
+                        <input 
+                            type="text" 
+                            id="categorySearch" 
+                            class="category-search-input"
+                            placeholder="Type to search categories or click arrow to browse all..."
+                            autocomplete="off"
+                        >
+                        <button type="button" class="category-show-all-btn" id="categoryShowAllBtn" title="Show all categories">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="category-dropdown" id="categoryDropdown" style="display: none;">
+                        <div class="category-dropdown-header">
+                            <span class="category-count">{{ categories|length }} categories available</span>
+                            <button type="button" class="category-clear-search" id="categoryClearSearch" style="display: none;">Clear search</button>
+                        </div>
+                        {% for category in categories %}
+                        <div class="category-option" data-id="{{ category.id }}" data-name="{{ category.name }}">
+                            <span class="category-name">{{ category.name }}</span>
+                            <span class="category-usage">{{ category.component_count if category.component_count else 0 }} components</span>
+                        </div>
+                        {% endfor %}
+                        <div class="category-no-results" id="categoryNoResults" style="display: none;">
+                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                            <div>No categories found</div>
+                            <small>Try a different search term</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="selected-categories" id="selectedCategories">
+                    {% if component and component.categories %}
+                        {% for category in component.categories %}
+                        <span class="selected-category" data-id="{{ category.id }}">
+                            {{ category.name }}
+                            <button type="button" class="remove-category" onclick="removeCategory({{ category.id }})">×</button>
+                            <input type="hidden" name="category_ids" value="{{ category.id }}">
+                        </span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-help">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                </svg>
+                Type to search and auto-complete category names, or click the arrow to browse all available categories
+            </div>
+            <div id="category_error" class="form-error hidden"></div>
+        </div>
+
+        <!-- Brand Information -->
+        <div class="form-group">
+            <label for="brand_id" class="form-label">Brand</label>
+            <select 
+                id="brand_id" 
+                name="brand_id" 
+                class="form-select"
+                onchange="handleBrandSelection()"
+                aria-describedby="brand_help brand_error"
+            >
+                <option value="">Select a brand...</option>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}"
+                        {% if component and component._cached_brands and brand.id in component._cached_brands|map(attribute='id')|list %}selected{% endif %}>
+                    {{ brand.name }}
+                </option>
+                {% endfor %}
+                <option value="new">+ Create New Brand</option>
+            </select>
+            <div id="brand_help" class="form-help">Choose an existing brand or create a new one</div>
+            <div id="brand_error" class="form-error hidden"></div>
+        </div>
+
+        <div class="form-group" id="subbrand_group" style="display: none;">
+            <label for="subbrand_id" class="form-label">Subbrand</label>
+            <select 
+                id="subbrand_id" 
+                name="subbrand_id" 
+                class="form-select"
+                onchange="handleSubbrandSelection()"
+                aria-describedby="subbrand_help subbrand_error"
+            >
+                <option value="">Select a subbrand...</option>
+                <option value="new">+ Create New Subbrand</option>
+            </select>
+            <div id="subbrand_help" class="form-help">Optional subbrand within the selected brand</div>
+            <div id="subbrand_error" class="form-error hidden"></div>
+        </div>
+    </div>
+
+    <!-- New Brand Input -->
+    <div id="new_brand_input" class="form-group" style="display: none;">
+        <label for="new_brand_name" class="form-label required">New Brand Name</label>
+        <input 
+            type="text" 
+            id="new_brand_name" 
+            name="new_brand_name" 
+            class="form-input"
+            placeholder="Enter new brand name..."
+            aria-describedby="new_brand_help new_brand_error"
+        >
+        <div id="new_brand_help" class="form-help">This will create a new brand in the system</div>
+        <div id="new_brand_error" class="form-error hidden"></div>
+    </div>
+
+    <!-- New Subbrand Input -->
+    <div id="new_subbrand_input" class="form-group" style="display: none;">
+        <label for="new_subbrand_name" class="form-label required">New Subbrand Name</label>
+        <input 
+            type="text" 
+            id="new_subbrand_name" 
+            name="new_subbrand_name" 
+            class="form-input"
+            placeholder="Enter new subbrand name..."
+            onchange="validateSubbrandName()"
+            aria-describedby="new_subbrand_help new_subbrand_error"
+        >
+        <div id="new_subbrand_help" class="form-help">This will create a new subbrand under the selected brand</div>
+        <div id="new_subbrand_error" class="form-error hidden"></div>
+    </div>
+
+    <!-- Multiple Brand Selection Display (if component has multiple brands) -->
+    {% if component and component._cached_brands and component._cached_brands|length > 1 %}
+    <div class="form-group">
+        <label class="form-label">Selected Brands</label>
+        <div class="selected-brands">
+            {% for brand in component._cached_brands %}
+            <span class="brand-tag">
+                {{ brand.name }}
+                <button type="button" class="remove-brand" onclick="removeBrand({{ brand.id }})">×</button>
+            </span>
+            {% endfor %}
+        </div>
+        <div class="form-help">Multiple brands associated with this component</div>
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="description" class="form-label">Description</label>
+        <textarea 
+            id="description" 
+            name="description" 
+            class="form-textarea"
+            rows="4"
+            placeholder="Detailed description of the component..."
+            aria-describedby="description_help"
+        >{{ component.description if component else '' }}</textarea>
+        <div id="description_help" class="form-help">
+            <span id="char_count">{{ component.description|length if component and component.description else 0 }}</span> characters
+        </div>
+    </div>
+</div>

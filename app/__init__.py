@@ -83,6 +83,18 @@ def create_app(config_class=Config):
         app.logger.warning(f"Supplier API routes not available: {e}")
     
     try:
+        from app.api.variant_api import variant_api
+        app.register_blueprint(variant_api)
+    except ImportError as e:
+        app.logger.warning(f"Variant API routes not available: {e}")
+    
+    try:
+        from app.api.keyword_api import keyword_api
+        app.register_blueprint(keyword_api)
+    except ImportError as e:
+        app.logger.warning(f"Keyword API routes not available: {e}")
+    
+    try:
         from app.brand_routes import brand_bp
         app.register_blueprint(brand_bp)
     except ImportError as e:

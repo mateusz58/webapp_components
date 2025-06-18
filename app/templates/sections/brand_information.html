@@ -1,0 +1,96 @@
+<!-- Brand Information Section -->
+<div class="form-card">
+    <div class="form-card-header">
+        <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-.5-.5L8.636 3.5zM16 6.5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0-.5.5v9.5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-9.5zM1.5 4a.5.5 0 0 1 .5-.5h6V6a.5.5 0 0 0 .5.5h2v8a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V4z"/>
+        </svg>
+        <h2 class="form-card-title">Brand Information</h2>
+    </div>
+
+    <div class="form-grid form-grid-cols-2">
+        <div class="form-group">
+            <label for="brand_id" class="form-label">Brand</label>
+            <select 
+                id="brand_id" 
+                name="brand_id" 
+                class="form-select"
+                onchange="handleBrandSelection()"
+                aria-describedby="brand_help brand_error"
+            >
+                <option value="">Select a brand...</option>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}"
+                        {% if component and component._cached_brands and brand.id in component._cached_brands|map(attribute='id')|list %}selected{% endif %}>
+                    {{ brand.name }}
+                </option>
+                {% endfor %}
+                <option value="new">+ Create New Brand</option>
+            </select>
+            <div id="brand_help" class="form-help">Choose an existing brand or create a new one</div>
+            <div id="brand_error" class="form-error hidden"></div>
+        </div>
+
+        <div class="form-group" id="subbrand_group" style="display: none;">
+            <label for="subbrand_id" class="form-label">Subbrand</label>
+            <select 
+                id="subbrand_id" 
+                name="subbrand_id" 
+                class="form-select"
+                onchange="handleSubbrandSelection()"
+                aria-describedby="subbrand_help subbrand_error"
+            >
+                <option value="">Select a subbrand...</option>
+                <option value="new">+ Create New Subbrand</option>
+            </select>
+            <div id="subbrand_help" class="form-help">Optional subbrand within the selected brand</div>
+            <div id="subbrand_error" class="form-error hidden"></div>
+        </div>
+    </div>
+
+    <!-- New Brand Input -->
+    <div id="new_brand_input" class="form-group" style="display: none;">
+        <label for="new_brand_name" class="form-label required">New Brand Name</label>
+        <input 
+            type="text" 
+            id="new_brand_name" 
+            name="new_brand_name" 
+            class="form-input"
+            placeholder="Enter new brand name..."
+            aria-describedby="new_brand_help new_brand_error"
+        >
+        <div id="new_brand_help" class="form-help">This will create a new brand in the system</div>
+        <div id="new_brand_error" class="form-error hidden"></div>
+    </div>
+
+    <!-- New Subbrand Input -->
+    <div id="new_subbrand_input" class="form-group" style="display: none;">
+        <label for="new_subbrand_name" class="form-label required">New Subbrand Name</label>
+        <input 
+            type="text" 
+            id="new_subbrand_name" 
+            name="new_subbrand_name" 
+            class="form-input"
+            placeholder="Enter new subbrand name..."
+            onchange="validateSubbrandName()"
+            aria-describedby="new_subbrand_help new_subbrand_error"
+        >
+        <div id="new_subbrand_help" class="form-help">This will create a new subbrand under the selected brand</div>
+        <div id="new_subbrand_error" class="form-error hidden"></div>
+    </div>
+
+    <!-- Multiple Brand Selection Display (if component has multiple brands) -->
+    {% if component and component._cached_brands and component._cached_brands|length > 1 %}
+    <div class="form-group">
+        <label class="form-label">Selected Brands</label>
+        <div class="selected-brands">
+            {% for brand in component._cached_brands %}
+            <span class="brand-tag">
+                {{ brand.name }}
+                <button type="button" class="remove-brand" onclick="removeBrand({{ brand.id }})">×</button>
+            </span>
+            {% endfor %}
+        </div>
+        <div class="form-help">Multiple brands associated with this component</div>
+    </div>
+    {% endif %}
+</div>

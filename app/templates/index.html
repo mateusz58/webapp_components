@@ -1586,7 +1586,11 @@
                                 <div class="component-meta">
                                     <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
                                     <small class="me-2">{{ component.supplier.supplier_code }}</small>
-                                    <small class="me-2">{{ component.category.name }}</small>
+                                    <small class="me-2">
+                                        {% for category in component.categories %}
+                                            {{ category.name }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </small>
                                     
                                     <!-- Creation Date -->
                                     <small class="me-2">
@@ -1831,7 +1835,7 @@ function componentDashboard() {
         // UPDATED: Multi-select filters
         filters: {
     componentTypes: {{ current_filters.component_type_ids | tojson if current_filters else [] }},
-    categories: {{ current_filters.category_ids | tojson if current_filters else [] }},
+    // categories removed - now many-to-many relationship
     suppliers: {{ current_filters.supplier_ids | tojson if current_filters else [] }},
     brands: {{ current_filters.brand_ids | tojson if current_filters else [] }}
 },

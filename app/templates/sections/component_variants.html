@@ -1,0 +1,239 @@
+<!-- Component Variants Section -->
+<div class="form-card">
+    <div class="form-card-header">
+        <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+        </svg>
+        <h2 class="form-card-title">Component Variants</h2>
+        <div class="card-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="add_variant_btn">
+                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Add Variant
+            </button>
+        </div>
+    </div>
+
+    <div class="form-section-content">
+        <div class="form-help" style="margin-bottom: 1rem;">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+            </svg>
+            Add color variants to show different options for this component. Each variant needs at least one picture.
+        </div>
+
+        {% if component and component.variants %}
+            <div id="variants_container">
+                {% for variant in component.variants %}
+                <div class="variant-card" data-variant-id="{{ variant.id }}">
+                    <div class="variant-header">
+                        <h4 class="variant-title">{{ variant.color.name }} - {{ variant.variant_sku or 'No SKU' }}</h4>
+                        <div class="variant-actions">
+                            <button type="button" class="btn-icon btn-icon-outline" onclick="variantManager.toggleVariantPictures({{ variant.id }})" title="Manage Pictures">
+                                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="btn-icon btn-icon-danger" onclick="variantManager.removeVariant({{ variant.id }})" title="Remove Variant">×</button>
+                        </div>
+                    </div>
+                    
+                    <div class="variant-form">
+                        <div class="form-grid form-grid-cols-2">
+                            <div class="form-group">
+                                <label class="form-label required">Color</label>
+                                <select name="variant_color_{{ variant.id }}" id="color_select_{{ variant.id }}" class="form-select" required onchange="variantManager.handleColorSelection('{{ variant.id }}')">
+                                    <option value="{{ variant.color_id }}" selected style="font-weight: 500;">
+                                        {{ variant.color.name }} (Current)
+                                    </option>
+                                    <optgroup label="Available Colors">
+                                        {% for color in colors %}
+                                            {% if color.id != variant.color_id %}
+                                                {% set is_taken = false %}
+                                                {% for other_variant in component.variants %}
+                                                    {% if other_variant.id != variant.id and other_variant.color_id == color.id %}
+                                                        {% set is_taken = true %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if is_taken %}
+                                                <option value="{{ color.id }}" disabled style="color: #999; background-color: #f5f5f5;">
+                                                    {{ color.name }} (Already used)
+                                                </option>
+                                                {% else %}
+                                                <option value="{{ color.id }}">
+                                                    {{ color.name }}
+                                                </option>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="New Color">
+                                        <option value="custom">+ Add New Color</option>
+                                    </optgroup>
+                                </select>
+                                <div id="custom_color_input_{{ variant.id }}" style="display: none;" class="mt-2">
+                                    <input type="text" 
+                                           name="variant_custom_color_{{ variant.id }}" 
+                                           id="custom_color_{{ variant.id }}"
+                                           class="form-input" 
+                                           placeholder="Enter new color name..."
+                                           onchange="variantManager.updateVariantSKU('{{ variant.id }}')">
+                                    <small class="form-help">This will create a new color in the system</small>
+                                </div>
+                                <div class="form-help">Select a different color to change the variant</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Variant SKU</label>
+                                <input 
+                                    type="text" 
+                                    name="variant_sku_{{ variant.id }}" 
+                                    id="variant_sku_{{ variant.id }}"
+                                    class="form-input"
+                                    value="{{ variant.variant_sku }}"
+                                    readonly
+                                    style="background: var(--gray-50);"
+                                    title="Current SKU from database">
+                                <div class="form-help">
+                                    <span id="sku_help_{{ variant.id }}">Current SKU from database</span>
+                                    <span id="sku_preview_{{ variant.id }}" class="text-muted" style="display: none;">
+                                        Preview of new SKU (will be applied when saved)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Picture Miniatures with Actions -->
+                        <div class="form-group">
+                            <div class="pictures-section-header">
+                                <label class="form-label">Pictures ({{ variant.variant_pictures|length }})</label>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="variantManager.toggleVariantPictures({{ variant.id }})" title="Manage Pictures">
+                                    <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                    </svg>
+                                    Manage Pictures
+                                </button>
+                            </div>
+                            
+                            <!-- Picture Miniatures Display -->
+                            <div class="variant-pictures-miniatures" id="miniatures_{{ variant.id }}">
+                                {% if variant.variant_pictures %}
+                                    {% for picture in variant.variant_pictures %}
+                                    <div class="miniature-item" data-picture-id="{{ picture.id }}">
+                                        <img src="{{ picture.url }}" alt="Picture {{ picture.picture_order }}" onclick="variantManager.previewPicture('{{ picture.url }}', '{{ picture.picture_name }}', '{{ picture.id }}')">
+                                        {% if picture.is_primary %}
+                                        <span class="primary-badge">Primary</span>
+                                        {% else %}
+                                        <button type="button" class="btn-icon btn-icon-primary" onclick="variantManager.setPrimaryVariantPicture({{ variant.id }}, {{ picture.id }})" title="Set as primary">★</button>
+                                        {% endif %}
+                                        <button type="button" class="btn-icon btn-icon-danger" onclick="variantManager.removeVariantPicture({{ variant.id }}, {{ picture.id }})" title="Remove picture">×</button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="no-pictures-placeholder">
+                                        <svg width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                            <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                        </svg>
+                                        <p>No pictures yet</p>
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="variantManager.addVariantPicture({{ variant.id }})">
+                                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                                            </svg>
+                                            Add Pictures
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Pictures Section -->
+                    <div class="variant-pictures" id="pictures_section_{{ variant.id }}" style="display: none;">
+                        <div class="pictures-header">
+                            <h5>Manage Pictures for {{ variant.color.name }} Variant</h5>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="variantManager.toggleVariantPictures({{ variant.id }})">
+                                <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                                </svg>
+                                Close
+                            </button>
+                        </div>
+                        
+                        <!-- Picture Upload Area -->
+                        <div class="image-upload-area">
+                            <div class="upload-drop-zone" 
+                                 ondrop="variantManager.handleVariantDrop(event, {{ variant.id }})" 
+                                 ondragover="variantManager.handleDragOver(event)" 
+                                 ondragleave="variantManager.handleDragLeave(event)"
+                                 onclick="document.getElementById('variant_images_{{ variant.id }}').click()">
+                                <svg class="upload-icon" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                                </svg>
+                                <p><strong>Click to upload</strong> or drag and drop</p>
+                                <p class="upload-formats">PNG, JPG, JPEG, WEBP up to 16MB</p>
+                            </div>
+                            <input 
+                                type="file" 
+                                id="variant_images_{{ variant.id }}" 
+                                name="variant_images_{{ variant.id }}[]" 
+                                multiple 
+                                accept="image/*" 
+                                style="display: none;"
+                                onchange="variantManager.handleVariantImages({{ variant.id }}, this.files)">
+                        </div>
+
+                        <!-- Pictures Grid -->
+                        <div class="variant-pictures-grid" id="pictures_grid_{{ variant.id }}">
+                            {% if variant.variant_pictures %}
+                                {% for picture in variant.variant_pictures %}
+                                <div class="picture-item" data-picture-id="{{ picture.id }}">
+                                    <img src="{{ picture.url }}" alt="{{ picture.alt_text or 'Variant picture' }}">
+                                    <div class="picture-overlay">
+                                        {% if picture.is_primary %}
+                                        <span class="primary-badge">Primary</span>
+                                        {% else %}
+                                        <button type="button" class="btn-icon btn-icon-primary" onclick="variantManager.setPrimaryVariantPicture({{ variant.id }}, {{ picture.id }})">★</button>
+                                        {% endif %}
+                                        <button type="button" class="btn-icon btn-icon-danger" onclick="variantManager.removeVariantPicture({{ variant.id }}, {{ picture.id }})">×</button>
+                                    </div>
+                                    <div class="picture-info">
+                                        <input type="text" 
+                                               name="picture_alt_{{ picture.id }}" 
+                                               value="{{ picture.alt_text or '' }}" 
+                                               placeholder="Alt text..." 
+                                               class="picture-alt-input">
+                                        <small>Order: {{ picture.picture_order }}</small>
+                                    </div>
+                                    <input type="hidden" name="existing_pictures" value="{{ picture.id }}">
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div id="variants_container">
+                <!-- Empty state will be shown when no variants exist -->
+                <div id="empty_variants" class="empty-state">
+                    <svg class="empty-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                    </svg>
+                    <h3>No Variants Yet</h3>
+                    <p>Add color variants to showcase different options for this component</p>
+                    <button type="button" class="btn btn-primary" onclick="variantManager.addNewVariant()">Add First Variant</button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>

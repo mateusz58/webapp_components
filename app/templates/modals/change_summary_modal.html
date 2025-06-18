@@ -1,42 +1,83 @@
-<!-- Change Summary Modal -->
+<!-- Detailed Change Summary Modal -->
 <div id="changeSummaryModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container">
+    <div class="modal-container modal-large">
         <div class="modal-header">
             <div class="modal-header-content">
                 <div class="modal-icon">
-                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3z"/>
+                        <path d="M4 5h8v1H4V5zm0 2h8v1H4V7zm0 2h8v1H4V9z"/>
                     </svg>
                 </div>
                 <div>
-                    <h3 class="modal-title">Confirm Changes</h3>
-                    <p class="modal-subtitle">Review the changes you're about to apply</p>
+                    <h3 class="modal-title">Review Changes</h3>
+                    <p class="modal-subtitle">Review what will be changed before applying updates</p>
                 </div>
             </div>
             <button type="button" class="modal-close-btn" onclick="closeChangeSummaryModal()">
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
                 </svg>
             </button>
         </div>
         
         <div class="modal-body">
-            <!-- Changes Summary -->
-            <div id="changesContainer" class="changes-container">
-                <!-- Changes will be populated here by JavaScript -->
+            <!-- Essential Information Section -->
+            <div id="essentialInfoSection" class="change-section" style="display: none;">
+                <div class="section-header">
+                    <svg class="section-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                    <h4 class="section-title">Essential Information</h4>
+                </div>
+                <div id="essentialInfoContent" class="section-content"></div>
             </div>
-            
+
+            <!-- Brand Information Section -->
+            <div id="brandInfoSection" class="change-section" style="display: none;">
+                <div class="section-header">
+                    <svg class="section-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-.5-.5L8.636 3.5zM16 6.5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0-.5.5v9.5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-9.5zM1.5 4a.5.5 0 0 1 .5-.5h6V6a.5.5 0 0 0 .5.5h2v8a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V4z"/>
+                    </svg>
+                    <h4 class="section-title">Brand Information</h4>
+                </div>
+                <div id="brandInfoContent" class="section-content"></div>
+            </div>
+
+            <!-- Component Properties Section -->
+            <div id="propertiesSection" class="change-section" style="display: none;">
+                <div class="section-header">
+                    <svg class="section-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                    </svg>
+                    <h4 class="section-title">Component Properties</h4>
+                </div>
+                <div id="propertiesContent" class="section-content"></div>
+            </div>
+
+            <!-- Component Variants Section -->
+            <div id="variantsSection" class="change-section" style="display: none;">
+                <div class="section-header">
+                    <svg class="section-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                    <h4 class="section-title">Component Variants</h4>
+                </div>
+                <div id="variantsContent" class="section-content"></div>
+            </div>
+
             <!-- No Changes State -->
             <div id="noChangesState" class="no-changes-state" style="display: none;">
                 <div class="no-changes-icon">
                     <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
                     </svg>
                 </div>
-                <h4>No Changes Detected</h4>
-                <p>All fields have the same values as before. No update is needed.</p>
+                <h4>No changes detected</h4>
+                <p>All fields maintain their current values.</p>
             </div>
             
             <!-- Loading State -->
@@ -47,29 +88,34 @@
         </div>
         
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeChangeSummaryModal()">
-                Cancel
-            </button>
-            <button type="button" id="confirmChangesBtn" class="btn btn-primary" onclick="confirmAndSubmitChanges()">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-                </svg>
-                Apply Changes
-            </button>
+            <div class="footer-info">
+                <small id="lastUpdated" class="last-updated"></small>
+            </div>
+            <div class="footer-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeChangeSummaryModal()">
+                    Cancel
+                </button>
+                <button type="button" id="confirmChangesBtn" class="btn btn-primary" onclick="confirmAndSubmitChanges()">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                    </svg>
+                    Apply Changes
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Modal Overlay */
+/* Enhanced Modal Styling */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -83,17 +129,20 @@
     opacity: 1;
 }
 
-/* Modal Container */
 .modal-container {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    max-width: 600px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    max-width: 900px;
     width: 100%;
-    max-height: 80vh;
+    max-height: 85vh;
     overflow: hidden;
-    transform: scale(0.9) translateY(20px);
+    transform: scale(0.95) translateY(20px);
     transition: transform 0.3s ease;
+}
+
+.modal-large {
+    max-width: 1000px;
 }
 
 .modal-overlay.show .modal-container {
@@ -102,11 +151,12 @@
 
 /* Modal Header */
 .modal-header {
-    padding: 1.5rem;
+    padding: 1.5rem 2rem 1rem;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .modal-header-content {
@@ -116,15 +166,16 @@
 }
 
 .modal-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #10b981, #059669);
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .modal-title {
@@ -138,14 +189,15 @@
     margin: 0.25rem 0 0 0;
     font-size: 0.875rem;
     color: #6b7280;
+    font-weight: 500;
 }
 
 .modal-close-btn {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border: none;
     background: #f3f4f6;
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,138 +209,282 @@
 .modal-close-btn:hover {
     background: #e5e7eb;
     color: #374151;
+    transform: scale(1.05);
 }
 
 /* Modal Body */
 .modal-body {
-    padding: 1.5rem;
-    max-height: 50vh;
+    padding: 1rem 2rem;
+    max-height: 60vh;
     overflow-y: auto;
+    scroll-behavior: smooth;
 }
 
-/* Changes Container */
-.changes-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.change-item {
-    background: #f9fafb;
+/* Change Sections */
+.change-section {
+    margin-bottom: 1.5rem;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1rem;
-    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
 }
 
-.change-item.modified {
-    border-color: #fbbf24;
-    background: #fffbeb;
-}
-
-.change-item.added {
-    border-color: #10b981;
-    background: #ecfdf5;
-}
-
-.change-item.removed {
-    border-color: #ef4444;
-    background: #fef2f2;
-}
-
-.change-header {
+.section-header {
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+}
+
+.section-icon {
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.section-content {
+    padding: 1.5rem;
+}
+
+/* Change Items */
+.change-item {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+    background: #fafbfc;
+}
+
+.change-item:last-child {
+    margin-bottom: 0;
+}
+
+.change-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
     margin-bottom: 0.75rem;
 }
 
-.change-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
+.change-field:last-child {
+    margin-bottom: 0;
+}
+
+.field-label {
+    min-width: 120px;
+    font-size: 0.875rem;
     font-weight: 600;
-}
-
-.change-item.modified .change-icon {
-    background: #fbbf24;
-    color: white;
-}
-
-.change-item.added .change-icon {
-    background: #10b981;
-    color: white;
-}
-
-.change-item.removed .change-icon {
-    background: #ef4444;
-    color: white;
-}
-
-.change-label {
-    font-weight: 600;
-    color: #374151;
+    color: #6b7280;
     text-transform: capitalize;
 }
 
-.change-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.field-values {
+    flex: 1;
 }
 
-.change-value {
+.value-from {
     padding: 0.5rem;
-    background: white;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
     border-radius: 6px;
-    border: 1px solid #d1d5db;
-    font-family: 'SF Mono', Consolas, monospace;
-    font-size: 0.875rem;
-}
-
-.change-from {
     color: #dc2626;
+    font-size: 0.875rem;
     text-decoration: line-through;
-    opacity: 0.7;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
 }
 
-.change-to {
-    color: #059669;
+.value-to {
+    padding: 0.5rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    color: #16a34a;
+    font-size: 0.875rem;
     font-weight: 500;
 }
 
-.change-arrow {
-    color: #6b7280;
+.value-arrow {
     text-align: center;
+    color: #6b7280;
     font-size: 0.75rem;
     margin: 0.25rem 0;
 }
 
-/* No Changes State */
-.no-changes-state {
+/* Variant Changes */
+.variant-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background: white;
+    overflow: hidden;
+}
+
+.variant-item:last-child {
+    margin-bottom: 0;
+}
+
+.variant-header {
+    padding: 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.variant-name {
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.variant-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.variant-badge.new {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.variant-badge.modified {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.variant-badge.removed {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.variant-content {
+    padding: 1rem;
+}
+
+.variant-changes {
+    margin-bottom: 1rem;
+}
+
+.variant-pictures {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.pictures-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.picture-thumbnails {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 0.5rem;
+    max-width: 300px;
+}
+
+.picture-thumbnail {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    border: 2px solid #e5e7eb;
+    object-fit: cover;
+    transition: all 0.2s ease;
+}
+
+.picture-thumbnail:hover {
+    border-color: #3b82f6;
+    transform: scale(1.05);
+}
+
+.picture-thumbnail.new {
+    border-color: #10b981;
+}
+
+.picture-thumbnail.removed {
+    border-color: #ef4444;
+    opacity: 0.6;
+    filter: grayscale(100%);
+}
+
+.picture-placeholder {
+    width: 60px;
+    height: 60px;
+    border: 2px dashed #d1d5db;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 12px;
+    text-align: center;
+    background: #f9fafb;
+}
+
+.empty-state {
     text-align: center;
     padding: 2rem;
     color: #6b7280;
 }
 
+.empty-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+
+/* No Changes State */
+.no-changes-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #6b7280;
+}
+
 .no-changes-icon {
-    margin: 0 auto 1rem;
-    color: #d1d5db;
+    margin: 0 auto 1.5rem;
+    color: #10b981;
+    opacity: 0.8;
 }
 
 .no-changes-state h4 {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.75rem 0;
     color: #374151;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
 .no-changes-state p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 
 /* Modal Loading */
@@ -296,16 +492,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding: 2rem;
+    gap: 1.5rem;
+    padding: 3rem 2rem;
     color: #6b7280;
 }
 
 .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #e5e7eb;
-    border-top: 3px solid #3b82f6;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #3b82f6;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -317,79 +513,116 @@
 
 /* Modal Footer */
 .modal-footer {
-    padding: 1rem 1.5rem;
+    padding: 1.5rem 2rem;
     border-top: 1px solid #e5e7eb;
     display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    background: #f9fafb;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
 }
 
-.modal-footer .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 500;
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.last-updated {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.footer-actions .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.875rem;
 }
 
-.modal-footer .btn-secondary {
+.footer-actions .btn-secondary {
     background: white;
     color: #374151;
     border: 1px solid #d1d5db;
 }
 
-.modal-footer .btn-secondary:hover {
-    background: #f3f4f6;
+.footer-actions .btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
 }
 
-.modal-footer .btn-primary {
-    background: #3b82f6;
+.footer-actions .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.modal-footer .btn-primary:hover {
-    background: #2563eb;
+.footer-actions .btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
 }
 
-.modal-footer .btn:disabled {
+.footer-actions .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+/* Responsive Design */
+@media (max-width: 768px) {
     .modal-container {
-        margin: 0.5rem;
+        margin: 1rem;
         max-height: 90vh;
     }
     
     .modal-header {
-        padding: 1rem;
+        padding: 1.5rem;
     }
     
     .modal-body {
-        padding: 1rem;
+        padding: 1rem 1.5rem;
     }
     
     .modal-footer {
-        padding: 1rem;
+        padding: 1rem 1.5rem;
         flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
     }
     
-    .modal-footer .btn {
+    .footer-actions {
         width: 100%;
+    }
+    
+    .footer-actions .btn {
+        flex: 1;
         justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .variant-details {
+        grid-template-columns: 1fr;
     }
 }
 </style>
 
 <script>
-// Change Summary Modal JavaScript
+// Enhanced Change Summary Modal JavaScript
 let originalFormData = {};
 let currentFormData = {};
 let lookupMaps = {};
@@ -398,59 +631,81 @@ let lookupMaps = {};
 function initializeOriginalFormData() {
     const form = document.getElementById('componentForm');
     if (form) {
-        // Create lookup maps for resolving IDs to names
         createLookupMaps();
-        
         originalFormData = captureFormData(form);
         console.log('Original form data captured:', originalFormData);
     }
 }
 
-// Create lookup maps for suppliers, brands, categories, and component types
+// Create lookup maps for resolving IDs to names
 function createLookupMaps() {
     lookupMaps = {
         suppliers: {},
         brands: {},
+        subbrands: {},
         categories: {},
-        component_types: {}
+        component_types: {},
+        colors: {}
     };
     
-    // Create supplier lookup map
-    const supplierOptions = document.querySelectorAll('select[name="supplier_id"] option');
-    supplierOptions.forEach(option => {
-        if (option.value) {
-            lookupMaps.suppliers[option.value] = option.textContent.trim();
+    // Supplier lookup
+    document.querySelectorAll('select[name="supplier_id"] option').forEach(option => {
+        if (option.value) lookupMaps.suppliers[option.value] = option.textContent.trim();
+    });
+    
+    // Brand lookup
+    document.querySelectorAll('#brand_select option, select[name="brand_id"] option').forEach(option => {
+        if (option.value) lookupMaps.brands[option.value] = option.textContent.trim();
+    });
+    
+    // Subbrand lookup
+    document.querySelectorAll('select[name="subbrand_id"] option').forEach(option => {
+        if (option.value) lookupMaps.subbrands[option.value] = option.textContent.trim();
+    });
+    
+    // Category lookup - Updated for many-to-many categories
+    document.querySelectorAll('.category-option').forEach(option => {
+        if (option.dataset.id && option.dataset.name) {
+            lookupMaps.categories[option.dataset.id] = option.dataset.name;
         }
     });
     
-    // Create brand lookup map
-    const brandOptions = document.querySelectorAll('#brand_select option');
-    brandOptions.forEach(option => {
-        if (option.value) {
-            lookupMaps.brands[option.value] = option.textContent.trim();
+    // Also get categories from existing selected category tags
+    document.querySelectorAll('.selected-category[data-id]').forEach(categoryTag => {
+        const categoryId = categoryTag.dataset.id;
+        const categoryName = categoryTag.textContent.replace('×', '').trim();
+        if (categoryId && categoryName) {
+            lookupMaps.categories[categoryId] = categoryName;
         }
     });
     
-    // Create category lookup map
-    const categoryOptions = document.querySelectorAll('select[name="category_id"] option');
-    categoryOptions.forEach(option => {
-        if (option.value) {
-            lookupMaps.categories[option.value] = option.textContent.trim();
-        }
+    // Component type lookup
+    document.querySelectorAll('select[name="component_type_id"] option').forEach(option => {
+        if (option.value) lookupMaps.component_types[option.value] = option.textContent.trim();
     });
     
-    // Create component type lookup map
-    const componentTypeOptions = document.querySelectorAll('select[name="component_type_id"] option');
-    componentTypeOptions.forEach(option => {
-        if (option.value) {
-            lookupMaps.component_types[option.value] = option.textContent.trim();
+    // Color lookup
+    document.querySelectorAll('select option').forEach(option => {
+        if (option.value && option.textContent && !lookupMaps.colors[option.value]) {
+            const text = option.textContent.trim();
+            if (text.length > 0 && text !== 'Select a color...' && !text.includes('Add New')) {
+                lookupMaps.colors[option.value] = text;
+            }
         }
     });
     
     console.log('Lookup maps created:', lookupMaps);
 }
 
-// Capture current form data
+// Helper function to hide all sections
+function hideAllSections() {
+    document.getElementById('essentialInfoSection').style.display = 'none';
+    document.getElementById('brandInfoSection').style.display = 'none';
+    document.getElementById('propertiesSection').style.display = 'none';
+    document.getElementById('variantsSection').style.display = 'none';
+}
+
+// Enhanced form data capture with detailed variant tracking
 function captureFormData(form) {
     const data = {};
     const formData = new FormData(form);
@@ -460,14 +715,18 @@ function captureFormData(form) {
     data.description = formData.get('description') || '';
     data.component_type_id = formData.get('component_type_id') || '';
     data.supplier_id = formData.get('supplier_id') || '';
-    data.category_id = formData.get('category_id') || '';
     data.keywords = formData.get('keywords') || '';
     
-    // Brands - get all selected brand IDs from hidden inputs
-    const brandInputs = form.querySelectorAll('input[type="hidden"][name="brands"]');
-    data.brands = Array.from(brandInputs).map(input => input.value).filter(value => value);
+    // Category data - Updated for many-to-many categories
+    data.category_ids = formData.getAll('category_ids') || [];
     
-    // Properties (dynamic fields)
+    // Brand data
+    data.brand_id = formData.get('brand_id') || '';
+    data.subbrand_id = formData.get('subbrand_id') || '';
+    data.new_brand_name = formData.get('new_brand_name') || '';
+    data.new_subbrand_name = formData.get('new_subbrand_name') || '';
+    
+    // Properties
     data.properties = {};
     for (let [key, value] of formData.entries()) {
         if (key.startsWith('property_')) {
@@ -475,76 +734,319 @@ function captureFormData(form) {
         }
     }
     
-    // Component Images count
-    const componentImages = form.querySelectorAll('input[type="file"][name^="picture_"]');
-    data.images_count = Array.from(componentImages).filter(input => input.files.length > 0).length;
-    
-    // VARIANT TRACKING - New functionality
-    data.variants = {
-        count: 0,
-        new_images: 0,
-        existing_variants: [],
-        dynamic_content_hash: ''
-    };
-    
-    // Count existing variant sections in the DOM - improved selectors
-    const variantSections = document.querySelectorAll('.variant-card, [id*="variant_"], .component-variant, [data-variant-id]');
-    data.variants.count = variantSections.length;
-    
-    // Debug logging
-    console.log(`Variant detection: Found ${data.variants.count} variants`, variantSections);
-    
-    // Track variant image uploads
-    const variantImageInputs = form.querySelectorAll('input[type="file"][id^="variant_images_"], input[name^="variant_"][name*="images"]');
-    variantImageInputs.forEach(input => {
-        if (input.files && input.files.length > 0) {
-            data.variants.new_images += input.files.length;
-        }
-    });
-    
-    // Track variant-specific form inputs and content
-    const variantInputs = form.querySelectorAll('input[name*="variant"], textarea[name*="variant"], select[name*="variant"]');
-    let variantFormData = [];
-    variantInputs.forEach(input => {
-        variantFormData.push(`${input.name}:${input.value}`);
-    });
-    
-    // Create a hash of variant-related DOM content to detect structural changes
-    const variantContainers = document.querySelectorAll('.variant-card');
-    let contentString = '';
-    variantContainers.forEach((container, index) => {
-        // Capture key identifiers and counts
-        const images = container.querySelectorAll('img, .picture-item, .miniature-item');
-        const inputs = container.querySelectorAll('input, select, textarea');
-        const fileInputs = container.querySelectorAll('input[type="file"]');
-        
-        // Check for files in file inputs
-        let fileCount = 0;
-        fileInputs.forEach(input => {
-            if (input.files) fileCount += input.files.length;
-        });
-        
-        const variantId = container.dataset.variantId || `unknown_${index}`;
-        contentString += `v${variantId}:${images.length}imgs,${inputs.length}inputs,${fileCount}files;`;
-    });
-    
-    data.variants.dynamic_content_hash = contentString;
-    data.variants.form_data_hash = variantFormData.join('|');
-    
-    // Additional debugging
-    console.log('Variant tracking data:', {
-        count: data.variants.count,
-        new_images: data.variants.new_images,
-        content_hash: data.variants.dynamic_content_hash,
-        form_hash: data.variants.form_data_hash
-    });
+    // Enhanced variant tracking
+    data.variants = captureVariantData(form);
     
     return data;
 }
 
-// Helper function to resolve IDs to display names
+// Detailed variant data capture
+function captureVariantData(form) {
+    const variants = {
+        existing: [],
+        new: [],
+        totalCount: 0,
+        totalImages: 0,
+        changes: []
+    };
+    
+    // Capture existing variants
+    const existingVariants = document.querySelectorAll('[data-variant-id]:not([data-variant-id^="new_"])');
+    existingVariants.forEach(variantEl => {
+        const variantId = variantEl.dataset.variantId;
+        const colorSelect = variantEl.querySelector('[name*="variant_color_"]');
+        
+        // Count pictures more accurately
+        let pictureCount = 0;
+        
+        // Count from pictures grid if expanded section is visible
+        const picturesGrid = variantEl.querySelector('.variant-pictures-grid, #pictures_grid_' + variantId);
+        if (picturesGrid) {
+            pictureCount = picturesGrid.querySelectorAll('.picture-item').length;
+        } else {
+            // Count from miniatures if grid not visible
+            const miniatures = variantEl.querySelectorAll('.miniature-item');
+            pictureCount = miniatures.length;
+        }
+        
+        // Also check for picture count display in UI
+        const pictureLabel = variantEl.querySelector('.pictures-section-header .form-label');
+        if (pictureLabel && pictureLabel.textContent) {
+            const match = pictureLabel.textContent.match(/Pictures \((\d+)\)/);
+            if (match) {
+                pictureCount = Math.max(pictureCount, parseInt(match[1], 10));
+            }
+        }
+        
+        variants.existing.push({
+            id: variantId,
+            color: colorSelect ? colorSelect.value : null,
+            colorName: colorSelect && colorSelect.value ? (lookupMaps.colors[colorSelect.value] || colorSelect.selectedOptions[0]?.textContent.trim()) : 'Unknown',
+            pictureCount: pictureCount
+        });
+    });
+    
+    // Capture new variants
+    const newVariants = document.querySelectorAll('[data-variant-id^="new_"]');
+    newVariants.forEach(variantEl => {
+        const variantId = variantEl.dataset.variantId;
+        const colorSelect = variantEl.querySelector('[name*="variant_color_"]');
+        const customColorInput = variantEl.querySelector('[name*="custom_color_"]');
+        
+        // Count pictures more accurately for new variants
+        let pictureCount = 0;
+        
+        const picturesGrid = variantEl.querySelector('.variant-pictures-grid, #pictures_grid_' + variantId);
+        if (picturesGrid) {
+            pictureCount = picturesGrid.querySelectorAll('.picture-item').length;
+        } else {
+            const miniatures = variantEl.querySelectorAll('.miniature-item:not(.no-pictures)');
+            pictureCount = miniatures.length;
+        }
+        
+        // Check picture count in label for new variants too
+        const pictureLabel = variantEl.querySelector('.pictures-section-header .form-label');
+        if (pictureLabel && pictureLabel.textContent) {
+            const match = pictureLabel.textContent.match(/Pictures \((\d+)\)/);
+            if (match) {
+                pictureCount = Math.max(pictureCount, parseInt(match[1], 10));
+            }
+        }
+        
+        let colorName = 'Not selected';
+        if (colorSelect && colorSelect.value === 'custom' && customColorInput) {
+            colorName = customColorInput.value || 'Custom (unnamed)';
+        } else if (colorSelect && colorSelect.value) {
+            colorName = lookupMaps.colors[colorSelect.value] || colorSelect.selectedOptions[0]?.textContent.trim() || 'Unknown';
+        }
+        
+        variants.new.push({
+            id: variantId,
+            color: colorSelect ? colorSelect.value : null,
+            colorName: colorName,
+            pictureCount: pictureCount,
+            isCustomColor: colorSelect?.value === 'custom'
+        });
+    });
+    
+    variants.totalCount = variants.existing.length + variants.new.length;
+    variants.totalImages = [...variants.existing, ...variants.new].reduce((sum, v) => sum + v.pictureCount, 0);
+    
+    return variants;
+}
+
+// Enhanced change detection with detailed variant analysis
+function detectChanges(original, current) {
+    const changes = {
+        component: [],
+        variants: [],
+        stats: { modified: 0, added: 0, removed: 0 }
+    };
+    
+    // Component field changes
+    const componentFields = [
+        { key: 'product_number', label: 'Product Number', resolve: false },
+        { key: 'description', label: 'Description', resolve: false },
+        { key: 'component_type_id', label: 'Component Type', resolve: true },
+        { key: 'supplier_id', label: 'Supplier', resolve: true },
+        { key: 'keywords', label: 'Keywords', resolve: false },
+        { key: 'brand_id', label: 'Brand', resolve: true },
+        { key: 'subbrand_id', label: 'Subbrand', resolve: true },
+        { key: 'new_brand_name', label: 'New Brand Name', resolve: false },
+        { key: 'new_subbrand_name', label: 'New Subbrand Name', resolve: false }
+    ];
+    
+    componentFields.forEach(field => {
+        if (original[field.key] !== current[field.key]) {
+            let fromValue = original[field.key] || 'None';
+            let toValue = current[field.key] || 'None';
+            
+            if (field.resolve) {
+                fromValue = resolveDisplayValue(field.key, fromValue);
+                toValue = resolveDisplayValue(field.key, toValue);
+            }
+            
+            changes.component.push({
+                type: 'modified',
+                field: field.key,
+                label: field.label,
+                from: fromValue,
+                to: toValue
+            });
+            changes.stats.modified++;
+        }
+    });
+    
+    // Category changes - Handle many-to-many categories
+    const originalCategoryIds = original.category_ids || [];
+    const currentCategoryIds = current.category_ids || [];
+    
+    // Convert arrays to sets for comparison
+    const originalCategorySet = new Set(originalCategoryIds.map(id => String(id)));
+    const currentCategorySet = new Set(currentCategoryIds.map(id => String(id)));
+    
+    // Check if categories have changed
+    if (originalCategorySet.size !== currentCategorySet.size || 
+        !Array.from(originalCategorySet).every(id => currentCategorySet.has(id))) {
+        
+        const originalCategoryNames = originalCategoryIds.map(id => 
+            lookupMaps.categories[id] || `Unknown Category (ID: ${id})`
+        );
+        const currentCategoryNames = currentCategoryIds.map(id => 
+            lookupMaps.categories[id] || `Unknown Category (ID: ${id})`
+        );
+        
+        changes.component.push({
+            type: 'modified',
+            field: 'category_ids',
+            label: 'Categories',
+            from: originalCategoryNames.length > 0 ? originalCategoryNames.join(', ') : 'None',
+            to: currentCategoryNames.length > 0 ? currentCategoryNames.join(', ') : 'None'
+        });
+        changes.stats.modified++;
+    }
+    
+    // Properties changes
+    const originalProperties = original.properties || {};
+    const currentProperties = current.properties || {};
+    
+    // Compare all property keys
+    const allPropertyKeys = new Set([...Object.keys(originalProperties), ...Object.keys(currentProperties)]);
+    
+    for (const propKey of allPropertyKeys) {
+        const originalValue = originalProperties[propKey] || '';
+        const currentValue = currentProperties[propKey] || '';
+        
+        if (originalValue !== currentValue) {
+            changes.component.push({
+                type: 'modified',
+                field: propKey,
+                label: propKey.replace('property_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                from: originalValue || 'None',
+                to: currentValue || 'None'
+            });
+            changes.stats.modified++;
+        }
+    }
+    
+    // Variant changes analysis
+    const variantChanges = analyzeVariantChanges(original.variants, current.variants);
+    changes.variants = variantChanges.changes;
+    changes.stats.added += variantChanges.stats.added;
+    changes.stats.removed += variantChanges.stats.removed;
+    changes.stats.modified += variantChanges.stats.modified;
+    
+    return changes;
+}
+
+// Detailed variant change analysis
+function analyzeVariantChanges(originalVariants, currentVariants) {
+    const changes = [];
+    const stats = { added: 0, removed: 0, modified: 0 };
+    
+    // Initialize original variants if not provided
+    if (!originalVariants) {
+        originalVariants = { existing: [], new: [], totalCount: 0, totalImages: 0 };
+    }
+    
+    // Check for changes in existing variants (picture count changes)
+    if (originalVariants.existing && currentVariants.existing) {
+        currentVariants.existing.forEach(currentVariant => {
+            const originalVariant = originalVariants.existing.find(v => v.id === currentVariant.id);
+            
+            if (originalVariant) {
+                // Check if picture count changed
+                if (originalVariant.pictureCount !== currentVariant.pictureCount) {
+                    const pictureChange = currentVariant.pictureCount - originalVariant.pictureCount;
+                    const changeType = pictureChange > 0 ? 'added' : 'removed';
+                    const changeCount = Math.abs(pictureChange);
+                    
+                    changes.push({
+                        type: 'modified',
+                        variantType: 'existing',
+                        name: `${currentVariant.colorName} variant`,
+                        details: {
+                            variantId: currentVariant.id,
+                            color: currentVariant.colorName,
+                            pictureChange: {
+                                type: changeType,
+                                count: changeCount,
+                                from: originalVariant.pictureCount,
+                                to: currentVariant.pictureCount
+                            },
+                            pictures: currentVariant.pictureCount
+                        }
+                    });
+                    stats.modified++;
+                }
+                
+                // Check if color changed
+                if (originalVariant.color !== currentVariant.color) {
+                    changes.push({
+                        type: 'modified',
+                        variantType: 'existing',
+                        name: `Variant color change`,
+                        details: {
+                            variantId: currentVariant.id,
+                            colorChange: {
+                                from: originalVariant.colorName,
+                                to: currentVariant.colorName
+                            },
+                            pictures: currentVariant.pictureCount
+                        }
+                    });
+                    stats.modified++;
+                }
+            }
+        });
+    }
+    
+    // New variants
+    if (currentVariants.new && currentVariants.new.length > 0) {
+        currentVariants.new.forEach(variant => {
+            changes.push({
+                type: 'added',
+                variantType: 'new',
+                name: `${variant.colorName} variant`,
+                details: {
+                    variantId: variant.id,
+                    color: variant.colorName,
+                    pictures: variant.pictureCount,
+                    isCustomColor: variant.isCustomColor
+                }
+            });
+            stats.added++;
+        });
+    }
+    
+    // Removed variants (if original had variants that current doesn't)
+    if (originalVariants.existing && originalVariants.existing.length > 0) {
+        originalVariants.existing.forEach(originalVariant => {
+            const stillExists = currentVariants.existing && 
+                currentVariants.existing.find(v => v.id === originalVariant.id);
+            
+            if (!stillExists) {
+                changes.push({
+                    type: 'removed',
+                    variantType: 'existing',
+                    name: `${originalVariant.colorName} variant`,
+                    details: {
+                        variantId: originalVariant.id,
+                        color: originalVariant.colorName,
+                        pictures: originalVariant.pictureCount
+                    }
+                });
+                stats.removed++;
+            }
+        });
+    }
+    
+    return { changes, stats };
+}
+
+// Helper functions
 function resolveDisplayValue(fieldKey, value) {
-    if (!value) return value;
+    if (!value || value === 'None') return value;
     
     switch (fieldKey) {
         case 'supplier_id':
@@ -553,257 +1055,327 @@ function resolveDisplayValue(fieldKey, value) {
             return lookupMaps.component_types[value] || `Unknown Type (ID: ${value})`;
         case 'category_id':
             return lookupMaps.categories[value] || `Unknown Category (ID: ${value})`;
+        case 'brand_id':
+            return lookupMaps.brands[value] || `Unknown Brand (ID: ${value})`;
+        case 'subbrand_id':
+            return lookupMaps.subbrands && lookupMaps.subbrands[value] || `Unknown Subbrand (ID: ${value})`;
         default:
             return value;
     }
 }
 
-// Helper function to resolve brand IDs to names
 function resolveBrandNames(brandIds) {
     if (!Array.isArray(brandIds) || brandIds.length === 0) return 'None';
-    
     return brandIds.map(id => lookupMaps.brands[id] || `Unknown Brand (ID: ${id})`).join(', ');
 }
 
-// Compare form data and detect changes
-function detectChanges(original, current) {
-    const changes = [];
-    
-    // Debug logging
-    console.log('Detecting changes between:', {
-        original: original,
-        current: current
-    });
-    
-    // Compare basic fields with proper display value resolution
-    const basicFields = [
-        { key: 'product_number', label: 'Product Number', resolve: false },
-        { key: 'description', label: 'Description', resolve: false },
-        { key: 'component_type_id', label: 'Component Type', resolve: true },
-        { key: 'supplier_id', label: 'Supplier', resolve: true },
-        { key: 'category_id', label: 'Category', resolve: true },
-        { key: 'keywords', label: 'Keywords', resolve: false }
-    ];
-    
-    basicFields.forEach(field => {
-        if (original[field.key] !== current[field.key]) {
-            let fromValue = original[field.key];
-            let toValue = current[field.key];
-            
-            // Resolve IDs to display names if needed
-            if (field.resolve) {
-                fromValue = resolveDisplayValue(field.key, fromValue);
-                toValue = resolveDisplayValue(field.key, toValue);
-            }
-            
-            // Handle empty values
-            fromValue = fromValue || 'None';
-            toValue = toValue || 'None';
-            
-            changes.push({
-                type: 'modified',
-                field: field.key,
-                label: field.label,
-                from: fromValue,
-                to: toValue
-            });
-        }
-    });
-    
-    // Compare brands with name resolution
-    const originalBrands = new Set(original.brands);
-    const currentBrands = new Set(current.brands);
-    
-    if (originalBrands.size !== currentBrands.size || 
-        ![...originalBrands].every(brand => currentBrands.has(brand))) {
-        changes.push({
-            type: 'modified',
-            field: 'brands',
-            label: 'Brands',
-            from: resolveBrandNames(Array.from(originalBrands)),
-            to: resolveBrandNames(Array.from(currentBrands))
-        });
-    }
-    
-    // Compare properties
-    const originalProps = JSON.stringify(original.properties);
-    const currentProps = JSON.stringify(current.properties);
-    
-    if (originalProps !== currentProps) {
-        changes.push({
-            type: 'modified',
-            field: 'properties',
-            label: 'Properties',
-            from: 'Previous values',
-            to: 'Updated values'
-        });
-    }
-    
-    // Check for new component images
-    if (current.images_count > 0) {
-        changes.push({
-            type: 'added',
-            field: 'images',
-            label: 'Component Images',
-            from: '',
-            to: `${current.images_count} new image(s) to upload`
-        });
-    }
-    
-    // VARIANT CHANGES DETECTION - New functionality
-    
-    // Check for variant count changes (new/removed variants)
-    if (original.variants.count !== current.variants.count) {
-        const difference = current.variants.count - original.variants.count;
-        changes.push({
-            type: difference > 0 ? 'added' : 'removed',
-            field: 'variants_count',
-            label: 'Component Variants',
-            from: `${original.variants.count} variant(s)`,
-            to: `${current.variants.count} variant(s)`
-        });
-    }
-    
-    // Check for new variant images
-    if (current.variants.new_images > 0) {
-        changes.push({
-            type: 'added',
-            field: 'variant_images',
-            label: 'Variant Images',
-            from: '',
-            to: `${current.variants.new_images} new variant image(s) to upload`
-        });
-    }
-    
-    // Check for variant content/structure changes
-    if (original.variants.dynamic_content_hash !== current.variants.dynamic_content_hash) {
-        changes.push({
-            type: 'modified',
-            field: 'variant_structure',
-            label: 'Variant Content',
-            from: 'Previous variant setup',
-            to: 'Modified variant configuration'
-        });
-    }
-    
-    // Check for variant form data changes
-    if (original.variants.form_data_hash !== current.variants.form_data_hash) {
-        changes.push({
-            type: 'modified',
-            field: 'variant_data',
-            label: 'Variant Details',
-            from: 'Previous variant data',
-            to: 'Updated variant information'
-        });
-    }
-    
-    return changes;
-}
-
-// Render changes in the modal
+// Enhanced modal rendering with organized sections
 function renderChanges(changes) {
-    const container = document.getElementById('changesContainer');
+    const essentialSection = document.getElementById('essentialInfoSection');
+    const brandSection = document.getElementById('brandInfoSection');
+    const propertiesSection = document.getElementById('propertiesSection');
+    const variantsSection = document.getElementById('variantsSection');
     const noChangesState = document.getElementById('noChangesState');
     const confirmBtn = document.getElementById('confirmChangesBtn');
+    const lastUpdated = document.getElementById('lastUpdated');
     
-    if (changes.length === 0) {
-        container.style.display = 'none';
+    const totalChanges = changes.stats.modified + changes.stats.added + changes.stats.removed;
+    
+    if (totalChanges === 0) {
+        hideAllSections();
         noChangesState.style.display = 'block';
         confirmBtn.disabled = true;
         confirmBtn.textContent = 'No Changes to Apply';
+        console.log('No changes detected');
         return;
     }
     
-    container.style.display = 'block';
+    console.log(`Total changes detected: ${totalChanges}`);
+    
+    // Hide all sections initially
+    hideAllSections();
+    
+    // Update timestamp
+    if (lastUpdated) {
+        lastUpdated.textContent = `Last analyzed: ${new Date().toLocaleTimeString()}`;
+    }
+    
+    // Organize changes by section
+    const sectionChanges = organizeChangesBySection(changes);
+    
+    // Render Essential Information section
+    if (sectionChanges.essential.length > 0) {
+        essentialSection.style.display = 'block';
+        document.getElementById('essentialInfoContent').innerHTML = 
+            renderSectionChanges(sectionChanges.essential);
+    }
+    
+    // Render Brand Information section
+    if (sectionChanges.brand.length > 0) {
+        brandSection.style.display = 'block';
+        document.getElementById('brandInfoContent').innerHTML = 
+            renderSectionChanges(sectionChanges.brand);
+    }
+    
+    // Render Component Properties section
+    if (sectionChanges.properties.length > 0) {
+        propertiesSection.style.display = 'block';
+        document.getElementById('propertiesContent').innerHTML = 
+            renderSectionChanges(sectionChanges.properties);
+    }
+    
+    // Render Component Variants section
+    if (changes.variants.length > 0) {
+        variantsSection.style.display = 'block';
+        document.getElementById('variantsContent').innerHTML = 
+            renderVariantChanges(changes.variants);
+    }
+    
     noChangesState.style.display = 'none';
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = `
         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
             <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
         </svg>
-        Apply ${changes.length} Change${changes.length > 1 ? 's' : ''}
+        Apply ${totalChanges} Change${totalChanges > 1 ? 's' : ''}
     `;
+}
+
+// Organize changes by their respective sections
+function organizeChangesBySection(changes) {
+    const sectionChanges = {
+        essential: [],
+        brand: [],
+        properties: []
+    };
     
-    container.innerHTML = changes.map(change => `
-        <div class="change-item ${change.type}">
-            <div class="change-header">
-                <div class="change-icon">
-                    ${change.type === 'modified' ? 'M' : change.type === 'added' ? '+' : '-'}
+    changes.component.forEach(change => {
+        if (['product_number', 'description', 'component_type_id', 'supplier_id', 'category_ids', 'keywords'].includes(change.field)) {
+            sectionChanges.essential.push(change);
+        } else if (['brand_id', 'subbrand_id', 'new_brand_name', 'new_subbrand_name'].includes(change.field)) {
+            sectionChanges.brand.push(change);
+        } else if (change.field.startsWith('property_')) {
+            sectionChanges.properties.push(change);
+        }
+    });
+    
+    return sectionChanges;
+}
+
+// Render changes for a specific section
+function renderSectionChanges(changes) {
+    return changes.map(change => `
+        <div class="change-item">
+            <div class="change-field">
+                <div class="field-label">${change.label}</div>
+                <div class="field-values">
+                    ${change.from ? `
+                        <div class="value-from">${change.from}</div>
+                        <div class="value-arrow">↓</div>
+                    ` : ''}
+                    <div class="value-to">${change.to}</div>
                 </div>
-                <div class="change-label">${change.label}</div>
-            </div>
-            <div class="change-details">
-                ${change.from ? `<div class="change-value change-from">${change.from}</div>` : ''}
-                ${change.from && change.to ? '<div class="change-arrow">↓</div>' : ''}
-                <div class="change-value change-to">${change.to}</div>
             </div>
         </div>
     `).join('');
 }
 
-// Show change summary modal
+// Render variant changes with picture miniatures
+function renderVariantChanges(variantChanges) {
+    return variantChanges.map(change => {
+        const badgeClass = change.type === 'added' ? 'new' : 
+                          change.type === 'modified' ? 'modified' : 'removed';
+        
+        return `
+            <div class="variant-item">
+                <div class="variant-header">
+                    <div class="variant-name">${change.name}</div>
+                    <div class="variant-badge ${badgeClass}">${change.type}</div>
+                </div>
+                <div class="variant-content">
+                    ${change.details ? renderVariantDetails(change.details) : ''}
+                    ${change.details && change.details.pictures > 0 ? renderVariantPictures(change) : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Render variant details
+function renderVariantDetails(details) {
+    const fields = [];
+    
+    if (details.color) {
+        fields.push({ label: 'Color', value: details.color + (details.isCustomColor ? ' (Custom)' : '') });
+    }
+    
+    // Handle picture changes
+    if (details.pictureChange) {
+        const change = details.pictureChange;
+        const changeText = change.type === 'added' ? 
+            `${change.count} picture${change.count > 1 ? 's' : ''} added` :
+            `${change.count} picture${change.count > 1 ? 's' : ''} removed`;
+        fields.push({ 
+            label: 'Pictures', 
+            value: `${change.from} → ${change.to} (${changeText})` 
+        });
+    } else if (details.pictures !== undefined) {
+        fields.push({ label: 'Pictures', value: `${details.pictures} picture${details.pictures !== 1 ? 's' : ''}` });
+    }
+    
+    // Handle color changes
+    if (details.colorChange) {
+        fields.push({ 
+            label: 'Color Change', 
+            value: `${details.colorChange.from} → ${details.colorChange.to}` 
+        });
+    }
+    
+    if (fields.length === 0) return '';
+    
+    return `
+        <div class="variant-changes">
+            ${fields.map(field => `
+                <div class="change-field">
+                    <div class="field-label">${field.label}</div>
+                    <div class="field-values">
+                        <div class="value-to">${field.value}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Render variant pictures with miniatures
+function renderVariantPictures(change) {
+    if (!change.details || !change.details.pictures || change.details.pictures === 0) {
+        return '';
+    }
+    
+    // Try to get actual picture URLs from the variant element
+    const variantElement = document.querySelector(`[data-variant-id="${change.details.variantId || ''}"]`);
+    const pictureElements = variantElement ? variantElement.querySelectorAll('.picture-item img, .miniature-item img') : [];
+    
+    let picturesHtml = '';
+    
+    if (pictureElements.length > 0) {
+        // Render actual picture thumbnails
+        const thumbnails = Array.from(pictureElements).slice(0, 6).map(img => 
+            `<img src="${img.src}" alt="Variant picture" class="picture-thumbnail ${change.type === 'added' ? 'new' : ''}">`
+        ).join('');
+        
+        const remainingCount = Math.max(0, change.details.pictures - 6);
+        
+        picturesHtml = `
+            <div class="picture-thumbnails">
+                ${thumbnails}
+                ${remainingCount > 0 ? 
+                    `<div class="picture-placeholder">+${remainingCount}<br>more</div>` : 
+                ''}
+            </div>
+        `;
+    } else {
+        // Render placeholder thumbnails
+        const placeholderCount = Math.min(change.details.pictures, 6);
+        const placeholders = Array(placeholderCount).fill().map(() => 
+            `<div class="picture-placeholder">New<br>Image</div>`
+        ).join('');
+        
+        const remainingCount = Math.max(0, change.details.pictures - 6);
+        
+        picturesHtml = `
+            <div class="picture-thumbnails">
+                ${placeholders}
+                ${remainingCount > 0 ? 
+                    `<div class="picture-placeholder">+${remainingCount}<br>more</div>` : 
+                ''}
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="variant-pictures">
+            <div class="pictures-label">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                </svg>
+                Pictures (${change.details.pictures})
+            </div>
+            ${picturesHtml}
+        </div>
+    `;
+}
+
+
+// Modal control functions
 function showChangeSummaryModal() {
+    console.log('showChangeSummaryModal called');
     const form = document.getElementById('componentForm');
     const modal = document.getElementById('changeSummaryModal');
     const loading = document.getElementById('changeSummaryLoading');
-    const container = document.getElementById('changesContainer');
-    const noChangesState = document.getElementById('noChangesState');
     
-    // Show modal with loading state
+    console.log('Elements found:', { form: !!form, modal: !!modal, loading: !!loading });
+    
+    if (!modal) {
+        console.error('Modal not found!');
+        return;
+    }
+    
     modal.style.display = 'flex';
     loading.style.display = 'flex';
-    container.style.display = 'none';
-    noChangesState.style.display = 'none';
     
-    // Add show class for animation
+    // Hide all content sections initially
+    hideAllSections();
+    document.getElementById('noChangesState').style.display = 'none';
+    
     setTimeout(() => modal.classList.add('show'), 10);
     
-    // Simulate analysis delay and capture current data
     setTimeout(() => {
         currentFormData = captureFormData(form);
+        console.log('Original form data:', originalFormData);
+        console.log('Current form data:', currentFormData);
+        
         const changes = detectChanges(originalFormData, currentFormData);
+        console.log('Detected changes:', changes);
         
         loading.style.display = 'none';
         renderChanges(changes);
     }, 500);
 }
 
-// Close modal
 function closeChangeSummaryModal() {
     const modal = document.getElementById('changeSummaryModal');
     modal.classList.remove('show');
-    setTimeout(() => {
-        modal.style.display = 'none';
-    }, 300);
+    setTimeout(() => modal.style.display = 'none', 300);
 }
 
-// Confirm and submit changes
 function confirmAndSubmitChanges() {
-    const form = document.getElementById('componentForm');
     const confirmBtn = document.getElementById('confirmChangesBtn');
     
-    // Show loading state
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = `
         <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
         Applying Changes...
     `;
     
-    // Close modal and submit form
     closeChangeSummaryModal();
     
-    // Submit the form
-    setTimeout(() => {
-        form.submit();
-    }, 300);
+    // Use the global submitFormDirectly function if available
+    if (typeof window.submitFormDirectly === 'function') {
+        setTimeout(() => window.submitFormDirectly(), 300);
+    } else {
+        // Fallback to direct form submission
+        const form = document.getElementById('componentForm');
+        setTimeout(() => form.submit(), 300);
+    }
 }
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    initializeOriginalFormData();
-});
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initializeOriginalFormData);
 
-// Export functions for global access
+// Export functions
 window.showChangeSummaryModal = showChangeSummaryModal;
 window.closeChangeSummaryModal = closeChangeSummaryModal;
 window.confirmAndSubmitChanges = confirmAndSubmitChanges;

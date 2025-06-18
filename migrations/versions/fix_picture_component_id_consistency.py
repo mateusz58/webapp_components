@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'fix_picture_component_id'
-down_revision = 'add_picture_naming_system'
+revision = 'fix_picture_component_id_consistency'
+down_revision = 'add_picture_naming_001'
 branch_labels = None
 depends_on = None
 

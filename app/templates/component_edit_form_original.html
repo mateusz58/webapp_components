@@ -1,0 +1,2168 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Component' if component else 'New Component' }} - ComponentHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/component_edit_form.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Success Notification Banner (positioned at top) -->
+{% if changed_fields %}
+<div class="success-notification-banner">
+    <div class="success-notification-content">
+        <div class="success-notification-header">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+            </svg>
+            <strong>Component updated successfully!</strong>
+        </div>
+        <div class="success-notification-details">
+            <strong>Updated fields:</strong>
+            <span class="updated-fields">
+                {% for field in changed_fields %}
+                    {% if field == 'product_number' %}Product Number
+                    {% elif field == 'description' %}Description
+                    {% elif field == 'component_type_id' %}Component Type
+                    {% elif field == 'supplier_id' %}Supplier
+                    {% elif field == 'category_ids' or field == 'categories' %}Categories
+                    {% elif field == 'keywords' %}Keywords
+                    {% elif field == 'brands' %}Brands
+                    {% elif field == 'properties' %}Properties
+                    {% elif field == 'images' %}Images
+                    {% else %}{{ field|title }}{% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="component-form-layout">
+
+    <!-- Main Form Column -->
+    <div class="main-form">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>{{ 'Edit Component' if component else 'Create New Component' }}</h1>
+            <p>{{ 'Update component details and properties' if component else 'Add a new component to your library' }}</p>
+            <div class="header-actions">
+                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                    </svg>
+                    Back to Components
+                </a>
+            </div>
+        </div>
+
+        <!-- Validation Summary -->
+        <div id="validationSummary" class="validation-summary hidden">
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--danger-color); font-size: 1rem;">Please fix the following errors:</h4>
+            <ul id="validationList" style="margin: 0; padding-left: 1.25rem;"></ul>
+        </div>
+
+        <!-- Main Form -->
+        <form id="componentForm" method="POST" enctype="multipart/form-data" novalidate>
+            
+            <!-- Essential Information -->
+            <div class="form-card">
+                <div class="form-card-header">
+                    <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                    <h2 class="form-card-title">Essential Information</h2>
+                </div>
+
+                <div class="form-grid form-grid-cols-2">
+                    <div class="form-group">
+                        <label for="product_number" class="form-label required">Product Number</label>
+                        <input 
+                            type="text" 
+                            id="product_number" 
+                            name="product_number" 
+                            class="form-input"
+                            value="{{ component.product_number if component else '' }}"
+                            required
+                            aria-describedby="product_number_help product_number_error"
+                        >
+                        <div id="product_number_help" class="form-help">Unique identifier (e.g., F-WL001, S-WL0001)</div>
+                        <div id="product_number_error" class="form-error hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="component_type_id" class="form-label required">Component Type</label>
+                        <select 
+                            id="component_type_id" 
+                            name="component_type_id" 
+                            class="form-select"
+                            required
+                            aria-describedby="component_type_error"
+                        >
+                            <option value="">Select component type...</option>
+                            {% for component_type in component_types %}
+                            <option value="{{ component_type.id }}" 
+                                    {% if component and component.component_type_id == component_type.id %}selected{% endif %}>
+                                {{ component_type.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="component_type_error" class="form-error hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="supplier_id" class="form-label">Supplier</label>
+                        <select 
+                            id="supplier_id" 
+                            name="supplier_id" 
+                            class="form-select"
+                            aria-describedby="supplier_error"
+                        >
+                            <option value="">Select supplier...</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" 
+                                    {% if component and component.supplier_id == supplier.id %}selected{% endif %}>
+                                {{ supplier.supplier_code }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="supplier_error" class="form-error hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="categories" class="form-label">Categories</label>
+                        <div class="category-selector" id="categorySelector">
+                            <div class="category-input-container">
+                                <div class="category-search-wrapper">
+                                    <input 
+                                        type="text" 
+                                        id="categorySearch" 
+                                        class="category-search-input"
+                                        placeholder="Type to search categories or click arrow to browse all..."
+                                        autocomplete="off"
+                                    >
+                                    <button type="button" class="category-show-all-btn" id="categoryShowAllBtn" title="Show all categories">
+                                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="category-dropdown" id="categoryDropdown" style="display: none;">
+                                    <div class="category-dropdown-header">
+                                        <span class="category-count">{{ categories|length }} categories available</span>
+                                        <button type="button" class="category-clear-search" id="categoryClearSearch" style="display: none;">Clear search</button>
+                                    </div>
+                                    {% for category in categories %}
+                                    <div class="category-option" data-id="{{ category.id }}" data-name="{{ category.name }}">
+                                        <span class="category-name">{{ category.name }}</span>
+                                        <span class="category-usage">{{ category.component_count if category.component_count else 0 }} components</span>
+                                    </div>
+                                    {% endfor %}
+                                    <div class="category-no-results" id="categoryNoResults" style="display: none;">
+                                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                        </svg>
+                                        <div>No categories found</div>
+                                        <small>Try a different search term</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="selected-categories" id="selectedCategories">
+                                {% if component and component.categories %}
+                                    {% for category in component.categories %}
+                                    <span class="selected-category" data-id="{{ category.id }}">
+                                        {{ category.name }}
+                                        <button type="button" class="remove-category" onclick="removeCategory({{ category.id }})">×</button>
+                                        <input type="hidden" name="category_ids" value="{{ category.id }}">
+                                    </span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-help">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                            </svg>
+                            Type to search and auto-complete category names, or click the arrow to browse all available categories
+                        </div>
+                        <div id="category_error" class="form-error hidden"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea 
+                        id="description" 
+                        name="description" 
+                        class="form-textarea"
+                        rows="4"
+                        placeholder="Detailed description of the component..."
+                        aria-describedby="description_help"
+                    >{{ component.description if component else '' }}</textarea>
+                    <div id="description_help" class="form-help">
+                        <span id="char_count">{{ component.description|length if component and component.description else 0 }}</span> characters
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brand & Subbrand Information -->
+            <div class="form-card" style="border-left: 4px solid var(--primary-color); background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+                <div class="form-card-header">
+                    <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-.5-.5L8.636 3.5zM16 6.5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0-.5.5v9.5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-9.5zM1.5 4a.5.5 0 0 1 .5-.5h6V6a.5.5 0 0 0 .5.5h2v8a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V4z"/>
+                    </svg>
+                    <h2 class="form-card-title">Brand Information</h2>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">
+                        Associate this component with a brand and optionally a subbrand
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-cols-2">
+                    <div class="form-group">
+                        <label for="brand_id" class="form-label required">Brand</label>
+                        <select id="brand_id" name="brand_id" class="form-select" required aria-describedby="brand_help" onchange="handleBrandSelection()">
+                            <option value="">Choose a brand...</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}" {% if component and component.brands and component.brands|length > 0 and component.brands[0].id == brand.id %}selected{% endif %}>{{ brand.name }}</option>
+                            {% endfor %}
+                            <option value="new">+ Create New Brand</option>
+                        </select>
+                        <div id="brand_help" class="form-help">Required: Select the main brand for this component</div>
+                    </div>
+
+                    <div class="form-group" id="subbrand_group" style="display: none;">
+                        <label for="subbrand_id" class="form-label">Subbrand</label>
+                        <select id="subbrand_id" name="subbrand_id" class="form-select" aria-describedby="subbrand_help" onchange="handleSubbrandSelection()">
+                            <option value="">Select a subbrand...</option>
+                            <option value="new">+ Create New Subbrand</option>
+                        </select>
+                        <div id="subbrand_help" class="form-help">Optional: Select or create a subbrand</div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="new_brand_input" style="display: none;">
+                    <div style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border: 2px dashed var(--primary-color); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                            <svg style="width: 24px; height: 24px; color: var(--primary-color); margin-right: 0.75rem;" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                            <div>
+                                <h4 style="margin: 0; color: var(--primary-color); font-weight: 600; font-size: 1.1rem;">Creating New Brand</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--gray-600); font-size: 0.875rem;">Enter the name for your new brand below</p>
+                            </div>
+                        </div>
+                        <label for="new_brand_name" class="form-label required" style="font-weight: 600; color: var(--gray-800);">Brand Name</label>
+                        <input type="text" id="new_brand_name" name="new_brand_name" class="form-input" placeholder="e.g., Nike, Apple, Samsung..." style="border: 2px solid var(--primary-color); font-size: 1rem; padding: 0.75rem;" />
+                        <div class="form-help" style="margin-top: 0.5rem; font-weight: 500; color: var(--primary-color);">
+                            ✓ This will create a new brand in your database
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="new_subbrand_input" style="display: none;">
+                    <label for="new_subbrand_name" class="form-label required">New Subbrand Name</label>
+                    <input type="text" id="new_subbrand_name" name="new_subbrand_name" class="form-input" placeholder="Enter new subbrand name..." />
+                    <div class="form-help">This will create a new subbrand under the selected brand</div>
+                    <div id="subbrand_error" class="form-error hidden"></div>
+                </div>
+            </div>
+
+            <!-- Dynamic Properties -->
+            <div class="form-card">
+                <div class="form-card-header">
+                    <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                    </svg>
+                    <h2 class="form-card-title">Component Properties</h2>
+                </div>
+
+                <div id="properties_container" class="form-grid">
+                    <div id="no_properties" class="text-center" style="grid-column: 1 / -1; padding: 2rem; color: var(--gray-500);">
+                        <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16" style="margin-bottom: 1rem; opacity: 0.5;">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        </svg>
+                        <p>Select a component type to see available properties</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Component Variants -->
+            <div class="form-card">
+                <div class="form-card-header">
+                    <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                    <h2 class="form-card-title">Component Variants</h2>
+                    <button type="button" class="btn btn-primary btn-sm" id="add_variant_btn">
+                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        </svg>
+                        Add Variant
+                    </button>
+                </div>
+
+                <div id="variants_container">
+                    {% if component and component.variants %}
+                        {% for variant in component.variants %}
+                        <div class="variant-card" data-variant-id="{{ variant.id }}">
+                            <div class="variant-header">
+                                <h4 class="variant-title">{{ variant.color.name }} - {{ variant.variant_sku or 'No SKU' }}</h4>
+                                <div class="variant-actions">
+                                    <button type="button" class="btn-icon btn-icon-outline" onclick="toggleVariantPictures({{ variant.id }})" title="Manage Pictures">
+                                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                            <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariant({{ variant.id }})" title="Remove Variant">×</button>
+                                </div>
+                            </div>
+                            
+                            <div class="variant-form">
+                                <div class="form-grid form-grid-cols-2">
+                                    <div class="form-group">
+                                        <label class="form-label required">Color</label>
+                                        <select name="variant_color_{{ variant.id }}" id="color_select_{{ variant.id }}" class="form-select" required onchange="handleColorSelection('{{ variant.id }}')">
+                                            <option value="{{ variant.color_id }}" selected style="font-weight: 500;">
+                                                {{ variant.color.name }} (Current)
+                                            </option>
+                                            <optgroup label="Available Colors">
+                                                {% for color in colors %}
+                                                    {% if color.id != variant.color_id %}
+                                                        {% set is_taken = false %}
+                                                        {% for other_variant in component.variants %}
+                                                            {% if other_variant.id != variant.id and other_variant.color_id == color.id %}
+                                                                {% set is_taken = true %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                        {% if is_taken %}
+                                                        <option value="{{ color.id }}" disabled style="color: #999; background-color: #f5f5f5;">
+                                                            {{ color.name }} (Already used)
+                                                        </option>
+                                                        {% else %}
+                                                        <option value="{{ color.id }}">
+                                                            {{ color.name }}
+                                                        </option>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </optgroup>
+                                            <optgroup label="New Color">
+                                                <option value="custom">+ Add New Color</option>
+                                            </optgroup>
+                                        </select>
+                                        <div id="custom_color_input_{{ variant.id }}" style="display: none;" class="mt-2">
+                                            <input type="text" 
+                                                   name="variant_custom_color_{{ variant.id }}" 
+                                                   id="custom_color_{{ variant.id }}"
+                                                   class="form-input" 
+                                                   placeholder="Enter new color name..."
+                                                   onchange="updateVariantSKU('{{ variant.id }}')">
+                                            <small class="form-help">This will create a new color in the system</small>
+                                        </div>
+                                        <div class="form-help">Select a different color to change the variant</div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Variant SKU</label>
+                                        <input 
+                                            type="text" 
+                                            name="variant_sku_{{ variant.id }}" 
+                                            id="variant_sku_{{ variant.id }}"
+                                            class="form-input"
+                                            value="{{ variant.variant_sku }}"
+                                            readonly
+                                            style="background: var(--gray-50);"
+                                            title="Current SKU from database">
+                                        <div class="form-help">
+                                            <span id="sku_help_{{ variant.id }}">Current SKU from database</span>
+                                            <span id="sku_preview_{{ variant.id }}" class="text-muted" style="display: none;">
+                                                Preview of new SKU (will be applied when saved)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Picture Miniatures with Actions -->
+                                <div class="form-group">
+                                    <div class="pictures-section-header">
+                                        <label class="form-label">Pictures ({{ variant.variant_pictures|length }})</label>
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleVariantPictures({{ variant.id }})" title="Manage Pictures">
+                                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                            </svg>
+                                            Manage Pictures
+                                        </button>
+                                    </div>
+                                    <div class="form-help" style="margin-bottom: 0.5rem; color: var(--gray-600); font-size: 0.75rem;">
+                                        <strong>Note:</strong> At least one picture is required for each variant
+                                    </div>
+                                    <div class="picture-miniatures" id="miniatures_display_{{ variant.id }}">
+                                        {% if variant.variant_pictures %}
+                                            {% for picture in variant.variant_pictures|sort(attribute='picture_order') %}
+                                            <div class="miniature-item" data-picture-id="{{ picture.id }}" 
+                                                 title="Order: {{ picture.picture_order }}{% if picture.is_primary %} - Primary{% endif %}"
+                                                 onclick="editVariantPicture({{ variant.id }}, {{ picture.id }})">
+                                                <img src="{{ picture.url }}" alt="{{ picture.alt_text or 'Variant image' }}">
+                                                <span class="miniature-order">{{ picture.picture_order }}</span>
+                                                {% if picture.is_primary %}
+                                                <span class="miniature-primary">★</span>
+                                                {% endif %}
+                                                <div class="miniature-actions">
+                                                    <button type="button" class="miniature-action-btn delete" 
+                                                            onclick="event.stopPropagation(); deleteVariantPicture({{ variant.id }}, {{ picture.id }})"
+                                                            title="Delete picture">×</button>
+                                                    {% if not picture.is_primary %}
+                                                    <button type="button" class="miniature-action-btn primary" 
+                                                            onclick="event.stopPropagation(); setPrimaryVariantPicture({{ variant.id }}, {{ picture.id }})"
+                                                            title="Set as primary">★</button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                        <div class="no-pictures" onclick="toggleVariantPictures({{ variant.id }})">
+                                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                            </svg>
+                                            <span>Click to add pictures</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Variant Pictures Section -->
+                            <div class="variant-pictures" id="variant_pictures_{{ variant.id }}" style="display: none;">
+                                <div class="pictures-header">
+                                    <h5>Pictures for {{ variant.variant_name or variant.color.name }}</h5>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="addVariantPicture({{ variant.id }})">
+                                        Add Picture
+                                    </button>
+                                </div>
+                                
+                                <div class="image-upload-area" id="upload_area_{{ variant.id }}">
+                                    <input type="file" id="variant_images_{{ variant.id }}" multiple accept="image/*" style="display: none;" onchange="handleVariantImages({{ variant.id }}, this.files)">
+                                    <div class="upload-drop-zone" onclick="document.getElementById('variant_images_{{ variant.id }}').click()">
+                                        <svg class="upload-icon" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707V11.5z"/>
+                                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                                        </svg>
+                                        <p>Drop images or click to upload</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="variant-pictures-grid" id="pictures_grid_{{ variant.id }}">
+                                    {% for picture in variant.variant_pictures %}
+                                    <div class="picture-item" data-picture-id="{{ picture.id }}">
+                                        <img src="{{ picture.url }}" alt="{{ picture.alt_text or 'Variant image' }}" onclick="previewPicture('{{ picture.url }}', '{{ picture.picture_name }}', {{ picture.id }})" style="cursor: pointer;" title="Click to preview">
+                                        <div class="picture-overlay">
+                                            <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariantPicture({{ variant.id }}, {{ picture.id }})">×</button>
+                                            {% if picture.is_primary %}
+                                            <span class="primary-badge">Primary</span>
+                                            {% else %}
+                                            <button type="button" class="btn-icon btn-icon-primary" onclick="setPrimaryVariantPicture({{ variant.id }}, {{ picture.id }})">★</button>
+                                            {% endif %}
+                                        </div>
+                                        <div class="picture-info">
+                                            <div class="picture-filename" title="{{ picture.picture_name }}">
+                                                {{ picture.picture_name }}
+                                            </div>
+                                            <small>Order: {{ picture.picture_order }}</small>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="empty-state" id="empty_variants">
+                        <svg class="empty-icon" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        </svg>
+                        <h3>No Variants Yet</h3>
+                        <p>Add color variants to showcase different options for this component</p>
+                        <button type="button" class="btn btn-primary" onclick="addNewVariant()">Add First Variant</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Keywords -->
+            <div class="form-card">
+                <div class="form-card-header">
+                    <svg class="form-card-icon" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    </svg>
+                    <h2 class="form-card-title">Keywords</h2>
+                </div>
+
+                <div class="form-group">
+                    <label for="keyword_input" class="form-label">Add Keywords</label>
+                    <div class="keyword-input-container">
+                        <input 
+                            type="text" 
+                            id="keyword_input" 
+                            class="form-input autocomplete-input"
+                            placeholder="Type keywords and press Enter or comma to add..."
+                            aria-describedby="keyword_help"
+                            autocomplete="off"
+                            role="combobox"
+                            aria-expanded="false"
+                            aria-haspopup="listbox"
+                        >
+                        <div class="autocomplete-dropdown" id="keyword-dropdown" role="listbox" aria-hidden="true">
+                            <!-- Dropdown suggestions will be populated here -->
+                        </div>
+                    </div>
+                    <div id="keyword_help" class="form-help">Press Enter, comma, or Tab to add keywords</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Selected Keywords</label>
+                    <div id="keyword_tags" class="tags-container" role="group" aria-label="Selected keywords">
+                        {% if component and component.keywords %}
+                            {% for keyword in component.keywords %}
+                            <div class="tag" data-keyword="{{ keyword.name }}">
+                                <span>{{ keyword.name }}</span>
+                                <button type="button" class="tag-remove" aria-label="Remove {{ keyword.name }}">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <input type="hidden" id="keywords_input" name="keywords" value="{{ component.keywords | map(attribute='name') | join(',') if component and component.keywords else '' }}">
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <div>
+                    <span id="save_status" style="color: var(--gray-500); font-size: 0.875rem;"></span>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancel</a>
+                    {% if component %}
+                    <!-- Edit mode: Show change summary modal before submitting -->
+                    <button type="button" id="edit_submit_btn" class="btn btn-primary" onclick="showChangeSummaryModal()">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        </svg>
+                        Review & Update Component
+                    </button>
+                    {% else %}
+                    <!-- New component mode: Direct submit -->
+                    <button type="submit" id="new_submit_btn" class="btn btn-primary">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                        </svg>
+                        Save Component
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="preview-card">
+            <div id="preview_image" class="preview-image">
+                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                </svg>
+            </div>
+            <div class="preview-content">
+                <h3 id="preview_title" class="preview-title">{{ component.product_number if component else 'Component Preview' }}</h3>
+                <p id="preview_description" style="color: var(--gray-600); margin-bottom: 1rem;">
+                    {{ component.description if component and component.description else 'Description will appear here...' }}
+                </p>
+                <div id="preview_meta" class="preview-meta">
+                    {% if component %}
+                    <span class="preview-badge">{{ component.component_type.name }}</span>
+                    <span class="preview-badge">{{ component.supplier.supplier_code }}</span>
+                    {% for category in component.categories %}
+                    <span class="preview-badge">{{ category.name }}</span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div id="preview_brands" style="margin-top: 1rem;">
+                    {% if component and component.brands %}
+                    <small style="color: var(--gray-500); font-weight: 600;">Brands:</small><br>
+                    {% for brand in component.brands %}
+                    <span class="preview-badge" style="background: var(--gray-600); margin-top: 0.25rem;">{{ brand.name }}</span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Component Type Properties Data (simplified approach)
+    const componentTypeProperties = {
+        {% for ct in component_types %}
+        '{{ ct.id }}': {
+            name: '{{ ct.name }}',
+            properties: [
+                // We'll load these dynamically via AJAX to avoid JSON serialization issues
+            ]
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    // Form Elements
+    const form = document.getElementById('componentForm');
+    const productNumberInput = document.getElementById('product_number');
+    const componentTypeSelect = document.getElementById('component_type_id');
+    const supplierSelect = document.getElementById('supplier_id');
+    const categorySelect = document.getElementById('category_id');
+    const descriptionTextarea = document.getElementById('description');
+    const brandSelect = document.getElementById('brand_id');
+    const subbrandSelect = document.getElementById('subbrand_id');
+    const subbrandGroup = document.getElementById('subbrand_group');
+    const newBrandInput = document.getElementById('new_brand_input');
+    const newSubbrandInput = document.getElementById('new_subbrand_input');
+    const keywordInput = document.getElementById('keyword_input');
+    const keywordTags = document.getElementById('keyword_tags');
+    const keywordsHiddenInput = document.getElementById('keywords_input');
+    const propertiesContainer = document.getElementById('properties_container');
+    const noPropertiesMsg = document.getElementById('no_properties');
+    const submitBtn = document.getElementById('{% if component %}edit_submit_btn{% else %}new_submit_btn{% endif %}');
+    const saveStatus = document.getElementById('save_status');
+    const validationSummary = document.getElementById('validationSummary');
+    const validationList = document.getElementById('validationList');
+
+    // State
+    let selectedKeywords = new Set();
+    let validationErrors = {};
+
+    // Initialize
+    init();
+
+    function init() {
+        // Initialize existing keywords
+        document.querySelectorAll('#keyword_tags .tag').forEach(tag => {
+            selectedKeywords.add(tag.dataset.keyword);
+        });
+
+        // Initialize preview image with primary picture if editing existing component
+        {% if component and component.pictures %}
+            {% set primary_picture = component.pictures|selectattr('is_primary', 'eq', true)|first %}
+            {% if primary_picture %}
+                const previewImage = document.getElementById('preview_image');
+                previewImage.innerHTML = '<img src="{{ primary_picture.url }}" style="width: 100%; height: 100%; object-fit: cover;">';
+            {% endif %}
+        {% endif %}
+
+        // Highlight changed fields if any
+        {% if changed_fields %}
+            highlightChangedFields();
+        {% endif %}
+
+        // Set up event listeners
+        setupEventListeners();
+    }
+
+    function highlightChangedFields() {
+        const changedFields = {{ changed_fields|tojson }};
+        
+        changedFields.forEach(fieldName => {
+            let element = null;
+            
+            // Map field names to element IDs
+            switch(fieldName) {
+                case 'product_number':
+                    element = document.getElementById('product_number');
+                    break;
+                case 'description':
+                    element = document.getElementById('description');
+                    break;
+                case 'component_type_id':
+                    element = document.getElementById('component_type_id');
+                    break;
+                case 'supplier_id':
+                    element = document.getElementById('supplier_id');
+                    break;
+                case 'category_id':
+                    element = document.getElementById('category_id');
+                    break;
+                case 'keywords':
+                    element = document.getElementById('keyword_tags');
+                    break;
+                case 'brands':
+                    element = document.getElementById('brand_id');
+                    break;
+                case 'properties':
+                    element = document.getElementById('properties_container');
+                    break;
+                case 'images':
+                    element = document.getElementById('image_preview_grid');
+                    break;
+            }
+            
+            if (element) {
+                element.classList.add('field-changed');
+                // Remove the highlight class after animation completes
+                setTimeout(() => {
+                    element.classList.remove('field-changed');
+                }, 2000);
+            }
+        });
+    }
+
+    function setupEventListeners() {
+        // Form validation
+        productNumberInput.addEventListener('input', () => {
+            validateField('product_number');
+            updatePreview();
+        });
+        
+        componentTypeSelect.addEventListener('change', () => {
+            validateField('component_type_id');
+            loadComponentTypeProperties(componentTypeSelect.value);
+            updatePreview();
+        });
+        
+        supplierSelect.addEventListener('change', () => {
+            validateField('supplier_id');
+            updatePreview();
+        });
+        
+        categorySelect.addEventListener('change', () => {
+            validateField('category_id');
+            updatePreview();
+        });
+
+        descriptionTextarea.addEventListener('input', () => {
+            updateCharacterCount();
+            updatePreview();
+        });
+
+        // Brand selection
+        brandSelect.addEventListener('change', handleBrandSelection);
+        brandSelect.addEventListener('change', () => validateField('brand_id'));
+        
+        // Subbrand validation
+        if (document.getElementById('new_subbrand_name')) {
+            document.getElementById('new_subbrand_name').addEventListener('input', validateSubbrandName);
+        }
+
+        // Keyword management is now handled by keyword_autocomplete.js
+
+        // Form submission
+        form.addEventListener('submit', handleSubmit);
+
+        // Auto-save (for edit mode)
+        {% if component %}
+        let autoSaveTimeout;
+        form.addEventListener('input', () => {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveStatus.textContent = 'Changes saved automatically';
+                setTimeout(() => {
+                    saveStatus.textContent = '';
+                }, 2000);
+            }, 1000);
+        });
+        {% endif %}
+    }
+
+    function validateField(fieldName) {
+        const field = document.getElementById(fieldName);
+        const errorElement = document.getElementById(fieldName + '_error');
+        let isValid = true;
+        let errorMessage = '';
+
+        // Clear previous error
+        field.classList.remove('error');
+        errorElement.classList.add('hidden');
+        delete validationErrors[fieldName];
+
+        // Validate based on field
+        switch(fieldName) {
+            case 'product_number':
+                if (!field.value.trim()) {
+                    errorMessage = 'Product number is required';
+                    isValid = false;
+                } else if (field.value.trim().length < 3) {
+                    errorMessage = 'Product number must be at least 3 characters';
+                    isValid = false;
+                }
+                break;
+            case 'component_type_id':
+                if (!field.value) {
+                    errorMessage = 'Component type is required';
+                    isValid = false;
+                }
+                break;
+            case 'supplier_id':
+                // Supplier is now optional - no validation needed
+                break;
+            case 'category_id':
+                // Category is now optional - no validation needed
+                break;
+            case 'brand_id':
+                if (!field.value) {
+                    errorMessage = 'Brand is required';
+                    isValid = false;
+                }
+                break;
+        }
+
+        if (!isValid) {
+            field.classList.add('error');
+            errorElement.textContent = errorMessage;
+            errorElement.classList.remove('hidden');
+            validationErrors[fieldName] = errorMessage;
+        }
+
+        updateValidationSummary();
+        return isValid;
+    }
+
+    function updateValidationSummary() {
+        const errorCount = Object.keys(validationErrors).length;
+        
+        if (errorCount > 0) {
+            validationList.innerHTML = '';
+            Object.values(validationErrors).forEach(error => {
+                const li = document.createElement('li');
+                li.textContent = error;
+                validationList.appendChild(li);
+            });
+            validationSummary.classList.remove('hidden');
+        } else {
+            validationSummary.classList.add('hidden');
+        }
+    }
+
+    function loadComponentTypeProperties(componentTypeId) {
+        if (!componentTypeId) {
+            propertiesContainer.innerHTML = '<div id="no_properties" class="text-center" style="grid-column: 1 / -1; padding: 2rem; color: var(--gray-500);"><p>Select a component type to see available properties</p></div>';
+            return;
+        }
+
+        // Show loading
+        propertiesContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem;"><div class="spinner" style="margin: 0 auto;"></div></div>';
+
+        // Load properties via AJAX to avoid JSON serialization issues
+        fetch(`/api/component-type/${componentTypeId}/properties`)
+            .then(response => response.json())
+            .then(properties => {
+                renderProperties(properties);
+            })
+            .catch(() => {
+                // Fallback to hardcoded properties if API fails
+                renderProperties([]);
+            });
+    }
+
+    function renderProperties(properties) {
+        if (properties.length === 0) {
+            propertiesContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray-500);"><p>No specific properties for this component type</p></div>';
+            return;
+        }
+
+        propertiesContainer.innerHTML = '';
+        propertiesContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+
+        properties.forEach(property => {
+            const propertyDiv = createPropertyField(property);
+            propertiesContainer.appendChild(propertyDiv);
+        });
+    }
+
+    function createPropertyField(property) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+
+        const label = document.createElement('label');
+        label.className = 'form-label' + (property.is_required ? ' required' : '');
+        label.textContent = property.display_name || property.property_name;
+        label.setAttribute('for', property.property_name);
+
+        const currentValue = getCurrentPropertyValue(property.property_name);
+
+        let input;
+        if (property.property_type === 'select') {
+            input = document.createElement('select');
+            input.className = 'form-select';
+            
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = `Select ${property.property_name}...`;
+            input.appendChild(defaultOption);
+
+            (property.options || []).forEach(option => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option;
+                optionEl.textContent = option;
+                if (currentValue === option) optionEl.selected = true;
+                input.appendChild(optionEl);
+            });
+        } else if (property.property_type === 'multiselect') {
+            input = document.createElement('select');
+            input.className = 'form-select';
+            input.multiple = true;
+            input.style.minHeight = '100px';
+
+            (property.options || []).forEach(option => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option;
+                optionEl.textContent = option;
+                if (Array.isArray(currentValue) && currentValue.includes(option)) {
+                    optionEl.selected = true;
+                }
+                input.appendChild(optionEl);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input';
+            input.placeholder = property.placeholder || `Enter ${property.property_name}`;
+            input.value = currentValue || '';
+        }
+
+        input.id = property.property_name;
+        input.name = property.property_name;
+
+        div.appendChild(label);
+        div.appendChild(input);
+
+        if (property.placeholder && property.property_type === 'text') {
+            const help = document.createElement('div');
+            help.className = 'form-help';
+            help.textContent = property.placeholder;
+            div.appendChild(help);
+        }
+
+        return div;
+    }
+
+    function getCurrentPropertyValue(propertyName) {
+        {% if component and component.properties %}
+        const properties = {{ component.properties | tojson | safe }};
+        if (properties[propertyName]) {
+            return typeof properties[propertyName] === 'object' ? properties[propertyName].value : properties[propertyName];
+        }
+        {% endif %}
+        return '';
+    }
+
+    function handleBrandSelection() {
+        const brandSelect = document.getElementById('brand_id');
+        const subbrandGroup = document.getElementById('subbrand_group');
+        const subbrandSelect = document.getElementById('subbrand_id');
+        const newBrandInput = document.getElementById('new_brand_input');
+        const newSubbrandInput = document.getElementById('new_subbrand_input');
+        
+        if (brandSelect.value === 'new') {
+            // Show new brand input
+            newBrandInput.style.display = 'block';
+            document.getElementById('new_brand_name').setAttribute('required', 'required');
+            
+            // Hide subbrand section when creating new brand
+            subbrandGroup.style.display = 'none';
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        } else if (brandSelect.value) {
+            // Hide new brand input
+            newBrandInput.style.display = 'none';
+            document.getElementById('new_brand_name').removeAttribute('required');
+            
+            // Show subbrand section and load subbrands for selected brand
+            subbrandGroup.style.display = 'block';
+            loadSubbrands(brandSelect.value);
+            
+            // Hide new subbrand input by default
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        } else {
+            // Hide both brand and subbrand inputs
+            newBrandInput.style.display = 'none';
+            subbrandGroup.style.display = 'none';
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_brand_name').removeAttribute('required');
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        }
+        
+        // Update submit button state
+        updateSubmitButtonState();
+    }
+    
+    function handleSubbrandSelection() {
+        const subbrandSelect = document.getElementById('subbrand_id');
+        const newSubbrandInput = document.getElementById('new_subbrand_input');
+        
+        if (subbrandSelect.value === 'new') {
+            // Show new subbrand input
+            newSubbrandInput.style.display = 'block';
+            document.getElementById('new_subbrand_name').setAttribute('required', 'required');
+        } else {
+            // Hide new subbrand input
+            newSubbrandInput.style.display = 'none';
+            document.getElementById('new_subbrand_name').removeAttribute('required');
+        }
+        
+        // Update submit button state
+        updateSubmitButtonState();
+    }
+    
+    function loadSubbrands(brandId) {
+        const subbrandSelect = document.getElementById('subbrand_id');
+        
+        // Clear existing options except default and "new" option
+        subbrandSelect.innerHTML = '<option value="">Select a subbrand...</option><option value="new">+ Create New Subbrand</option>';
+        
+        // Load subbrands via AJAX
+        fetch(`/api/brand/${brandId}/subbrands`)
+            .then(response => response.json())
+            .then(subbrands => {
+                // Insert subbrands before the "new" option
+                const newOption = subbrandSelect.querySelector('option[value="new"]');
+                
+                subbrands.forEach(subbrand => {
+                    const option = document.createElement('option');
+                    option.value = subbrand.id;
+                    option.textContent = subbrand.name;
+                    subbrandSelect.insertBefore(option, newOption);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading subbrands:', error);
+            });
+    }
+    
+    function validateSubbrandName() {
+        const brandSelect = document.getElementById('brand_id');
+        const newSubbrandName = document.getElementById('new_subbrand_name').value.trim();
+        const errorElement = document.getElementById('subbrand_error');
+        
+        if (!newSubbrandName) {
+            return true; // Empty is fine, will be caught by required validation
+        }
+        
+        // Check if subbrand name already exists for this brand
+        if (brandSelect.value && brandSelect.value !== 'new') {
+            fetch(`/api/brand/${brandSelect.value}/subbrands/check`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: newSubbrandName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    errorElement.textContent = 'A subbrand with this name already exists for this brand';
+                    errorElement.classList.remove('hidden');
+                    return false;
+                } else {
+                    errorElement.classList.add('hidden');
+                    return true;
+                }
+            })
+            .catch(error => {
+                console.error('Error validating subbrand name:', error);
+            });
+        }
+        
+        return true;
+    }
+
+    function handleKeywordInput(e) {
+        if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+            e.preventDefault();
+            addKeyword();
+        }
+    }
+
+    function addKeyword() {
+        const keyword = keywordInput.value.trim().toLowerCase();
+        if (keyword && !selectedKeywords.has(keyword)) {
+            selectedKeywords.add(keyword);
+            
+            const tag = createTag(keyword, keyword, 'keyword');
+            keywordTags.appendChild(tag);
+            
+            keywordInput.value = '';
+            updateKeywordsInput();
+        }
+    }
+
+    // Keyword functions removed - now handled by keyword_autocomplete.js
+
+    function updateCharacterCount() {
+        const charCount = document.getElementById('char_count');
+        charCount.textContent = descriptionTextarea.value.length;
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        imageUploadZone.classList.add('dragover');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        imageUploadZone.classList.remove('dragover');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        imageUploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        processImages(files);
+    }
+
+    function handleImageSelect(e) {
+        const files = e.target.files;
+        processImages(files);
+    }
+
+    function processImages(files) {
+        Array.from(files).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageObj = {
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        name: file.name,
+                        url: e.target.result
+                    };
+                    uploadedImages.push(imageObj);
+                    renderImagePreview(imageObj);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    function renderImagePreview(imageObj) {
+        const div = document.createElement('div');
+        div.className = 'image-preview-item';
+        div.dataset.imageId = imageObj.id;
+        
+        div.innerHTML = `
+            <img src="${imageObj.url}" alt="${imageObj.name}" class="image-preview-img">
+            <div class="image-preview-actions">
+                <button type="button" class="image-action-btn" onclick="removeImage('${imageObj.id}')" title="Remove image">
+                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        imagePreviewGrid.appendChild(div);
+        updatePreviewImage();
+    }
+
+    function removeImage(imageId) {
+        uploadedImages = uploadedImages.filter(img => img.id != imageId);
+        const previewItem = document.querySelector(`[data-image-id="${imageId}"]`);
+        if (previewItem) previewItem.remove();
+        updatePreviewImage();
+    }
+
+    function removeExistingImage(btn) {
+        const item = btn.closest('.image-preview-item');
+        item.style.opacity = '0.5';
+        const hiddenInput = item.querySelector('input[name="existing_pictures"]');
+        if (hiddenInput) {
+            hiddenInput.name = 'remove_pictures';
+        }
+    }
+
+    function updatePreview() {
+        const previewTitle = document.getElementById('preview_title');
+        const previewDescription = document.getElementById('preview_description');
+        const previewMeta = document.getElementById('preview_meta');
+        
+        previewTitle.textContent = productNumberInput.value || 'Component Preview';
+        previewDescription.textContent = descriptionTextarea.value || 'Description will appear here...';
+        
+        // Update meta badges
+        const metaBadges = [];
+        if (componentTypeSelect.value) {
+            metaBadges.push(componentTypeSelect.options[componentTypeSelect.selectedIndex].text);
+        }
+        if (supplierSelect.value) {
+            metaBadges.push(supplierSelect.options[supplierSelect.selectedIndex].text);
+        }
+        if (categorySelect.value) {
+            metaBadges.push(categorySelect.options[categorySelect.selectedIndex].text);
+        }
+        
+        previewMeta.innerHTML = metaBadges.map(badge => 
+            `<span class="preview-badge">${badge}</span>`
+        ).join('');
+    }
+
+    function updatePreviewImage() {
+        const previewImage = document.getElementById('preview_image');
+        if (uploadedImages.length > 0) {
+            previewImage.innerHTML = `<img src="${uploadedImages[0].url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        }
+    }
+
+    function handleSubmit(e) {
+        // Validate required fields
+        const isValid = ['product_number', 'component_type_id', 'supplier_id', 'category_id'].every(validateField);
+        
+        if (!isValid) {
+            e.preventDefault();
+            document.querySelector('.validation-summary').scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
+    }
+
+    // Variant Management Functions
+    let variantCount = {{ component.variants|length if component and component.variants else 0 }};
+    
+    function getAvailableColorOptions() {
+        // Get all colors that are already taken by existing variants
+        const takenColors = new Set();
+        const existingVariants = document.querySelectorAll('[data-variant-id]');
+        
+        existingVariants.forEach(variant => {
+            const colorSelect = variant.querySelector('[name*="variant_color_"]');
+            if (colorSelect && colorSelect.value && colorSelect.value !== 'custom') {
+                takenColors.add(colorSelect.value);
+            }
+        });
+        
+        // Build options HTML
+        let optionsHtml = '<option value="">Select a color...</option>';
+        
+        {% for color in colors %}
+        const isTaken{{ color.id }} = takenColors.has('{{ color.id }}');
+        if (isTaken{{ color.id }}) {
+            optionsHtml += '<option value="{{ color.id }}" disabled style="color: #999; background-color: #f5f5f5;">{{ color.name }} (Already used)</option>';
+        } else {
+            optionsHtml += '<option value="{{ color.id }}">{{ color.name }}</option>';
+        }
+        {% endfor %}
+        
+        optionsHtml += '<option value="custom">+ Add New Color</option>';
+        
+        return optionsHtml;
+    }
+
+    function addNewVariant() {
+        const emptyState = document.getElementById('empty_variants');
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        variantCount++;
+        const variantId = `new_${variantCount}`;
+        const container = document.getElementById('variants_container');
+        
+        const variantCard = document.createElement('div');
+        variantCard.className = 'variant-card';
+        variantCard.dataset.variantId = variantId;
+        
+        variantCard.innerHTML = `
+            <div class="variant-header">
+                <h4 class="variant-title">New Variant - No SKU</h4>
+                <div class="variant-actions">
+                    <button type="button" class="btn-icon btn-icon-outline" onclick="toggleVariantPictures('${variantId}')" title="Manage Pictures">
+                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                            <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariant('${variantId}')" title="Remove Variant">×</button>
+                </div>
+            </div>
+            
+            <div class="variant-form">
+                <div class="form-grid form-grid-cols-2">
+                    <div class="form-group">
+                        <label class="form-label required">Color</label>
+                        <select name="new_variant_color_${variantId}" id="color_select_${variantId}" class="form-select" required onchange="handleColorSelection('${variantId}')">
+                            ${getAvailableColorOptions()}
+                        </select>
+                        <div id="custom_color_input_${variantId}" style="display: none;" class="mt-2">
+                            <input type="text" 
+                                   name="new_variant_custom_color_${variantId}" 
+                                   id="custom_color_${variantId}"
+                                   class="form-input" 
+                                   placeholder="Enter new color name..."
+                                   onchange="updateVariantSKU('${variantId}')">
+                            <small class="form-help">This will create a new color in the system</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Variant SKU</label>
+                        <input 
+                            type="text" 
+                            name="new_variant_sku_${variantId}" 
+                            id="variant_sku_${variantId}"
+                            class="form-input"
+                            readonly
+                            style="background: var(--gray-50);"
+                            placeholder="Auto-generated">
+                    </div>
+                </div>
+                
+                <!-- Picture Miniatures with Actions -->
+                <div class="form-group">
+                    <div class="pictures-section-header">
+                        <label class="form-label">Pictures (0)</label>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="addVariantPicture('${variantId}')">
+                            <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                            Add Picture
+                        </button>
+                    </div>
+                    <div class="form-help" style="margin-bottom: 0.5rem; color: var(--gray-600); font-size: 0.75rem;">
+                        <strong>Note:</strong> At least one picture is required for each variant
+                    </div>
+                    <div class="picture-miniatures" id="miniatures_display_${variantId}">
+                        <div class="no-pictures" onclick="addVariantPicture('${variantId}')">
+                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                            </svg>
+                            <span>Click to add pictures</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="variant-pictures" id="variant_pictures_${variantId}" style="display: none;">
+                <div class="pictures-header">
+                    <h5>Pictures for New Variant</h5>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addVariantPicture('${variantId}')">
+                        Add Picture
+                    </button>
+                </div>
+                
+                <div class="image-upload-area" id="upload_area_${variantId}">
+                    <input type="file" id="variant_images_${variantId}" multiple accept="image/*" style="display: none;" onchange="handleVariantImages('${variantId}', this.files)">
+                    <div class="upload-drop-zone" onclick="document.getElementById('variant_images_${variantId}').click()">
+                        <svg class="upload-icon" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707V11.5z"/>
+                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                        </svg>
+                        <p>Drop images or click to upload</p>
+                    </div>
+                </div>
+                
+                <div class="variant-pictures-grid" id="pictures_grid_${variantId}"></div>
+            </div>
+        `;
+        
+        container.appendChild(variantCard);
+        
+        // Update submit button state after adding new variant
+        updateSubmitButtonState();
+    }
+    
+    function removeVariant(variantId) {
+        // Check if this is a new variant (not yet saved to database)
+        const isNewVariant = variantId.toString().startsWith('new_');
+        
+        // Only ask for confirmation for existing variants
+        const shouldConfirm = !isNewVariant;
+        const confirmMessage = shouldConfirm ? 'Are you sure you want to remove this variant and all its pictures?' : null;
+        
+        if (!shouldConfirm || confirm(confirmMessage)) {
+            const card = document.querySelector(`[data-variant-id="${variantId}"]`);
+            if (card) {
+                card.remove();
+                
+                // Show empty state if no variants left
+                const container = document.getElementById('variants_container');
+                if (container.children.length === 0) {
+                    const emptyState = document.getElementById('empty_variants');
+                    if (emptyState) {
+                        emptyState.style.display = 'block';
+                    }
+                }
+                
+                // Update submit button state after removing variant
+                updateSubmitButtonState();
+            }
+        }
+    }
+    
+    function toggleVariantPictures(variantId) {
+        const picturesSection = document.getElementById(`variant_pictures_${variantId}`);
+        if (picturesSection) {
+            const isVisible = picturesSection.style.display !== 'none';
+            picturesSection.style.display = isVisible ? 'none' : 'block';
+        }
+    }
+    
+    function updateVariantSKU(variantId) {
+        var colorSelect = document.querySelector('[name*="variant_color_' + variantId + '"]');
+        var skuInput = document.getElementById('variant_sku_' + variantId);
+        var titleElement = document.querySelector('[data-variant-id="' + variantId + '"] .variant-title');
+        var productNumber = document.getElementById('product_number').value;
+        var supplierSelect = document.getElementById('supplier_id');
+        var skuHelp = document.getElementById('sku_help_' + variantId);
+        var skuPreview = document.getElementById('sku_preview_' + variantId);
+        
+        if (colorSelect && skuInput && productNumber) {
+            var colorName = '';
+            var supplierCode = supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex].text : '';
+            
+            // Handle custom color or selected color
+            if (colorSelect.value === 'custom') {
+                var customColorInput = document.getElementById('custom_color_' + variantId);
+                colorName = customColorInput ? customColorInput.value : 'custom';
+            } else if (colorSelect.value) {
+                var selectedOption = colorSelect.options[colorSelect.selectedIndex];
+                colorName = selectedOption.text;
+            }
+            
+            if (colorName) {
+                // Generate preview SKU matching database format
+                var normalizedProductNumber = productNumber.toLowerCase().replace(/\s+/g, '_');
+                var normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '_');
+                var previewSku = supplierCode ? 
+                    supplierCode.toLowerCase() + '_' + normalizedProductNumber + '_' + normalizedColorName :
+                    normalizedProductNumber + '_' + normalizedColorName;
+                
+                // Store original SKU if not already stored
+                if (!skuInput.dataset.originalSku) {
+                    skuInput.dataset.originalSku = skuInput.value;
+                }
+                
+                // Always show preview for new variants or when color changes
+                skuInput.value = previewSku;
+                skuInput.style.color = 'var(--warning-color)';
+                if (skuHelp) skuHelp.style.display = 'none';
+                if (skuPreview) skuPreview.style.display = 'inline';
+                
+                // Update title
+                if (titleElement) {
+                    titleElement.textContent = colorName + ' - ' + previewSku;
+                }
+                
+                // Store current color selection for comparison
+                skuInput.dataset.originalColorId = colorSelect.value;
+            }
+        }
+    }
+    
+    function handleColorSelection(variantId) {
+        const colorSelect = document.getElementById(`color_select_${variantId}`);
+        const customInput = document.getElementById(`custom_color_input_${variantId}`);
+        
+        if (colorSelect.value === 'custom') {
+            // Show custom color input
+            customInput.style.display = 'block';
+            colorSelect.removeAttribute('required');
+            document.getElementById(`custom_color_${variantId}`).setAttribute('required', 'required');
+        } else {
+            // Hide custom color input
+            customInput.style.display = 'none';
+            colorSelect.setAttribute('required', 'required');
+            document.getElementById(`custom_color_${variantId}`).removeAttribute('required');
+            
+            // Check for duplicate color selection
+            if (colorSelect.value && isDuplicateColor(variantId, colorSelect.value)) {
+                alert('This color is already used by another variant of this component. Please select a different color.');
+                colorSelect.value = '';
+                return;
+            }
+        }
+        
+        // Update SKU preview
+        updateVariantSKU(variantId);
+        
+        // Update submit button state
+        updateSubmitButtonState();
+    }
+    
+    function isDuplicateColor(currentVariantId, colorId) {
+        // Check existing variants for duplicate colors
+        const existingVariants = document.querySelectorAll('[data-variant-id]');
+        
+        for (let variant of existingVariants) {
+            const variantId = variant.dataset.variantId;
+            if (variantId === currentVariantId) continue; // Skip current variant
+            
+            const colorSelect = variant.querySelector('[name*="variant_color_"]');
+            if (colorSelect && colorSelect.value === colorId) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    function validateVariantBeforeSubmit(variantId) {
+        // Check if variant has at least one picture
+        const picturesGrid = document.getElementById(`pictures_grid_${variantId}`);
+        const pictures = picturesGrid ? picturesGrid.querySelectorAll('.picture-item') : [];
+        
+        if (pictures.length === 0) {
+            alert('Each variant must have at least one picture. Please add a picture before saving.');
+            return false;
+        }
+        
+        // Check color selection
+        const colorSelect = document.getElementById(`color_select_${variantId}`);
+        const customColorInput = document.getElementById(`custom_color_${variantId}`);
+        
+        if (colorSelect.value === 'custom') {
+            if (!customColorInput.value.trim()) {
+                alert('Please enter a name for the new color.');
+                customColorInput.focus();
+                return false;
+            }
+            
+            // Check if custom color name already exists
+            if (isColorNameExists(customColorInput.value.trim())) {
+                alert('A color with this name already exists. Please choose a different name.');
+                customColorInput.focus();
+                return false;
+            }
+        } else if (!colorSelect.value) {
+            alert('Please select a color for this variant.');
+            colorSelect.focus();
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function isColorNameExists(colorName) {
+        // Check against existing colors in the dropdown
+        const colorSelects = document.querySelectorAll('[name*="variant_color_"]');
+        if (colorSelects.length > 0) {
+            const options = colorSelects[0].querySelectorAll('option');
+            for (let option of options) {
+                if (option.textContent.toLowerCase().trim() === colorName.toLowerCase().trim() && option.value !== 'custom') {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    function handleVariantImages(variantId, files) {
+        Array.from(files).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    addVariantPictureToGrid(variantId, {
+                        id: `new_${Date.now()}_${Math.random()}`,
+                        file: file,
+                        name: file.name,
+                        url: e.target.result,
+                        isNew: true
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    function addVariantPictureToGrid(variantId, picture) {
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        if (!grid) return;
+        
+        // Calculate the next order number
+        const existingPictures = grid.querySelectorAll('.picture-item[data-picture-id]:not([data-picture-id^="new_"])');
+        const newPictures = grid.querySelectorAll('.picture-item[data-picture-id^="new_"]');
+        const nextOrder = existingPictures.length + newPictures.length + 1;
+        
+        // Generate proper filename convention
+        const productNumber = document.getElementById('product_number').value;
+        const supplierSelect = document.getElementById('supplier_id');
+        const colorSelect = document.querySelector(`[name*="variant_color_${variantId}"]`);
+        
+        let filename = '';
+        if (productNumber && colorSelect && colorSelect.value) {
+            const supplierCode = supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex].text : '';
+            const colorName = colorSelect.options[colorSelect.selectedIndex].text;
+            
+            const normalizedProductNumber = productNumber.toLowerCase().replace(/\s+/g, '_');
+            const normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '_');
+            
+            filename = supplierCode ? 
+                `${supplierCode.toLowerCase()}_${normalizedProductNumber}_${normalizedColorName}_${nextOrder}` :
+                `${normalizedProductNumber}_${normalizedColorName}_${nextOrder}`;
+        } else {
+            filename = `new_picture_${nextOrder}`;
+        }
+        
+        // Create a new picture div (do not clear grid)
+        const pictureDiv = document.createElement('div');
+        pictureDiv.className = 'picture-item';
+        pictureDiv.dataset.pictureId = picture.id || `new_${Date.now()}_${Math.random()}`;
+        pictureDiv.dataset.order = nextOrder;
+        
+        pictureDiv.innerHTML = `
+            <img src="${picture.url}" alt="${picture.name}" onclick="previewPicture('${picture.url}', '${filename}', '${pictureDiv.dataset.pictureId}')" style="cursor: pointer;" title="Click to preview">
+            <div class="picture-overlay">
+                <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariantPicture('${variantId}', '${pictureDiv.dataset.pictureId}')">×</button>
+                <button type="button" class="btn-icon btn-icon-primary" onclick="setPrimaryVariantPicture('${variantId}', '${pictureDiv.dataset.pictureId}')">★</button>
+            </div>
+            <div class="picture-info">
+                <div class="picture-filename" title="${filename}">
+                    ${filename}
+                </div>
+                <small>Order: ${nextOrder} - New picture</small>
+            </div>
+        `;
+        
+        grid.appendChild(pictureDiv);
+        
+        // Store file data for form submission
+        if (picture.file) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'file';
+            hiddenInput.name = `variant_${variantId}_images`;
+            hiddenInput.style.display = 'none';
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(picture.file);
+            hiddenInput.files = dataTransfer.files;
+            
+            pictureDiv.appendChild(hiddenInput);
+        }
+        
+        // Update miniatures (will now show all pictures, not just the last one)
+        updateVariantMiniatures(variantId);
+        
+        // Update submit button state after adding picture
+        updateSubmitButtonState();
+    }
+    
+    function updateVariantMiniatures(variantId) {
+        const miniatureContainer = document.getElementById(`miniatures_display_${variantId}`);
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        
+        if (!miniatureContainer) return;
+        
+        // Clear current miniatures
+        miniatureContainer.innerHTML = '';
+        
+        // Collect all pictures: existing from database + new from grid
+        let allPictures = [];
+        
+        // Get existing pictures from the database (these have numeric IDs and are rendered in HTML)
+        const existingPicturesFromDB = document.querySelectorAll(`#pictures_grid_${variantId} .picture-item[data-picture-id]:not([data-picture-id^="new_"])`);
+        existingPicturesFromDB.forEach(pictureItem => {
+            const img = pictureItem.querySelector('img');
+            const isPrimary = pictureItem.querySelector('.primary-badge');
+            const pictureId = pictureItem.dataset.pictureId;
+            
+            if (img && pictureId && !pictureId.startsWith('new_')) {
+                allPictures.push({
+                    id: pictureId,
+                    src: img.src,
+                    alt: img.alt,
+                    isPrimary: !!isPrimary,
+                    isExisting: true
+                });
+            }
+        });
+        
+        // Get new pictures that were just added (these have IDs starting with "new_")
+        const newPicturesFromGrid = document.querySelectorAll(`#pictures_grid_${variantId} .picture-item[data-picture-id^="new_"]`);
+        newPicturesFromGrid.forEach((pictureItem, index) => {
+            const img = pictureItem.querySelector('img');
+            const isPrimary = pictureItem.querySelector('.primary-badge');
+            const pictureId = pictureItem.dataset.pictureId;
+            
+            if (img && pictureId) {
+                allPictures.push({
+                    id: pictureId,
+                    src: img.src,
+                    alt: img.alt,
+                    isPrimary: !!isPrimary,
+                    isExisting: false
+                });
+            }
+        });
+        
+        const pictureCount = allPictures.length;
+        
+        // Update picture count in label
+        const label = miniatureContainer.closest('.form-group').querySelector('.form-label');
+        if (label) {
+            label.textContent = `Pictures (${pictureCount})`;
+        }
+        
+        if (pictureCount === 0) {
+            miniatureContainer.innerHTML = `
+                <div class="no-pictures" onclick="toggleVariantPictures(${variantId})">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                    </svg>
+                    <span>Click to add pictures</span>
+                </div>
+            `;
+        } else {
+            allPictures.forEach((picture, index) => {
+                const miniature = document.createElement('div');
+                miniature.className = 'miniature-item';
+                miniature.dataset.pictureId = picture.id;
+                miniature.title = `Order: ${index + 1}${picture.isPrimary ? ' - Primary' : ''}`;
+                
+                miniature.innerHTML = `
+                    <img src="${picture.src}" alt="${picture.alt}" class="miniature-img">
+                    <div class="miniature-actions">
+                        <button type="button" class="miniature-action-btn delete" onclick="removeVariantPicture('${variantId}', '${picture.id}')" title="Remove">×</button>
+                        ${picture.isPrimary ? 
+                            '<span class="miniature-action-btn primary" title="Primary">★</span>' : 
+                            '<button type="button" class="miniature-action-btn" onclick="setPrimaryVariantPicture(\'' + variantId + '\', \'' + picture.id + '\')" title="Set as primary">☆</button>'
+                        }
+                    </div>
+                `;
+                
+                miniatureContainer.appendChild(miniature);
+            });
+        }
+    }
+    
+    function addVariantPicture(variantId) {
+        // Trigger file input for this variant
+        const fileInput = document.getElementById(`variant_images_${variantId}`);
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+    
+    function editVariantPicture(variantId, pictureId) {
+        // Show the detailed picture management section
+        toggleVariantPictures(variantId);
+    }
+    
+    function deleteVariantPicture(variantId, pictureId) {
+        if (confirm('Are you sure you want to delete this picture?')) {
+            // Check if this is a new picture (not yet saved to database)
+            if (pictureId.toString().startsWith('new_')) {
+                // Just remove from DOM for new pictures
+                const pictureItem = document.querySelector(`[data-picture-id="${pictureId}"]`);
+                if (pictureItem) {
+                    pictureItem.remove();
+                    updateVariantMiniatures(variantId);
+                    updateSubmitButtonState();
+                }
+                return;
+            }
+            
+            // For existing pictures, call backend API to delete from database
+            fetch(`/api/picture/${pictureId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from DOM on success
+                    const pictureItem = document.querySelector(`[data-picture-id="${pictureId}"]`);
+                    if (pictureItem) {
+                        pictureItem.remove();
+                        updateVariantMiniatures(variantId);
+                        updateSubmitButtonState();
+                    }
+                    console.log('Picture deleted successfully');
+                } else {
+                    alert('Failed to delete picture: ' + (data.error || 'Unknown error'));
+                    console.error('Delete failed:', data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting picture: ' + error.message);
+                console.error('Delete error:', error);
+            });
+        }
+    }
+    
+    function removeVariantPicture(variantId, pictureId) {
+        // Find the picture item in the grid
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        if (!grid) return;
+        
+        const pictureItem = grid.querySelector(`[data-picture-id="${pictureId}"]`);
+        if (!pictureItem) return;
+        
+        // IMPORTANT: No database operations until "Review & Update Component" is clicked
+        // So we only do DOM operations here
+        
+        // Check if this is a new variant (not yet saved to database)
+        const isNewVariant = variantId.toString().startsWith('new_');
+        
+        // Check if this is a new picture (not yet saved to database)
+        const isNewPicture = pictureId.toString().startsWith('new_') || 
+                           pictureId.toString().includes('new_') ||
+                           !Number.isInteger(Number(pictureId));
+        
+        if (isNewVariant || isNewPicture) {
+            // For new variants or new pictures: remove immediately without confirmation
+            // since they're not saved to database yet
+            pictureItem.remove();
+            updateVariantMiniatures(variantId);
+            updateSubmitButtonState();
+            return;
+        }
+        
+        // For existing pictures in database: show confirmation dialog
+        if (confirm('Remove this picture? This will be saved when you click "Review & Update Component".')) {
+            // For existing pictures on existing variants: call backend API
+            fetch(`/api/picture/${pictureId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from grid on success
+                    pictureItem.remove();
+                    
+                    // Update miniatures
+                    updateVariantMiniatures(variantId);
+                    
+                    // Update submit button state
+                    updateSubmitButtonState();
+                    
+                    console.log('Picture deleted successfully');
+                } else {
+                    alert('Failed to delete picture: ' + (data.error || 'Unknown error'));
+                    console.error('Delete failed:', data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting picture: ' + error.message);
+                console.error('Delete error:', error);
+            });
+        }
+    }
+    
+    function setPrimaryVariantPicture(variantId, pictureId) {
+        // Remove primary status from all pictures in this variant
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        if (grid) {
+            grid.querySelectorAll('.primary-badge').forEach(badge => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-icon btn-icon-primary';
+                btn.onclick = () => setPrimaryVariantPicture(variantId, badge.closest('.picture-item').dataset.pictureId);
+                btn.innerHTML = '★';
+                badge.parentNode.replaceChild(btn, badge);
+            });
+            
+            // Set new primary
+            const newPrimary = grid.querySelector(`[data-picture-id="${pictureId}"] .btn-icon-primary`);
+            if (newPrimary) {
+                const badge = document.createElement('span');
+                badge.className = 'primary-badge';
+                badge.textContent = 'Primary';
+                newPrimary.parentNode.replaceChild(badge, newPrimary);
+            }
+            
+            // Update miniatures to reflect primary status
+            updateVariantMiniatures(variantId);
+        }
+    }
+
+    // Global functions for onclick handlers
+    window.addNewVariant = addNewVariant;
+    window.removeVariant = removeVariant;
+    window.toggleVariantPictures = toggleVariantPictures;
+    window.updateVariantSKU = updateVariantSKU;
+    window.handleVariantImages = handleVariantImages;
+    window.removeVariantPicture = removeVariantPicture;
+    window.setPrimaryVariantPicture = setPrimaryVariantPicture;
+    window.updateVariantMiniatures = updateVariantMiniatures;
+    window.addVariantPicture = addVariantPicture;
+    window.editVariantPicture = editVariantPicture;
+    window.deleteVariantPicture = deleteVariantPicture;
+    
+    // Add event listener for the add variant button
+    document.getElementById('add_variant_btn').addEventListener('click', addNewVariant);
+    
+    // Add form validation
+    document.getElementById('componentForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent default submission
+        
+        // Validate all variants
+        const variants = document.querySelectorAll('[data-variant-id]');
+        let isValid = true;
+        let errors = [];
+        
+        for (let variant of variants) {
+            const variantId = variant.dataset.variantId;
+            if (!validateVariantBeforeSubmit(variantId)) {
+                isValid = false;
+                errors.push(`Variant ${variantId} is incomplete`);
+            }
+        }
+        
+        // Show validation summary if there are errors
+        if (!isValid) {
+            const validationSummary = document.getElementById('validationSummary');
+            const validationList = document.getElementById('validationList');
+            
+            if (validationSummary && validationList) {
+                validationList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                validationSummary.classList.remove('hidden');
+                validationSummary.scrollIntoView({ behavior: 'smooth' });
+            }
+            return false;
+        }
+        
+        // Hide validation summary if all is valid
+        const validationSummary = document.getElementById('validationSummary');
+        if (validationSummary) {
+            validationSummary.classList.add('hidden');
+        }
+        
+        // If all validations pass, submit the form
+        this.submit();
+    });
+    
+    // Add to global scope
+    window.handleColorSelection = handleColorSelection;
+    window.validateVariantBeforeSubmit = validateVariantBeforeSubmit;
+    window.handleBrandSelection = handleBrandSelection;
+    window.handleSubbrandSelection = handleSubbrandSelection;
+    window.validateSubbrandName = validateSubbrandName;
+    
+    // Button State Management
+    let originalFormState = null;
+    let isFormChanged = false;
+    
+    function captureOriginalFormState() {
+        const form = document.getElementById('componentForm');
+        if (!form) return;
+        
+        const formData = new FormData(form);
+        originalFormState = {};
+        
+        // Capture all form values
+        for (let [key, value] of formData.entries()) {
+            if (originalFormState[key]) {
+                // Handle multiple values (like checkboxes or multiple selects)
+                if (!Array.isArray(originalFormState[key])) {
+                    originalFormState[key] = [originalFormState[key]];
+                }
+                originalFormState[key].push(value);
+            } else {
+                originalFormState[key] = value;
+            }
+        }
+        
+        // Capture variant picture counts
+        const variants = document.querySelectorAll('[data-variant-id]');
+        variants.forEach(variant => {
+            const variantId = variant.dataset.variantId;
+            const pictures = variant.querySelectorAll('.picture-item');
+            originalFormState[`variant_${variantId}_picture_count`] = pictures.length;
+        });
+    }
+    
+    function checkFormChanges() {
+        if (!originalFormState) return false;
+        
+        const form = document.getElementById('componentForm');
+        if (!form) return false;
+        
+        const currentFormData = new FormData(form);
+        const currentState = {};
+        
+        // Capture current form values
+        for (let [key, value] of currentFormData.entries()) {
+            if (currentState[key]) {
+                if (!Array.isArray(currentState[key])) {
+                    currentState[key] = [currentState[key]];
+                }
+                currentState[key].push(value);
+            } else {
+                currentState[key] = value;
+            }
+        }
+        
+        // Check variant picture counts
+        const variants = document.querySelectorAll('[data-variant-id]');
+        variants.forEach(variant => {
+            const variantId = variant.dataset.variantId;
+            const pictures = variant.querySelectorAll('.picture-item');
+            currentState[`variant_${variantId}_picture_count`] = pictures.length;
+        });
+        
+        // Compare states
+        for (let key in originalFormState) {
+            if (JSON.stringify(originalFormState[key]) !== JSON.stringify(currentState[key])) {
+                return true;
+            }
+        }
+        
+        for (let key in currentState) {
+            if (!(key in originalFormState)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    function validateAllVariantsHavePictures() {
+        const variants = document.querySelectorAll('[data-variant-id]');
+        
+        for (let variant of variants) {
+            const variantId = variant.dataset.variantId;
+            const picturesGrid = document.getElementById(`pictures_grid_${variantId}`);
+            const pictures = picturesGrid ? picturesGrid.querySelectorAll('.picture-item') : [];
+            
+            if (pictures.length === 0) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    function updateSubmitButtonState() {
+        const submitBtn = document.getElementById('submit_btn');
+        if (!submitBtn) return;
+        
+        const hasChanges = checkFormChanges();
+        const allVariantsHavePictures = validateAllVariantsHavePictures();
+        
+        const shouldEnable = hasChanges && allVariantsHavePictures;
+        
+        if (shouldEnable) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.title = '';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+            
+            if (!hasChanges && !allVariantsHavePictures) {
+                submitBtn.title = 'No changes made and some variants lack pictures';
+            } else if (!hasChanges) {
+                submitBtn.title = 'No changes have been made';
+            } else if (!allVariantsHavePictures) {
+                submitBtn.title = 'All variants must have at least one picture';
+            }
+        }
+    }
+    
+    // Initialize form state tracking
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            captureOriginalFormState();
+            updateSubmitButtonState();
+        }, 100);
+        
+        // Add change listeners to form
+        const form = document.getElementById('componentForm');
+        if (form) {
+            form.addEventListener('input', updateSubmitButtonState);
+            form.addEventListener('change', updateSubmitButtonState);
+        }
+        
+        // Set up mutation observer to watch for variant changes
+        const variantsContainer = document.getElementById('variants_container');
+        if (variantsContainer) {
+            const observer = new MutationObserver(updateSubmitButtonState);
+            observer.observe(variantsContainer, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['data-picture-id']
+            });
+        }
+    });
+    
+    // Picture Preview Function
+    function previewPicture(imageUrl, imageName, pictureId) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('picturePreviewModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'picturePreviewModal';
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="picturePreviewTitle">Picture Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img id="picturePreviewImage" src="" alt="" class="img-fluid" style="max-height: 70vh;">
+                            <div class="mt-3">
+                                <strong>Filename:</strong> <span id="picturePreviewFilename"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Set image and filename
+        document.getElementById('picturePreviewImage').src = imageUrl;
+        document.getElementById('picturePreviewImage').alt = imageName;
+        document.getElementById('picturePreviewFilename').textContent = imageName;
+        document.getElementById('picturePreviewTitle').textContent = `Picture Preview - ${imageName}`;
+        
+        // Show modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+    
+    // Add to global scope
+    window.previewPicture = previewPicture;
+
+});
+</script>
+
+<!-- Keyword Autocomplete Module -->
+<script src="{{ url_for('static', filename='js/keyword_autocomplete.js') }}?v={{ cache_bust_version }}"></script>
+
+<!-- Category Selector Module -->
+<script src="{{ url_for('static', filename='js/category_selector.js') }}?v={{ cache_bust_version }}"></script>
+
+<!-- Include Change Summary Modal (only for edit mode) -->
+{% if component %}
+{% include 'modals/change_summary_modal.html' %}
+{% endif %}
+
+{% endblock %}
