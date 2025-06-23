@@ -1,0 +1,26 @@
+<!-- Empty State -->
+<div class="empty-state">
+    <div class="mb-3">
+        <i data-lucide="package" class="empty-state-icon"></i>
+    </div>
+    <h4 class="h5 mb-2">No components found</h4>
+    <p class="text-muted mb-3 small">
+        {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') or request.args.get('brand_id') %}
+        No components match your current filters.
+        {% else %}
+        Get started by adding your first component.
+        {% endif %}
+    </p>
+    <div class="d-flex gap-2 justify-content-center">
+        <a href="{{ url_for('component_web.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm">
+            <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
+            Add Component
+        </a>
+        {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') or request.args.get('brand_id') %}
+        <a href="{{ url_for('component_web.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i data-lucide="x" class="me-1" style="width: 16px; height: 16px;"></i>
+            Clear Filters
+        </a>
+        {% endif %}
+    </div>
+</div>

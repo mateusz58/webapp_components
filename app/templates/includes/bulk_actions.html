@@ -1,0 +1,29 @@
+<!-- Bulk Actions -->
+<div class="bulk-actions" :class="{ 'show': selectedComponents.length > 0 }">
+    <span class="fw-medium small">
+        <span x-text="selectedComponents.length"></span> selected
+    </span>
+    <div class="d-flex gap-2">
+        <button class="btn btn-warning-modern btn-sm" @click="bulkAction('export')">
+            <i data-lucide="download" class="me-1" style="width: 12px; height: 12px;"></i>
+            Export
+        </button>
+        <button class="btn btn-danger-modern btn-sm" @click="bulkAction('delete')">
+            <i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>
+            Delete
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" @click="clearSelection()">
+            Clear
+        </button>
+    </div>
+</div>
+
+<!-- Select All Checkbox -->
+<div class="mb-2 d-flex align-items-center" x-show="componentsOnPage.length > 0">
+    <input type="checkbox"
+           id="selectAll"
+           class="form-check-input me-2"
+           @change="toggleSelectAll($event)"
+           :checked="selectedComponents.length === componentsOnPage.length && componentsOnPage.length > 0">
+    <label for="selectAll" class="small mb-0">Select all on this page</label>
+</div>

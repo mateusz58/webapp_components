@@ -13,6 +13,8 @@
 @import url('./components/buttons.css');
 @import url('./components/forms.css');
 @import url('./components/alerts.css');
+@import url('./components/multi-select.css');
 
 /* Page-specific styles */
 @import url('./pages/supplier-management.css');
+@import url('./pages/dashboard.css');

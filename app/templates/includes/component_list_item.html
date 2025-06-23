@@ -1,0 +1,122 @@
+<!-- LIST VIEW ITEM -->
+<div class="card mb-2" x-show="viewMode === 'list'">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <input type="checkbox"
+                       class="form-check-input"
+                       @click.stop="toggleSelection({{ component.id }})"
+                       :checked="selectedComponents.includes({{ component.id }})">
+            </div>
+            <div class="col-auto">
+                {% if component.pictures %}
+                {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
+                <img src="{{ primary_picture.url }}"
+                     alt="{{ primary_picture.picture_name }}"
+                     class="component-image">
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center component-image">
+                    <i data-lucide="image" style="width: 20px; height: 20px; color: #9ca3af;"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="component-title">{{ component.product_number }}</h6>
+                        <p class="component-description">
+                            {{ component.description|truncate(80) if component.description else 'No description' }}
+                        </p>
+                        <div class="component-meta">
+                            <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
+                            <small class="me-2">{{ component.supplier.supplier_code }}</small>
+                            <small class="me-2">
+                                {% for category in component.categories %}
+                                    {{ category.name }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                            
+                            <!-- Creation Date -->
+                            <small class="me-2">
+                                <i data-lucide="calendar-plus" class="me-1" style="width: 10px; height: 10px; color: #6b7280;"></i>
+                                {{ component.created_at.strftime('%b %d, %Y') if component.created_at else 'Unknown' }}
+                            </small>
+
+                            <!-- Brand display for list view -->
+                            {% if component._cached_brands %}
+                            {% for brand in component._cached_brands[:2] %}
+                            <span class="brand-tag">{{ brand.name }}</span>
+                            {% endfor %}
+                            {% if component._cached_brands|length > 2 %}
+                            <span class="brand-tag bg-secondary">+{{ component._cached_brands|length - 2 }}</span>
+                            {% endif %}
+                            {% endif %}
+
+                            {% if component.keywords %}
+                            {% if search %}
+                            <!-- Highlight matching keywords in list view -->
+                            {% for keyword in component.keywords[:3] %}
+                            {% if search.lower() in keyword.name.lower() %}
+                            <span class="keyword-tag" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; font-size: 0.65rem;">
+                                <i data-lucide="search" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i>
+                                {{ keyword.name }}
+                            </span>
+                            {% else %}
+                            <span class="keyword-tag" style="font-size: 0.65rem;">{{ keyword.name }}</span>
+                            {% endif %}
+                            {% endfor %}
+                            {% else %}
+                            {% for keyword in component.keywords[:3] %}
+                            <span class="keyword-tag" style="font-size: 0.65rem;">{{ keyword.name }}</span>
+                            {% endfor %}
+                            {% endif %}
+                            {% endif %}
+
+                            <!-- Variant Colors Preview for List View -->
+                            {% if component._cached_variants %}
+                            <div class="variant-colors">
+                                {% for variant in component._cached_variants[:4] %}
+                                <div class="variant-color-dot"
+                                     data-variant-name="{{ variant.name }}"
+                                     data-variant-id="{{ variant.id }}"
+                                     data-has-image="{% if variant.picture_url and variant.picture_url|trim and variant.picture_url|lower != 'null' and variant.picture_url|trim != '' %}true{% else %}false{% endif %}"
+                                     {% if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                                     title="{{ variant.name }}{{ ' (No image available)' if not variant.picture_url or variant.picture_url.strip() == '' or variant.picture_url == 'null' else '' }}">
+                                </div>
+                                {% endfor %}
+                                {% if component._cached_variants|length > 4 %}
+                                <div class="variant-color-dot" style="background-color: #f0f0f0; border-color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #666;" title="More variants available">
+                                    +{{ component._cached_variants|length - 4 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="status-badge {{ component.get_status_badge_class() }} mb-2">
+                            {{ component.get_status_display() }}
+                        </span>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
+                               class="btn btn-outline-primary btn-sm">
+                                <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
+                            </a>
+                            <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
+                               class="btn btn-outline-warning btn-sm">
+                                <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
+                            </a>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal{{ component.id }}">
+                                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

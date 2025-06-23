@@ -1,0 +1,204 @@
+<!-- GRID VIEW ITEM -->
+<div class="grid-item" 
+     x-show="viewMode === 'grid'"
+     data-component-id="{{ component.id }}"
+     data-component-type="{{ component.component_type.name if component.component_type else 'None' }}"
+     data-supplier="{{ component.supplier.supplier_code if component.supplier else 'None' }}"
+     data-keywords-count="{{ component.keywords|length if component.keywords else 0 }}"
+     data-brands-count="{{ component._cached_brands|length if component._cached_brands else 0 }}"
+     data-variants-count="{{ component._cached_variants|length if component._cached_variants else 0 }}">
+    <div class="card component-card"
+         @click="navigateToComponent({{ component.id }})"
+         style="cursor: pointer;">
+
+        <!-- Selection Checkbox -->
+        <div class="selection-checkbox">
+            <input type="checkbox"
+                   class="form-check-input"
+                   @click.stop="toggleSelection({{ component.id }})"
+                   :checked="selectedComponents.includes({{ component.id }})">
+        </div>
+
+        <!-- Component Image -->
+        {% if component.pictures %}
+        {% set primary_picture = component.pictures|sort(attribute='picture_order')|first %}
+        <img src="{{ primary_picture.url }}"
+             alt="{{ primary_picture.picture_name }}"
+             class="card-img-top"
+             onerror="this.outerHTML='<div class=\'d-flex align-items-center justify-content-center bg-light card-img-top\' style=\'height: 120px;\'><i data-lucide=\'image\' style=\'width: 32px; height: 32px; color: #9ca3af;\'></i></div>'; lucide.createIcons();">
+        {% else %}
+        <div class="d-flex align-items-center justify-content-center bg-light" style="height: 120px;">
+            <i data-lucide="image" style="width: 32px; height: 32px; color: #9ca3af;"></i>
+        </div>
+        {% endif %}
+
+        <!-- Status Badge -->
+        <div class="status-badge-position">
+            <span class="status-badge {{ component.get_status_badge_class() }}">
+                {% if component.get_overall_status() == 'approved' %}
+                    <i data-lucide="check-circle" style="width: 10px; height: 10px;"></i>
+                {% elif component.get_overall_status() == 'rejected' %}
+                    <i data-lucide="x-circle" style="width: 10px; height: 10px;"></i>
+                {% else %}
+                    <i data-lucide="clock" style="width: 10px; height: 10px;"></i>
+                {% endif %}
+                {{ component.get_status_display() }}
+            </span>
+        </div>
+
+        <!-- Component Info -->
+        <div class="card-body">
+            <div class="card-body-content">
+                <h6 class="card-title fw-bold mb-2">{{ component.product_number }}</h6>
+
+                <p class="card-text text-muted mb-2">
+                    {{ component.description|truncate(40) if component.description else 'No description' }}
+                </p>
+
+                <!-- Component Meta -->
+                <div class="component-meta mb-2">
+                    <div class="d-flex align-items-center mb-1">
+                        {% if component.component_type %}
+                            <span class="badge bg-primary me-1">{{ component.component_type.name }}</span>
+                        {% endif %}
+                        {% if component.supplier %}
+                            <small>{{ component.supplier.supplier_code }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center mb-1">
+                        {% if component.category %}
+                            <small>{{ component.category.name }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i data-lucide="calendar-plus" class="me-1" style="width: 10px; height: 10px; color: #6b7280;"></i>
+                        <small class="text-muted">{{ component.created_at.strftime('%b %d, %Y') if component.created_at else 'Unknown' }}</small>
+                    </div>
+                </div>
+
+                <!-- Brand Display -->
+                {% if component._cached_brands %}
+                <div class="mb-2">
+                    {% for brand in component._cached_brands[:2] %}
+                    <span class="brand-tag">{{ brand.name }}</span>
+                    {% endfor %}
+                    {% if component._cached_brands|length > 2 %}
+                    <span class="brand-tag bg-secondary">+{{ component._cached_brands|length - 2 }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Keywords -->
+                {% if component.keywords %}
+                <div class="mb-2">
+                    {% if search %}
+                    <!-- When searching, highlight matching keywords -->
+                    {% set matched_keywords = [] %}
+                    {% set other_keywords = [] %}
+                    {% for keyword in component.keywords %}
+                    {% if search.lower() in keyword.name.lower() %}
+                    {% set _ = matched_keywords.append(keyword) %}
+                    {% else %}
+                    {% set _ = other_keywords.append(keyword) %}
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- Show matched keywords first with highlight -->
+                    {% for keyword in matched_keywords[:2] %}
+                    <span class="keyword-tag" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24;">
+                        <i data-lucide="search" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i>
+                        {{ keyword.name }}
+                    </span>
+                    {% endfor %}
+
+                    <!-- Show other keywords if space permits -->
+                    {% set remaining_slots = 2 - matched_keywords[:2]|length %}
+                    {% for keyword in other_keywords[:remaining_slots] %}
+                    <span class="keyword-tag">{{ keyword.name }}</span>
+                    {% endfor %}
+
+                    <!-- Show count of remaining -->
+                    {% if component.keywords|length > 2 %}
+                    <span class="keyword-tag keyword-expand-trigger" 
+                          data-component-id="{{ component.id }}"
+                          @click.stop
+                          style="cursor: pointer; background-color: #e2e8f0; color: #64748b;">
+                        +{{ component.keywords|length - 2 }}
+                    </span>
+                    {% endif %}
+                    {% else %}
+                    <!-- Normal display when not searching -->
+                    {% for keyword in component.keywords[:2] %}
+                    <span class="keyword-tag">{{ keyword.name }}</span>
+                    {% endfor %}
+                    {% if component.keywords|length > 2 %}
+                    <span class="keyword-tag keyword-expand-trigger" 
+                          data-component-id="{{ component.id }}"
+                          @click.stop
+                          style="cursor: pointer; background-color: #e2e8f0; color: #64748b;">
+                        +{{ component.keywords|length - 2 }}
+                    </span>
+                    {% endif %}
+                    {% endif %}
+                    
+                    <!-- Hidden div with all keywords for expansion -->
+                    <div id="all-keywords-{{ component.id }}" class="all-keywords-container" style="display: none;">
+                        {% for keyword in component.keywords %}
+                        <span class="keyword-tag">{{ keyword.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Variant Colors Preview -->
+                {% if component._cached_variants %}
+                <div class="variant-colors">
+                    {% for variant in component._cached_variants[:5] %}
+                    <div class="variant-color-dot"
+                         data-variant-name="{{ variant.name }}"
+                         data-variant-id="{{ variant.id }}"
+                         data-has-image="{% if variant.picture_url and variant.picture_url|trim and variant.picture_url|lower != 'null' and variant.picture_url|trim != '' %}true{% else %}false{% endif %}"
+                         {% if variant.picture_url and variant.picture_url.strip() and variant.picture_url != 'null' %}style="background-image: url('{{ variant.picture_url }}');"{% else %}style="background-color: #{{ variant.color_name|lower|replace(' ', '')|replace('-', '') }}; border-color: #ddd;"{% endif %}
+                         title="{{ variant.name }}{{ ' (No image available)' if not variant.picture_url or variant.picture_url.strip() == '' or variant.picture_url == 'null' else '' }}">
+                    </div>
+                    {% endfor %}
+                    {% if component._cached_variants|length > 5 %}
+                    <div class="variant-color-dot" style="background-color: #f0f0f0; border-color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666;" title="More variants available">
+                        +{{ component._cached_variants|length - 5 }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Properties Count -->
+                {% if component.properties %}
+                <div class="properties-count">
+                    <i data-lucide="settings" class="me-1" style="width: 12px; height: 12px;"></i>
+                    {{ component.properties|length }} properties
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group w-100 mt-auto" role="group">
+                <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
+                   class="btn btn-outline-primary btn-sm"
+                   @click.stop>
+                    <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
+                </a>
+                <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
+                   class="btn btn-outline-warning btn-sm"
+                   @click.stop>
+                    <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
+                </a>
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        @click.stop="deleteComponent({{ component.id }})"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteModal{{ component.id }}">
+                    <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,318 @@
+<!-- Multi-Select Filter Panel with Enhanced Dropdowns -->
+<div class="filter-panel">
+    <form method="GET" action="{{ url_for('component_web.index') }}" x-ref="filterForm" @submit.prevent="handleFormSubmit($event)">
+        <!-- Search Bar -->
+        <div class="row mb-2">
+            <div class="col-md-8">
+                <div class="search-box">
+                    <input type="text"
+                           class="form-control form-control-modern"
+                           name="search"
+                           value="{{ search }}"
+                           placeholder="Search by product number, description, keyword..."
+                           x-model="searchQuery"
+                           @keyup.enter="$refs.filterForm.submit()">
+                    <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <!-- View Toggle -->
+                <div class="view-toggle d-flex ms-auto">
+                    <button type="button"
+                            @click="viewMode = 'grid'"
+                            :class="{ 'active': viewMode === 'grid' }"
+                            title="Grid View">
+                        <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    <button type="button"
+                            @click="viewMode = 'list'"
+                            :class="{ 'active': viewMode === 'list' }"
+                            title="List View">
+                        <i data-lucide="list" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Sort Options Row -->
+        <div class="row mb-2">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Sort By</label>
+                <select name="sort_by" class="form-select form-select-sm">
+                    <option value="created_at" {% if current_filters.sort_by == 'created_at' %}selected{% endif %}>Date Created</option>
+                    <option value="updated_at" {% if current_filters.sort_by == 'updated_at' %}selected{% endif %}>Last Updated</option>
+                    <option value="product_number" {% if current_filters.sort_by == 'product_number' %}selected{% endif %}>Product Number</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Order</label>
+                <select name="sort_order" class="form-select form-select-sm">
+                    <option value="desc" {% if current_filters.sort_order == 'desc' %}selected{% endif %}>Newest First</option>
+                    <option value="asc" {% if current_filters.sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Multi-Select Filter Row -->
+        <div class="row mb-3">
+            <!-- Component Types Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <!-- Hidden select for form submission -->
+                    <select multiple name="component_type_id" style="display: none;">
+                        <template x-for="typeId in filters.componentTypes" :key="typeId">
+                            <option :value="typeId" selected></option>
+                        </template>
+                    </select>
+
+                    <!-- Custom Multi-Select Display -->
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('componentTypes')">
+                        <span x-show="filters.componentTypes.length === 0">All Types</span>
+                        <span x-show="filters.componentTypes.length === 1" x-text="getSelectedText('componentTypes')"></span>
+                        <span x-show="filters.componentTypes.length > 1" x-text="filters.componentTypes.length + ' types'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.componentTypes }"></i>
+                    </div>
+
+                    <!-- Dropdown -->
+                    <div x-show="dropdownStates.componentTypes"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <!-- Search within dropdown -->
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search types..."
+                                   x-model="dropdownSearch.componentTypes"
+                                   @click.stop>
+                        </div>
+
+                        <!-- Select All / Deselect All -->
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('componentTypes')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('componentTypes')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        <!-- Options -->
+                        {% for component_type in component_types %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('componentTypes', '{{ component_type.id }}') }"
+                             @click="selectOption('componentTypes', '{{ component_type.id }}', '{{ component_type.name }}')"
+                             x-show="!dropdownSearch.componentTypes || '{{ component_type.name }}'.toLowerCase().includes(dropdownSearch.componentTypes.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('componentTypes', '{{ component_type.id }}') }"></div>
+                            <span>{{ component_type.name }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suppliers Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <select multiple name="supplier_id" style="display: none;">
+                        <template x-for="supId in filters.suppliers" :key="supId">
+                            <option :value="supId" selected></option>
+                        </template>
+                    </select>
+
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('suppliers')">
+                        <span x-show="filters.suppliers.length === 0">All Suppliers</span>
+                        <span x-show="filters.suppliers.length === 1" x-text="getSelectedText('suppliers')"></span>
+                        <span x-show="filters.suppliers.length > 1" x-text="filters.suppliers.length + ' suppliers'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.suppliers }"></i>
+                    </div>
+
+                    <div x-show="dropdownStates.suppliers"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search suppliers..."
+                                   x-model="dropdownSearch.suppliers"
+                                   @click.stop>
+                        </div>
+
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('suppliers')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('suppliers')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        {% for supplier in suppliers %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('suppliers', '{{ supplier.id }}') }"
+                             @click="selectOption('suppliers', '{{ supplier.id }}', '{{ supplier.supplier_code }}')"
+                             x-show="!dropdownSearch.suppliers || '{{ supplier.supplier_code }}'.toLowerCase().includes(dropdownSearch.suppliers.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('suppliers', '{{ supplier.id }}') }"></div>
+                            <span>{{ supplier.supplier_code }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brands Multi-Select -->
+            <div class="col-md-3 mb-2">
+                <div class="multi-select-wrapper">
+                    <select multiple name="brand_id" style="display: none;">
+                        <template x-for="brandId in filters.brands" :key="brandId">
+                            <option :value="brandId" selected></option>
+                        </template>
+                    </select>
+
+                    <div class="multi-select-placeholder" @click="toggleMultiSelect('brands')">
+                        <span x-show="filters.brands.length === 0">All Brands</span>
+                        <span x-show="filters.brands.length === 1" x-text="getSelectedText('brands')"></span>
+                        <span x-show="filters.brands.length > 1" x-text="filters.brands.length + ' brands'"></span>
+                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; margin-left: auto;"
+                           :class="{ 'rotate-180': dropdownStates.brands }"></i>
+                    </div>
+
+                    <div x-show="dropdownStates.brands"
+                         x-transition
+                         class="multi-select-dropdown"
+                         @click.stop>
+
+                        <div class="multi-select-search">
+                            <input type="text"
+                                   placeholder="Search brands..."
+                                   x-model="dropdownSearch.brands"
+                                   @click.stop>
+                        </div>
+
+                        <div class="multi-select-actions">
+                            <button type="button"
+                                    @click="selectAllOptions('brands')"
+                                    class="multi-select-action-btn">
+                                Select All
+                            </button>
+                            <button type="button"
+                                    @click="deselectAllOptions('brands')"
+                                    class="multi-select-action-btn">
+                                Clear
+                            </button>
+                        </div>
+
+                        {% if brands %}
+                        {% for brand in brands %}
+                        <div class="multi-select-option"
+                             :class="{ 'selected': isOptionSelected('brands', '{{ brand.id }}') }"
+                             @click="selectOption('brands', '{{ brand.id }}', '{{ brand.name }}')"
+                             x-show="!dropdownSearch.brands || '{{ brand.name }}'.toLowerCase().includes(dropdownSearch.brands.toLowerCase())">
+                            <div class="multi-select-checkbox"
+                                 :class="{ 'checked': isOptionSelected('brands', '{{ brand.id }}') }"></div>
+                            <span>{{ brand.name }}</span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Actions Row -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <!-- Active Filters Display -->
+                <div x-show="hasActiveFilters()" class="d-flex flex-wrap gap-1 align-items-center">
+                    <small class="text-muted fw-bold me-2">Filters:</small>
+
+                    <!-- Component Type Tags -->
+                    <template x-for="(typeId, index) in filters.componentTypes" :key="'type-' + typeId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('component_type_id', typeId)"></span>
+                            <button type="button" @click="removeFilter('componentTypes', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Category Tags -->
+                    <template x-for="(categoryId, index) in filters.categories" :key="'cat-' + categoryId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('category_id', categoryId)"></span>
+                            <button type="button" @click="removeFilter('categories', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Supplier Tags -->
+                    <template x-for="(supplierId, index) in filters.suppliers" :key="'sup-' + supplierId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('supplier_id', supplierId)"></span>
+                            <button type="button" @click="removeFilter('suppliers', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Brand Tags -->
+                    <template x-for="(brandId, index) in filters.brands" :key="'brand-' + brandId">
+                        <span class="filter-tag">
+                            <span x-text="getOptionText('brand_id', brandId)"></span>
+                            <button type="button" @click="removeFilter('brands', index)" class="filter-tag-remove">
+                                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+                            </button>
+                        </span>
+                    </template>
+
+                    <!-- Clear All Button -->
+                    <button type="button" @click="clearAllFilters()" class="btn btn-outline-danger btn-sm">
+                        <i data-lucide="x-circle" class="me-1" style="width: 12px; height: 12px;"></i>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-primary-modern btn-modern btn-sm">
+                        <i data-lucide="filter" class="me-1" style="width: 14px; height: 14px;"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Quick Filters (Single Select) - HIDDEN FOR NOW -->
+    <!-- 
+    <div class="quick-filters">
+        <div class="filter-chip" @click="quickFilter('all')" :class="{ 'active': activeQuickFilter === 'all' }">
+            All
+        </div>
+        <div class="filter-chip" @click="quickFilter('approved')" :class="{ 'active': activeQuickFilter === 'approved' }">
+            Approved
+        </div>
+        <div class="filter-chip" @click="quickFilter('pending')" :class="{ 'active': activeQuickFilter === 'pending' }">
+            Pending
+        </div>
+        <div class="filter-chip" @click="quickFilter('recent')" :class="{ 'active': activeQuickFilter === 'recent' }">
+            Recent
+        </div>
+    </div>
+    -->
+</div>

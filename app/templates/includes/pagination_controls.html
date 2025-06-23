@@ -1,0 +1,122 @@
+<!-- Pagination Controls -->
+{% if components and components.items %}
+<div class="pagination-controls">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <!-- Per Page Controls -->
+        <div class="per-page-controls">
+            <span>Show:</span>
+            <select class="per-page-select" onchange="changePerPage(this.value)">
+                <option value="10" {% if request.args.get('per_page', 20)|int == 10 %}selected{% endif %}>10</option>
+                <option value="20" {% if request.args.get('per_page', 20)|int == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if request.args.get('per_page', 20)|int == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if request.args.get('per_page', 20)|int == 100 %}selected{% endif %}>100</option>
+                <option value="200" {% if request.args.get('per_page', 20)|int == 200 %}selected{% endif %}>200</option>
+            </select>
+            <span>per page</span>
+        </div>
+
+        <!-- Show All Button -->
+        <div>
+            {% if request.args.get('show_all') %}
+            {% set current_params = {} %}
+            {% for k, v in request.args.items() %}
+            {% if k != 'show_all' %}
+            {% set _ = current_params.update({k: v}) %}
+            {% endif %}
+            {% endfor %}
+            <a href="{{ url_for('component_web.index', **current_params) }}"
+               class="show-all-btn active">
+                <i data-lucide="list" class="me-1" style="width: 12px; height: 12px;"></i>
+                Showing All ({{ components.total }})
+            </a>
+            {% else %}
+            {% set current_params = {} %}
+            {% for k, v in request.args.items() %}
+            {% set _ = current_params.update({k: v}) %}
+            {% endfor %}
+            {% set _ = current_params.update({'show_all': 'true'}) %}
+            <a href="{{ url_for('component_web.index', **current_params) }}"
+               class="show-all-btn"
+               onclick="return confirmShowAll({{ components.total if components.total <= 1000 else 1000 }})">
+                <i data-lucide="maximize-2" class="me-1" style="width: 12px; height: 12px;"></i>
+                Show All
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pagination Info -->
+    <div class="pagination-info">
+        {% if components.total > 0 %}
+            {% if request.args.get('show_all') %}
+                Showing all {{ components.total }} components
+            {% else %}
+                Showing {{ ((components.page - 1) * components.per_page) + 1 }} to
+                {{ components.page * components.per_page if components.page * components.per_page <= components.total else components.total }}
+                of {{ components.total }} components
+            {% endif %}
+        {% else %}
+            No components found
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Compact Pagination -->
+{% if components and components.pages > 1 and not request.args.get('show_all') %}
+<nav aria-label="Component pagination" class="mt-4">
+    <ul class="pagination pagination-modern justify-content-center">
+        {% if components.has_prev %}
+        <li class="page-item">
+            {% set prev_url = url_for('component_web.index', page=components.prev_num) %}
+            {% for key, value in request.args.items() %}
+                {% if key != 'page' %}
+                    {% set prev_url = prev_url + ('&' if '?' in prev_url else '?') + key + '=' + value %}
+                {% endif %}
+            {% endfor %}
+            <a class="page-link" href="{{ prev_url }}">
+                <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for page_num in components.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+        {% if page_num == components.page %}
+        <li class="page-item active">
+            <span class="page-link">{{ page_num }}</span>
+        </li>
+        {% else %}
+        <li class="page-item">
+            {% set page_url = url_for('component_web.index', page=page_num) %}
+            {% for key, value in request.args.items() %}
+                {% if key != 'page' %}
+                    {% set page_url = page_url + ('&' if '?' in page_url else '?') + key + '=' + value %}
+                {% endif %}
+            {% endfor %}
+            <a class="page-link" href="{{ page_url }}">{{ page_num }}</a>
+        </li>
+        {% endif %}
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">...</span>
+        </li>
+        {% endif %}
+        {% endfor %}
+
+        {% if components.has_next %}
+        <li class="page-item">
+            {% set next_url = url_for('component_web.index', page=components.next_num) %}
+            {% for key, value in request.args.items() %}
+                {% if key != 'page' %}
+                    {% set next_url = next_url + ('&' if '?' in next_url else '?') + key + '=' + value %}
+                {% endif %}
+            {% endfor %}
+            <a class="page-link" href="{{ next_url }}">
+                <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

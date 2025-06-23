@@ -1,0 +1,27 @@
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-compact">
+        <div class="modal-content modal-content-modern">
+            <div class="modal-header modal-header-modern">
+                <h6 class="modal-title">Confirm Deletion</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body modal-body-modern">
+                <div class="d-flex align-items-center mb-2">
+                    <i data-lucide="alert-triangle" class="text-warning me-2" style="width: 20px; height: 20px;"></i>
+                    <strong>This action cannot be undone!</strong>
+                </div>
+                <p class="small">Delete component <strong>{{ component.product_number }}</strong>?</p>
+            </div>
+            <div class="modal-footer modal-footer-modern">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('component_web.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger-modern btn-modern btn-sm">
+                        <i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>
+                        Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

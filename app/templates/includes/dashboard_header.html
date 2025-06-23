@@ -1,0 +1,58 @@
+<!-- Dashboard Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h4 mb-0 text-dark fw-bold">Component Dashboard</h1>
+        <p class="text-muted mb-0 small">Manage and organize your component library  TEST2</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('component_web.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
+            <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
+            New Component
+        </a>
+        <a href="{{ url_for('utility_web.upload') }}" class="btn btn-success-modern btn-modern btn-sm d-flex align-items-center">
+            <i data-lucide="upload" class="me-1" style="width: 16px; height: 16px;"></i>
+            Bulk Upload
+        </a>
+        <a href="{{ url_for('supplier.suppliers') }}" class="btn btn-outline-primary btn-modern btn-sm d-flex align-items-center">
+            <i data-lucide="users" class="me-1" style="width: 16px; height: 16px;"></i>
+            Suppliers
+        </a>
+    </div>
+</div>
+
+<!-- Compact Stats Overview -->
+<div class="row mb-3">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">{{ components.total if components else 0 }}</h4>
+                    <p class="mb-0 opacity-75 small">Total Components</p>
+                </div>
+                <i data-lucide="layers" style="width: 24px; height: 24px; opacity: 0.7;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">{{ suppliers|length }}</h4>
+                    <p class="mb-0 opacity-75 small">Active Suppliers</p>
+                </div>
+                <i data-lucide="truck" style="width: 24px; height: 24px; opacity: 0.7;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">{{ brands_count if brands_count is defined else 0 }}</h4>
+                    <p class="mb-0 opacity-75 small">Active Brands</p>
+                </div>
+                <i data-lucide="tag" style="width: 24px; height: 24px; opacity: 0.7;"></i>
+            </div>
+        </div>
+    </div>
+</div>
