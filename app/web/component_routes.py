@@ -17,6 +17,121 @@ MAX_PER_PAGE = 200
 SHOW_ALL_LIMIT = 1000
 
 
+def _get_form_data():
+    """Extract common form data"""
+    return {
+        'product_number': request.form.get('product_number', '').strip(),
+        'description': request.form.get('description', '').strip(),
+        'supplier_id': request.form.get('supplier_id', type=int),
+        'category_id': request.form.get('category_id', type=int),
+        'component_type_id': request.form.get('component_type_id', type=int)
+    }
+
+
+def _validate_required_fields(form_data):
+    """Validate required form fields"""
+    if not form_data['product_number']:
+        flash('Product number is required.', 'error')
+        return False
+    
+    if not form_data['component_type_id']:
+        flash('Component type is required.', 'error')
+        return False
+    
+    return True
+
+
+def _handle_component_properties(component, component_type_id):
+    """Handle dynamic component properties"""
+    if component_type_id:
+        type_properties = ComponentTypeProperty.query.filter_by(
+            component_type_id=component_type_id
+        ).all()
+        
+        properties = {}
+        for prop in type_properties:
+            value = request.form.get(f'property_{prop.property_name}')
+            if value:
+                properties[prop.property_name] = value
+        
+        component.properties = properties
+
+
+def _handle_brand_associations(component, is_edit=False):
+    """Handle component-brand associations"""
+    if is_edit:
+        # Remove existing associations for edit
+        ComponentBrand.query.filter_by(component_id=component.id).delete()
+    
+    brand_ids = request.form.getlist('brand_ids[]')
+    for brand_id in brand_ids:
+        if brand_id.isdigit():
+            brand_assoc = ComponentBrand(
+                component_id=component.id,
+                brand_id=int(brand_id)
+            )
+            db.session.add(brand_assoc)
+
+
+def _handle_keywords(component, is_edit=False):
+    """Handle component keywords"""
+    keywords_input = request.form.get('keywords', '').strip()
+    
+    if is_edit:
+        component.keywords.clear()
+    
+    if keywords_input:
+        keyword_names = [k.strip() for k in keywords_input.split(',') if k.strip()]
+        for keyword_name in keyword_names:
+            keyword = Keyword.query.filter_by(name=keyword_name).first()
+            if not keyword:
+                keyword = Keyword(name=keyword_name)
+                db.session.add(keyword)
+                db.session.flush()
+            
+            if not is_edit and keyword not in component.keywords:
+                component.keywords.append(keyword)
+            elif is_edit:
+                component.keywords.append(keyword)
+
+
+def _handle_picture_uploads(component, is_edit=False):
+    """Handle picture uploads"""
+    if is_edit:
+        pictures = request.files.getlist('new_pictures')
+        max_order = db.session.query(func.max(Picture.picture_order)).filter_by(
+            component_id=component.id
+        ).scalar() or 0
+        picture_order = max_order + 1
+    else:
+        pictures = request.files.getlist('pictures')
+        picture_order = 1
+    
+    for picture_file in pictures:
+        if picture_file and allowed_file(picture_file.filename):
+            url = save_uploaded_file(picture_file)
+            if url:
+                picture = Picture(
+                    component_id=component.id,
+                    url=url,
+                    picture_order=picture_order,
+                    alt_text=f"{component.product_number} - Image {picture_order}"
+                )
+                db.session.add(picture)
+                picture_order += 1
+
+
+def _get_form_context_data():
+    """Get common context data for forms"""
+    return {
+        'component_types': ComponentType.query.order_by(ComponentType.name).all(),
+        'suppliers': Supplier.query.order_by(Supplier.supplier_code).all(),
+        'categories': Category.query.order_by(Category.name).all(),
+        'brands': Brand.query.order_by(Brand.name).all(),
+        'colors': Color.query.order_by(Color.name).all()
+    }
+
+
 def allowed_file(filename):
     """Check if the uploaded file has an allowed extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -375,26 +490,15 @@ def new_component():
     """
     if request.method == 'POST':
         try:
-            # Get form data
-            product_number = request.form.get('product_number', '').strip()
-            description = request.form.get('description', '').strip()
-            supplier_id = request.form.get('supplier_id', type=int)
-            category_id = request.form.get('category_id', type=int)
-            component_type_id = request.form.get('component_type_id', type=int)
-            
-            # Validate required fields
-            if not product_number:
-                flash('Product number is required.', 'error')
-                return redirect(request.url)
-            
-            if not component_type_id:
-                flash('Component type is required.', 'error')
+            # Get and validate form data
+            form_data = _get_form_data()
+            if not _validate_required_fields(form_data):
                 return redirect(request.url)
             
             # Check for duplicate product number
             existing = Component.query.filter_by(
-                product_number=product_number,
-                supplier_id=supplier_id
+                product_number=form_data['product_number'],
+                supplier_id=form_data['supplier_id']
             ).first()
             
             if existing:
@@ -403,74 +507,22 @@ def new_component():
             
             # Create component
             component = Component(
-                product_number=product_number,
-                description=description,
-                supplier_id=supplier_id,
-                category_id=category_id,
-                component_type_id=component_type_id,
+                product_number=form_data['product_number'],
+                description=form_data['description'],
+                supplier_id=form_data['supplier_id'],
+                category_id=form_data['category_id'],
+                component_type_id=form_data['component_type_id'],
                 properties={}
             )
             
-            # Handle dynamic properties
-            component_type = ComponentType.query.get(component_type_id)
-            if component_type:
-                type_properties = ComponentTypeProperty.query.filter_by(
-                    component_type_id=component_type_id
-                ).all()
-                
-                properties = {}
-                for prop in type_properties:
-                    value = request.form.get(f'property_{prop.property_name}')
-                    if value:
-                        properties[prop.property_name] = value
-                
-                component.properties = properties
-            
-            # Handle brand associations
-            brand_ids = request.form.getlist('brand_ids[]')
-            for brand_id in brand_ids:
-                if brand_id.isdigit():
-                    brand_assoc = ComponentBrand(
-                        component_id=component.id,
-                        brand_id=int(brand_id)
-                    )
-                    db.session.add(brand_assoc)
-            
-            # Handle keywords
-            keywords_input = request.form.get('keywords', '').strip()
-            if keywords_input:
-                keyword_names = [k.strip() for k in keywords_input.split(',') if k.strip()]
-                for keyword_name in keyword_names:
-                    # Find or create keyword
-                    keyword = Keyword.query.filter_by(name=keyword_name).first()
-                    if not keyword:
-                        keyword = Keyword(name=keyword_name)
-                        db.session.add(keyword)
-                        db.session.flush()
-                    
-                    # Associate with component
-                    if keyword not in component.keywords:
-                        component.keywords.append(keyword)
-            
             db.session.add(component)
-            db.session.flush()  # Get component ID before handling pictures
+            db.session.flush()  # Get component ID before handling associations
             
-            # Handle picture uploads
-            pictures = request.files.getlist('pictures')
-            picture_order = 1
-            
-            for picture_file in pictures:
-                if picture_file and allowed_file(picture_file.filename):
-                    url = save_uploaded_file(picture_file)
-                    if url:
-                        picture = Picture(
-                            component_id=component.id,
-                            url=url,
-                            picture_order=picture_order,
-                            alt_text=f"{component.product_number} - Image {picture_order}"
-                        )
-                        db.session.add(picture)
-                        picture_order += 1
+            # Handle all associations and uploads
+            _handle_component_properties(component, form_data['component_type_id'])
+            _handle_brand_associations(component, is_edit=False)
+            _handle_keywords(component, is_edit=False)
+            _handle_picture_uploads(component, is_edit=False)
             
             db.session.commit()
             flash('Component created successfully!', 'success')
@@ -483,17 +535,10 @@ def new_component():
             return redirect(request.url)
     
     # GET request - show form
-    component_types = ComponentType.query.order_by(ComponentType.name).all()
-    suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-    categories = Category.query.order_by(Category.name).all()
-    brands = Brand.query.order_by(Brand.name).all()
+    context = _get_form_context_data()
+    context['component'] = None
     
-    return render_template('component_form.html',
-                         component_types=component_types,
-                         suppliers=suppliers,
-                         categories=categories,
-                         brands=brands,
-                         component=None)
+    return render_template('component_edit_form.html', **context)
 
 
 @component_web.route('/component/edit/<int:id>', methods=['GET', 'POST'])
@@ -505,77 +550,23 @@ def edit_component(id):
     
     if request.method == 'POST':
         try:
+            # Get and validate form data
+            form_data = _get_form_data()
+            if not _validate_required_fields(form_data):
+                return redirect(request.url)
+            
             # Update basic fields
-            component.product_number = request.form.get('product_number', '').strip()
-            component.description = request.form.get('description', '').strip()
-            component.supplier_id = request.form.get('supplier_id', type=int)
-            component.category_id = request.form.get('category_id', type=int)
-            component.component_type_id = request.form.get('component_type_id', type=int)
+            component.product_number = form_data['product_number']
+            component.description = form_data['description']
+            component.supplier_id = form_data['supplier_id']
+            component.category_id = form_data['category_id']
+            component.component_type_id = form_data['component_type_id']
             
-            # Update dynamic properties
-            if component.component_type:
-                type_properties = ComponentTypeProperty.query.filter_by(
-                    component_type_id=component.component_type_id
-                ).all()
-                
-                properties = {}
-                for prop in type_properties:
-                    value = request.form.get(f'property_{prop.property_name}')
-                    if value:
-                        properties[prop.property_name] = value
-                
-                component.properties = properties
-            
-            # Update brand associations
-            # First remove all existing associations
-            ComponentBrand.query.filter_by(component_id=component.id).delete()
-            
-            # Add new associations
-            brand_ids = request.form.getlist('brand_ids[]')
-            for brand_id in brand_ids:
-                if brand_id.isdigit():
-                    brand_assoc = ComponentBrand(
-                        component_id=component.id,
-                        brand_id=int(brand_id)
-                    )
-                    db.session.add(brand_assoc)
-            
-            # Update keywords
-            keywords_input = request.form.get('keywords', '').strip()
-            component.keywords.clear()
-            
-            if keywords_input:
-                keyword_names = [k.strip() for k in keywords_input.split(',') if k.strip()]
-                for keyword_name in keyword_names:
-                    keyword = Keyword.query.filter_by(name=keyword_name).first()
-                    if not keyword:
-                        keyword = Keyword(name=keyword_name)
-                        db.session.add(keyword)
-                        db.session.flush()
-                    component.keywords.append(keyword)
-            
-            # Handle new picture uploads
-            new_pictures = request.files.getlist('new_pictures')
-            
-            # Get the highest existing picture order
-            max_order = db.session.query(func.max(Picture.picture_order)).filter_by(
-                component_id=component.id
-            ).scalar() or 0
-            
-            picture_order = max_order + 1
-            
-            for picture_file in new_pictures:
-                if picture_file and allowed_file(picture_file.filename):
-                    url = save_uploaded_file(picture_file)
-                    if url:
-                        picture = Picture(
-                            component_id=component.id,
-                            url=url,
-                            picture_order=picture_order,
-                            alt_text=f"{component.product_number} - Image {picture_order}"
-                        )
-                        db.session.add(picture)
-                        picture_order += 1
+            # Handle all associations and uploads
+            _handle_component_properties(component, form_data['component_type_id'])
+            _handle_brand_associations(component, is_edit=True)
+            _handle_keywords(component, is_edit=True)
+            _handle_picture_uploads(component, is_edit=True)
             
             db.session.commit()
             flash('Component updated successfully!', 'success')
@@ -588,25 +579,19 @@ def edit_component(id):
             return redirect(request.url)
     
     # GET request - show form
-    component_types = ComponentType.query.order_by(ComponentType.name).all()
-    suppliers = Supplier.query.order_by(Supplier.supplier_code).all()
-    categories = Category.query.order_by(Category.name).all()
-    brands = Brand.query.order_by(Brand.name).all()
+    context = _get_form_context_data()
+    context['component'] = component
     
-    # Get type properties
+    # Get type properties for display
     type_properties = []
     if component.component_type:
         type_properties = ComponentTypeProperty.query.filter_by(
             component_type_id=component.component_type_id
         ).order_by(ComponentTypeProperty.display_order).all()
     
-    return render_template('component_edit_form.html',
-                         component=component,
-                         component_types=component_types,
-                         suppliers=suppliers,
-                         categories=categories,
-                         brands=brands,
-                         type_properties=type_properties)
+    context['type_properties'] = type_properties
+    
+    return render_template('component_edit_form.html', **context)
 
 
 @component_web.route('/component/delete/<int:id>', methods=['POST'])
@@ -656,7 +641,7 @@ def update_proto_status(id):
         
         component.proto_status = status
         component.proto_comment = comment if comment else None
-        component.proto_date = datetime.utcnow() if status != 'pending' else None
+        component.proto_date = datetime.now(datetime.UTC) if status != 'pending' else None
         
         db.session.commit()
         flash('Proto status updated successfully!', 'success')
@@ -684,7 +669,7 @@ def update_sms_status(id):
         
         component.sms_status = status
         component.sms_comment = comment if comment else None
-        component.sms_date = datetime.utcnow() if status != 'pending' else None
+        component.sms_date = datetime.now(datetime.UTC) if status != 'pending' else None
         
         db.session.commit()
         flash('SMS status updated successfully!', 'success')
@@ -712,7 +697,7 @@ def update_pps_status(id):
         
         component.pps_status = status
         component.pps_comment = comment if comment else None
-        component.pps_date = datetime.utcnow() if status != 'pending' else None
+        component.pps_date = datetime.now(datetime.UTC) if status != 'pending' else None
         
         db.session.commit()
         flash('PPS status updated successfully!', 'success')
