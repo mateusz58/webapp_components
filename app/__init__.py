@@ -69,39 +69,79 @@ def create_app(config_class=Config):
     if uploads_dir:
         os.makedirs(uploads_dir, exist_ok=True)
 
-    # Register new modular blueprints
+    # Register API blueprints with /api prefix
     try:
-        from app.web.supplier_routes import supplier_bp
-        app.register_blueprint(supplier_bp)
+        from app.api.component_api import component_api
+        app.register_blueprint(component_api, url_prefix='/api')
     except ImportError as e:
-        app.logger.warning(f"Supplier routes not available: {e}")
+        app.logger.warning(f"Component API routes not available: {e}")
+    
+    try:
+        from app.api.category_api import category_api
+        app.register_blueprint(category_api, url_prefix='/api')
+    except ImportError as e:
+        app.logger.warning(f"Category API routes not available: {e}")
+    
+    try:
+        from app.api.picture_api import picture_api
+        app.register_blueprint(picture_api, url_prefix='/api')
+    except ImportError as e:
+        app.logger.warning(f"Picture API routes not available: {e}")
+    
+    try:
+        from app.api.brand_api import brand_api
+        app.register_blueprint(brand_api, url_prefix='/api')
+    except ImportError as e:
+        app.logger.warning(f"Brand API routes not available: {e}")
     
     try:
         from app.api.supplier_api import supplier_api_bp
-        app.register_blueprint(supplier_api_bp)
+        app.register_blueprint(supplier_api_bp)  # Already has url_prefix
     except ImportError as e:
         app.logger.warning(f"Supplier API routes not available: {e}")
     
     try:
         from app.api.variant_api import variant_api
-        app.register_blueprint(variant_api)
+        app.register_blueprint(variant_api)  # Already has url_prefix
     except ImportError as e:
         app.logger.warning(f"Variant API routes not available: {e}")
     
     try:
         from app.api.keyword_api import keyword_api
-        app.register_blueprint(keyword_api)
+        app.register_blueprint(keyword_api)  # Already has url_prefix
     except ImportError as e:
         app.logger.warning(f"Keyword API routes not available: {e}")
+    
+    # Register web blueprints
+    try:
+        from app.web.component_routes import component_web
+        app.register_blueprint(component_web)
+    except ImportError as e:
+        app.logger.warning(f"Component web routes not available: {e}")
+    
+    try:
+        from app.web.variant_routes import variant_web
+        app.register_blueprint(variant_web)
+    except ImportError as e:
+        app.logger.warning(f"Variant web routes not available: {e}")
+    
+    try:
+        from app.web.utility_routes import utility_web
+        app.register_blueprint(utility_web)
+    except ImportError as e:
+        app.logger.warning(f"Utility web routes not available: {e}")
+    
+    try:
+        from app.web.supplier_routes import supplier_bp, suppliers_bp
+        app.register_blueprint(supplier_bp)
+        app.register_blueprint(suppliers_bp)
+    except ImportError as e:
+        app.logger.warning(f"Supplier web routes not available: {e}")
     
     try:
         from app.brand_routes import brand_bp
         app.register_blueprint(brand_bp)
     except ImportError as e:
         app.logger.warning(f"Brand routes not available: {e}")
-    
-    # Register main routes (legacy)
-    from app.routes import main
-    app.register_blueprint(main)
 
     return app

@@ -870,15 +870,15 @@
             <p class="text-muted mb-0 small">Manage and organize your component library  TEST2</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
+            <a href="{{ url_for('component_web.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm d-flex align-items-center">
                 <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
                 New Component
             </a>
-            <a href="{{ url_for('main.upload_csv') }}" class="btn btn-success-modern btn-modern btn-sm d-flex align-items-center">
+            <a href="{{ url_for('utility_web.upload') }}" class="btn btn-success-modern btn-modern btn-sm d-flex align-items-center">
                 <i data-lucide="upload" class="me-1" style="width: 16px; height: 16px;"></i>
                 Bulk Upload
             </a>
-            <a href="{{ url_for('main.suppliers') }}" class="btn btn-outline-primary btn-modern btn-sm d-flex align-items-center">
+            <a href="{{ url_for('supplier.suppliers') }}" class="btn btn-outline-primary btn-modern btn-sm d-flex align-items-center">
                 <i data-lucide="users" class="me-1" style="width: 16px; height: 16px;"></i>
                 Suppliers
             </a>
@@ -925,7 +925,7 @@
     <!-- Compact Filter Panel -->
     <!-- Multi-Select Filter Panel with Enhanced Dropdowns -->
 <div class="filter-panel">
-    <form method="GET" action="{{ url_for('main.index') }}" x-ref="filterForm" @submit.prevent="handleFormSubmit($event)">
+    <form method="GET" action="{{ url_for('component_web.index') }}" x-ref="filterForm" @submit.prevent="handleFormSubmit($event)">
         <!-- Search Bar -->
         <div class="row mb-2">
             <div class="col-md-8">
@@ -1276,7 +1276,7 @@
                 {% set _ = current_params.update({k: v}) %}
                 {% endif %}
                 {% endfor %}
-                <a href="{{ url_for('main.index', **current_params) }}"
+                <a href="{{ url_for('component_web.index', **current_params) }}"
                    class="show-all-btn active">
                     <i data-lucide="list" class="me-1" style="width: 12px; height: 12px;"></i>
                     Showing All ({{ components.total }})
@@ -1287,7 +1287,7 @@
                 {% set _ = current_params.update({k: v}) %}
                 {% endfor %}
                 {% set _ = current_params.update({'show_all': 'true'}) %}
-                <a href="{{ url_for('main.index', **current_params) }}"
+                <a href="{{ url_for('component_web.index', **current_params) }}"
                    class="show-all-btn"
                    onclick="return confirmShowAll({{ components.total if components.total <= 1000 else 1000 }})">
                     <i data-lucide="maximize-2" class="me-1" style="width: 12px; height: 12px;"></i>
@@ -1532,12 +1532,12 @@
 
                     <!-- Action Buttons -->
                     <div class="btn-group w-100 mt-auto" role="group">
-                        <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                        <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                            class="btn btn-outline-primary btn-sm"
                            @click.stop>
                             <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
                         </a>
-                        <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                        <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                            class="btn btn-outline-warning btn-sm"
                            @click.stop>
                             <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
@@ -1655,11 +1655,11 @@
                                     {{ component.get_status_display() }}
                                 </span>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                    <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                                        class="btn btn-outline-primary btn-sm">
                                         <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
                                     </a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                                    <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                                        class="btn btn-outline-warning btn-sm">
                                         <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
                                     </a>
@@ -1694,7 +1694,7 @@
                     </div>
                     <div class="modal-footer modal-footer-modern">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                        <form action="{{ url_for('component_web.delete_component', id=component.id) }}" method="POST" class="d-inline">
                             <button type="submit" class="btn btn-danger-modern btn-modern btn-sm">
                                 <i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>
                                 Delete
@@ -1713,7 +1713,7 @@
         <ul class="pagination pagination-modern justify-content-center">
             {% if components.has_prev %}
             <li class="page-item">
-                {% set prev_url = url_for('main.index', page=components.prev_num) %}
+                {% set prev_url = url_for('component_web.index', page=components.prev_num) %}
                 {% for key, value in request.args.items() %}
                     {% if key != 'page' %}
                         {% set prev_url = prev_url + ('&' if '?' in prev_url else '?') + key + '=' + value %}
@@ -1733,7 +1733,7 @@
             </li>
             {% else %}
             <li class="page-item">
-                {% set page_url = url_for('main.index', page=page_num) %}
+                {% set page_url = url_for('component_web.index', page=page_num) %}
                 {% for key, value in request.args.items() %}
                     {% if key != 'page' %}
                         {% set page_url = page_url + ('&' if '?' in page_url else '?') + key + '=' + value %}
@@ -1751,7 +1751,7 @@
 
             {% if components.has_next %}
             <li class="page-item">
-                {% set next_url = url_for('main.index', page=components.next_num) %}
+                {% set next_url = url_for('component_web.index', page=components.next_num) %}
                 {% for key, value in request.args.items() %}
                     {% if key != 'page' %}
                         {% set next_url = next_url + ('&' if '?' in next_url else '?') + key + '=' + value %}
@@ -1781,12 +1781,12 @@
             {% endif %}
         </p>
         <div class="d-flex gap-2 justify-content-center">
-            <a href="{{ url_for('main.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm">
+            <a href="{{ url_for('component_web.new_component') }}" class="btn btn-primary-modern btn-modern btn-sm">
                 <i data-lucide="plus" class="me-1" style="width: 16px; height: 16px;"></i>
                 Add Component
             </a>
             {% if search or request.args.get('component_type_id') or request.args.get('category_id') or request.args.get('supplier_id') or request.args.get('brand_id') %}
-            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ url_for('component_web.index') }}" class="btn btn-outline-secondary btn-sm">
                 <i data-lucide="x" class="me-1" style="width: 16px; height: 16px;"></i>
                 Clear Filters
             </a>

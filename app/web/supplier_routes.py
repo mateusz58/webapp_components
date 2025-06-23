@@ -9,6 +9,8 @@ from app.utils.database import safe_commit, safe_delete
 from flask import current_app
 
 supplier_bp = Blueprint('supplier', __name__, url_prefix='/supplier')
+# Additional blueprint for /suppliers route without prefix
+suppliers_bp = Blueprint('suppliers', __name__)
 
 
 @supplier_bp.route('s')
@@ -204,3 +206,10 @@ def delete_supplier(id):
             'Error deleting supplier. Please try again.',
             'supplier.suppliers'
         )
+
+
+# Route for /suppliers (without prefix)
+@suppliers_bp.route('/suppliers')
+def suppliers_main():
+    """Display all suppliers - main route."""
+    return suppliers()

@@ -314,7 +314,7 @@
                     <!-- Component Info -->
                     <div class="card-body">
                         <h6 class="card-title fw-bold mb-2">
-                            <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                            <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                                class="text-decoration-none">
                                 {{ component.product_number }}
                             </a>
@@ -375,12 +375,12 @@
                                 {{ component.created_at.strftime('%Y-%m-%d') if component.created_at else 'N/A' }}
                             </small>
                             <div class="d-flex">
-                                <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                                    class="quick-action-btn btn-outline-primary"
                                    title="View Details">
                                     <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                                 </a>
-                                <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                                <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                                    class="quick-action-btn btn-outline-secondary"
                                    title="Edit Component">
                                     <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
@@ -414,7 +414,7 @@
                         {% for component in components.items %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                                    class="fw-semibold text-decoration-none">
                                     {{ component.product_number }}
                                 </a>
@@ -447,12 +447,12 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-1">
-                                    <a href="{{ url_for('main.component_detail', id=component.id) }}"
+                                    <a href="{{ url_for('component_web.component_detail', id=component.id) }}"
                                        class="btn btn-sm btn-outline-primary"
                                        title="View Details">
                                         <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
                                     </a>
-                                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                                    <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                                        class="btn btn-sm btn-outline-secondary"
                                        title="Edit">
                                         <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
@@ -534,11 +534,11 @@
                         Start by creating components and associating them with this brand.
                     </p>
                     <div class="d-flex gap-2 justify-content-center">
-                        <a href="{{ url_for('main.new_component') }}" class="btn btn-primary">
+                        <a href="{{ url_for('component_web.new_component') }}" class="btn btn-primary">
                             <i data-lucide="plus" style="width: 16px; height: 16px;" class="me-2"></i>
                             Create Component
                         </a>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('component_web.index') }}" class="btn btn-outline-secondary">
                             <i data-lucide="list" style="width: 16px; height: 16px;" class="me-2"></i>
                             View All Components
                         </a>

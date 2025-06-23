@@ -28,7 +28,7 @@
     <!-- Compact Navigation -->
     <nav class="navbar navbar-expand-lg navbar-modern">
         <div class="container-fluid px-3">
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('component_web.index') }}">
                 <i data-lucide="layers" class="me-2" style="width: 24px; height: 24px;"></i>
                 ComponentHub
             </a>
@@ -40,25 +40,25 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.index') }}">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('component_web.index') }}">
                             <i data-lucide="grid-3x3" class="me-1" style="width: 16px; height: 16px;"></i>
                             Components
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.suppliers') }}">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('supplier.suppliers') }}">
                             <i data-lucide="truck" class="me-1" style="width: 16px; height: 16px;"></i>
                             Suppliers
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.new_component') }}">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('component_web.new_component') }}">
                             <i data-lucide="plus-circle" class="me-1" style="width: 16px; height: 16px;"></i>
                             New Component
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" href="{{ url_for('main.upload_csv') }}">
+                        <a class="nav-link d-flex align-items-center" href="{{ url_for('utility_web.upload') }}">
                             <i data-lucide="upload" class="me-1" style="width: 16px; height: 16px;"></i>
                             Bulk Upload
                         </a>

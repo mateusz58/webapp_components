@@ -98,6 +98,29 @@ def safe_bulk_update(instances_data: List[tuple]) -> tuple:
     return success_count, error_count, errors
 
 
+def safe_bulk_delete(instances: List[Any]) -> tuple:
+    """
+    Safely bulk delete instances.
+    Returns (success_count, error_count, errors) tuple.
+    """
+    success_count = 0
+    error_count = 0
+    errors = []
+    
+    for instance in instances:
+        try:
+            db.session.delete(instance)
+            db.session.commit()
+            success_count += 1
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            error_count += 1
+            errors.append(f"Error deleting {instance}: {str(e)}")
+            current_app.logger.error(f"Bulk delete error: {str(e)}")
+    
+    return success_count, error_count, errors
+
+
 def paginate_query(query, page: int = 1, per_page: int = 20, error_out: bool = False):
     """Paginate a query with error handling."""
     try:

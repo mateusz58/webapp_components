@@ -636,7 +636,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                    <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                        class="btn btn-warning-modern btn-modern">
                         <i data-lucide="edit" class="me-2" style="width: 18px; height: 18px;"></i>
                         Edit
@@ -716,7 +716,7 @@
                         <div class="text-center">
                             <i data-lucide="image" style="width: 60px; height: 60px;"></i>
                             <p class="mt-3 text-muted mb-0">No images available</p>
-                            <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                            <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                                class="btn btn-primary-modern btn-modern mt-3">
                                 <i data-lucide="upload" class="me-2" style="width: 16px; height: 16px;"></i>
                                 Add Images
@@ -782,7 +782,7 @@
 
                 <!-- Status Update Form -->
                 <div class="status-update-form" :class="{ 'show': activeStatusForm === 'proto' }">
-                    <form method="POST" action="{{ url_for('main.update_proto_status', id=component.id) }}">
+                    <form method="POST" action="{{ url_for('component_web.update_proto_status', id=component.id) }}">
                         <div class="row">
                             <div class="col-md-4">
                                 <select name="status" class="form-select form-control-modern" required>
@@ -840,7 +840,7 @@
 
                 <!-- SMS Status Update Form -->
                 <div class="status-update-form" :class="{ 'show': activeStatusForm === 'sms' }">
-                    <form method="POST" action="{{ url_for('main.update_sms_status', id=component.id) }}">
+                    <form method="POST" action="{{ url_for('component_web.update_sms_status', id=component.id) }}">
                         <div class="row">
                             <div class="col-md-4">
                                 <select name="status" class="form-select form-control-modern" required>
@@ -898,7 +898,7 @@
 
                 <!-- PPS Status Update Form -->
                 <div class="status-update-form" :class="{ 'show': activeStatusForm === 'pps' }">
-                    <form method="POST" action="{{ url_for('main.update_pps_status', id=component.id) }}">
+                    <form method="POST" action="{{ url_for('component_web.update_pps_status', id=component.id) }}">
                         <div class="row">
                             <div class="col-md-4">
                                 <select name="status" class="form-select form-control-modern" required>
@@ -1072,7 +1072,7 @@
                                             <small class="text-muted">
                                                 {{ variant.variant_pictures|length }} image{{ 's' if variant.variant_pictures|length != 1 else '' }}
                                             </small>
-                                            <a href="{{ url_for('main.edit_variant', component_id=component.id, variant_id=variant.id) }}"
+                                            <a href="{{ url_for('variant_web.edit_variant', component_id=component.id, variant_id=variant.id) }}"
                                                class="btn btn-sm btn-outline-primary">
                                                 Edit
                                             </a>
@@ -1086,7 +1086,7 @@
                         <div class="text-center py-5">
                             <i data-lucide="palette" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
                             <p class="text-muted mt-3 mb-0">No color variants yet</p>
-                            <a href="{{ url_for('main.new_variant', id=component.id) }}"
+                            <a href="{{ url_for('variant_web.new_variant', id=component.id) }}"
                                class="btn btn-primary-modern btn-modern mt-3">
                                 Add First Variant
                             </a>
@@ -1103,7 +1103,7 @@
                 <h5 class="fw-bold mb-3">Quick Actions</h5>
 
                 <div class="d-grid gap-2">
-                    <a href="{{ url_for('main.edit_component', id=component.id) }}"
+                    <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
                        class="btn btn-primary-modern btn-modern">
                         <i data-lucide="edit" class="me-2" style="width: 18px; height: 18px;"></i>
                         Edit Component
@@ -1116,7 +1116,7 @@
 
                     <hr>
 
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                    <a href="{{ url_for('component_web.index') }}" class="btn btn-outline-secondary">
                         <i data-lucide="arrow-left" class="me-2" style="width: 18px; height: 18px;"></i>
                         Back to List
                     </a>
@@ -1175,7 +1175,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="{{ url_for('main.delete_component', id=component.id) }}" method="POST" class="d-inline">
+                    <form action="{{ url_for('component_web.delete_component', id=component.id) }}" method="POST" class="d-inline">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
                 </div>
