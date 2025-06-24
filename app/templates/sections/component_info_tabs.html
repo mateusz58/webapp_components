@@ -1,0 +1,176 @@
+<!-- Information Tabs -->
+<div class="info-tabs">
+    <ul class="nav nav-tabs nav-tabs-modern" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    :class="{ 'active': activeTab === 'basic-info' }"
+                    @click="selectTab('basic-info')"
+                    type="button">
+                <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
+                Basic Info
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link"
+                    :class="{ 'active': activeTab === 'properties' }"
+                    @click="selectTab('properties')"
+                    type="button">
+                <i data-lucide="settings" class="me-2" style="width: 16px; height: 16px;"></i>
+                Properties
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link"
+                    :class="{ 'active': activeTab === 'keywords' }"
+                    @click="selectTab('keywords')"
+                    type="button">
+                <i data-lucide="tag" class="me-2" style="width: 16px; height: 16px;"></i>
+                Keywords
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link"
+                    :class="{ 'active': activeTab === 'variants' }"
+                    @click="selectTab('variants')"
+                    type="button">
+                <i data-lucide="palette" class="me-2" style="width: 16px; height: 16px;"></i>
+                Variants ({{ component.variants|length }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content tab-content-modern">
+        <!-- Basic Info Tab -->
+        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'basic-info' }" id="basic-info" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Product Number</label>
+                        <p class="text-muted mb-0">{{ component.product_number }}</p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Component Type</label>
+                        <p class="text-muted mb-0">{{ component.component_type.name }}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Supplier</label>
+                        <p class="text-muted mb-0">{{ component.supplier.supplier_code }}</p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Categories</label>
+                        <div class="text-muted mb-0">
+                            {% if component.categories %}
+                                {% for category in component.categories %}
+                                    <span class="badge bg-primary me-1">{{ category.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No categories assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if component.description %}
+            <div class="mb-0">
+                <label class="form-label fw-bold">Description</label>
+                <p class="text-muted mb-0">{{ component.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Properties Tab -->
+        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'properties' }" id="properties" role="tabpanel">
+            {% if component.properties %}
+            <div class="row g-4">
+                {% for key, prop in component.properties.items() %}
+                <div class="col-md-6">
+                    <div class="p-4 bg-light rounded h-100">
+                        <label class="form-label fw-bold mb-3">{{ key|title }}</label>
+                        {% if prop.value is iterable and prop.value is not string %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for value in prop.value %}
+                            <span class="badge bg-primary">{{ value }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted mb-0">{{ prop.value }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i data-lucide="settings" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                <p class="text-muted mt-3 mb-0">No properties defined</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Keywords Tab -->
+        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'keywords' }" id="keywords" role="tabpanel">
+            {% if component.keywords %}
+            <div class="d-flex flex-wrap gap-2">
+                {% for keyword in component.keywords %}
+                <span class="badge bg-primary px-3 py-2">{{ keyword.name }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                <p class="text-muted mt-3 mb-0">No keywords assigned</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Variants Tab -->
+        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'variants' }" id="variants" role="tabpanel">
+            {% if component.variants %}
+            <div class="row g-4">
+                {% for variant in component.variants %}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="variant-color-swatch me-3"
+                                     style="background: {{ variant.color.hex_code or '#ccc' }}"></div>
+                                <div>
+                                    <h6 class="mb-0">{{ variant.get_color_display_name() }}</h6>
+                                    {% if variant.variant_sku %}
+                                    <small class="text-muted">{{ variant.variant_sku }}</small>
+                                    {% else %}
+                                    <small class="text-muted">{{ variant.color.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    {{ variant.variant_pictures|length }} image{{ 's' if variant.variant_pictures|length != 1 else '' }}
+                                </small>
+                                <a href="{{ url_for('variant_web.edit_variant', component_id=component.id, variant_id=variant.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Edit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i data-lucide="palette" style="width: 48px; height: 48px; color: var(--color-secondary);"></i>
+                <p class="text-muted mt-3 mb-0">No color variants yet</p>
+                <a href="{{ url_for('variant_web.new_variant', id=component.id) }}"
+                   class="btn btn-primary-modern btn-modern mt-3">
+                    Add First Variant
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

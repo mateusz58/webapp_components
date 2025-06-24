@@ -1,0 +1,26 @@
+<!-- Sidebar -->
+<div class="col-lg-4">
+    <div class="action-buttons">
+        <h5 class="fw-bold mb-3">Quick Actions</h5>
+
+        <div class="d-grid gap-2">
+            <a href="{{ url_for('component_web.edit_component', id=component.id) }}"
+               class="btn btn-primary-modern btn-modern">
+                <i data-lucide="edit" class="me-2" style="width: 18px; height: 18px;"></i>
+                Edit Component
+            </a>
+
+            <button class="btn btn-warning-modern btn-modern" @click="duplicateComponent({{ component.id }})">
+                <i data-lucide="copy" class="me-2" style="width: 18px; height: 18px;"></i>
+                Duplicate
+            </button>
+
+            <hr>
+
+            <a href="{{ url_for('component_web.index') }}" class="btn btn-outline-secondary">
+                <i data-lucide="arrow-left" class="me-2" style="width: 18px; height: 18px;"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
