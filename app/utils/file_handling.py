@@ -60,8 +60,8 @@ def optimize_image(image_file, max_size: Tuple[int, int] = (1920, 1920), quality
         return None
 
 
-def save_uploaded_file(file, folder: str = 'uploads', optimize_images: bool = True) -> Optional[str]:
-    """Save uploaded file and return the relative URL."""
+def save_uploaded_file(file, folder: str = '', optimize_images: bool = True) -> Optional[str]:
+    """Save uploaded file and return the WebDAV URL."""
     if not file or not allowed_file(file.filename):
         return None
 
@@ -71,12 +71,30 @@ def save_uploaded_file(file, folder: str = 'uploads', optimize_images: bool = Tr
         if not unique_filename:
             return None
 
-        # Create upload directory if it doesn't exist
-        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], folder)
-        os.makedirs(upload_path, exist_ok=True)
-
-        # Full file path
-        file_path = os.path.join(upload_path, unique_filename)
+        # Try to save to WebDAV mount point first
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+        
+        # Save directly to WebDAV root (no subfolder)
+        if folder:
+            upload_path = os.path.join(upload_folder, folder)
+        else:
+            upload_path = upload_folder
+        
+        try:
+            os.makedirs(upload_path, exist_ok=True)
+            file_path = os.path.join(upload_path, unique_filename)
+            webdav_available = True
+        except (OSError, PermissionError) as e:
+            current_app.logger.warning(f"WebDAV mount not available: {e}. Falling back to local storage.")
+            # Fall back to local storage
+            local_folder = current_app.config.get('LOCAL_UPLOAD_FOLDER', 'app/static/uploads')
+            if folder:
+                upload_path = os.path.join(local_folder, folder)
+            else:
+                upload_path = local_folder
+            os.makedirs(upload_path, exist_ok=True)
+            file_path = os.path.join(upload_path, unique_filename)
+            webdav_available = False
 
         # Optimize images if requested and file is an image
         if optimize_images and any(ext in file.filename.lower() for ext in ['jpg', 'jpeg', 'png']):
@@ -91,8 +109,20 @@ def save_uploaded_file(file, folder: str = 'uploads', optimize_images: bool = Tr
             # Save file directly
             file.save(file_path)
 
-        # Return relative URL for web access
-        return f"/static/uploads/{folder}/{unique_filename}"
+        # Return appropriate URL based on storage location
+        if webdav_available:
+            # Return WebDAV URL - directly to file without uploads folder
+            url_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+            if folder:
+                return f"{url_prefix}/{folder}/{unique_filename}"
+            else:
+                return f"{url_prefix}/{unique_filename}"
+        else:
+            # Return local URL for fallback
+            if folder:
+                return f"/static/uploads/{folder}/{unique_filename}"
+            else:
+                return f"/static/uploads/{unique_filename}"
 
     except Exception as e:
         current_app.logger.error(f"File upload error: {str(e)}")
@@ -102,12 +132,21 @@ def save_uploaded_file(file, folder: str = 'uploads', optimize_images: bool = Tr
 def delete_file(file_url: str) -> bool:
     """Delete a file given its URL."""
     try:
-        if not file_url or not file_url.startswith('/static/uploads/'):
+        if not file_url:
             return False
         
-        # Convert URL to file path
-        relative_path = file_url.replace('/static/uploads/', '')
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], relative_path)
+        # Handle WebDAV URLs - format: http://31.182.67.115/webdav/components/filename.jpg
+        webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+        if file_url.startswith(webdav_prefix):
+            # Convert WebDAV URL to local file path
+            relative_path = file_url.replace(webdav_prefix + '/', '')
+            file_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/components'), relative_path)
+        elif file_url.startswith('/static/uploads/'):
+            # Handle local URLs
+            relative_path = file_url.replace('/static/uploads/', '')
+            file_path = os.path.join(current_app.config.get('LOCAL_UPLOAD_FOLDER', 'app/static/uploads'), relative_path)
+        else:
+            return False
         
         if os.path.exists(file_path):
             os.remove(file_path)

@@ -89,8 +89,8 @@ def create_app(config_class=Config):
         app.logger.warning(f"Picture API routes not available: {e}")
     
     try:
-        from app.api.brand_api import brand_api
-        app.register_blueprint(brand_api, url_prefix='/api')
+        from app.api.brand_api import brand_api_bp
+        app.register_blueprint(brand_api_bp)  # Already has url_prefix
     except ImportError as e:
         app.logger.warning(f"Brand API routes not available: {e}")
     
@@ -139,9 +139,9 @@ def create_app(config_class=Config):
         app.logger.warning(f"Supplier web routes not available: {e}")
     
     try:
-        from app.brand_routes import brand_bp
+        from app.web.brand_routes import brand_bp
         app.register_blueprint(brand_bp)
     except ImportError as e:
-        app.logger.warning(f"Brand routes not available: {e}")
+        app.logger.warning(f"Brand web routes not available: {e}")
 
     return app

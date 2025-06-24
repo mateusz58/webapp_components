@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, ComponentTypeProperty, Color
+from app.utils.file_handling import save_uploaded_file, allowed_file, delete_file
 from sqlalchemy import or_, and_, func, desc, asc
 from sqlalchemy.orm import joinedload
 import os
@@ -23,7 +24,6 @@ def _get_form_data():
         'product_number': request.form.get('product_number', '').strip(),
         'description': request.form.get('description', '').strip(),
         'supplier_id': request.form.get('supplier_id', type=int),
-        'category_id': request.form.get('category_id', type=int),
         'component_type_id': request.form.get('component_type_id', type=int)
     }
 
@@ -39,6 +39,85 @@ def _validate_required_fields(form_data):
         return False
     
     return True
+
+
+def _validate_component_variants(is_edit=False, component_id=None):
+    """Validate component variants and their pictures"""
+    errors = []
+    
+    # Check if component has at least one variant
+    has_variants = False
+    variant_count = 0
+    
+    # Check existing variants (for edit mode)
+    if is_edit and component_id:
+        existing_variants = ComponentVariant.query.filter_by(component_id=component_id).all()
+        for variant in existing_variants:
+            variant_key = f'variant_color_{variant.id}'
+            if variant_key in request.form:
+                has_variants = True
+                variant_count += 1
+                
+                # Check if this variant has pictures
+                picture_files = request.files.getlist(f'variant_images_{variant.id}[]')
+                existing_pictures = request.form.getlist('existing_pictures')
+                variant_pictures = [p for p in variant.variant_pictures if str(p.id) in existing_pictures]
+                
+                if not picture_files and not variant_pictures:
+                    color_name = variant.color.name if variant.color else "Unknown"
+                    errors.append(f'Variant "{color_name}" must have at least one picture.')
+    
+    # Check new variants
+    new_variant_count = 1
+    while True:
+        color_key = f'variant_color_new_{new_variant_count}'
+        if color_key not in request.form:
+            break
+            
+        color_id = request.form.get(color_key)
+        custom_color_key = f'variant_custom_color_new_{new_variant_count}'
+        custom_color_name = request.form.get(custom_color_key, '').strip()
+        
+        # Check if color is selected
+        if color_id or custom_color_name:
+            has_variants = True
+            variant_count += 1
+            
+            # Check if this variant has pictures
+            picture_files = request.files.getlist(f'variant_images_new_{new_variant_count}[]')
+            valid_files = [f for f in picture_files if f and f.filename and allowed_file(f.filename)]
+            
+            if not valid_files:
+                color_display = custom_color_name if custom_color_name else f"Color ID {color_id}"
+                errors.append(f'Variant "{color_display}" must have at least one picture.')
+        
+        new_variant_count += 1
+    
+    # Check if component has at least one variant
+    if not has_variants:
+        errors.append('Component must have at least one color variant.')
+    
+    return errors
+
+
+def _validate_duplicate_product_number(product_number, supplier_id, component_id=None):
+    """Check for duplicate product number with same supplier"""
+    query = Component.query.filter_by(
+        product_number=product_number,
+        supplier_id=supplier_id
+    )
+    
+    # Exclude current component in edit mode
+    if component_id:
+        query = query.filter(Component.id != component_id)
+    
+    existing = query.first()
+    
+    if existing:
+        supplier_name = existing.supplier.supplier_code if existing.supplier else "No Supplier"
+        return f'A component with product number "{product_number}" already exists for supplier "{supplier_name}".'
+    
+    return None
 
 
 def _handle_component_properties(component, component_type_id):
@@ -71,6 +150,26 @@ def _handle_brand_associations(component, is_edit=False):
                 brand_id=int(brand_id)
             )
             db.session.add(brand_assoc)
+
+
+def _handle_categories(component, is_edit=False):
+    """Handle component-category associations"""
+    # Try to get category_ids[] (multiple categories) or fall back to category_id (single category)
+    category_ids = request.form.getlist('category_ids[]')
+    if not category_ids:
+        # Fall back to single category_id for backward compatibility
+        single_category_id = request.form.get('category_id')
+        if single_category_id:
+            category_ids = [single_category_id]
+    
+    if is_edit:
+        component.categories.clear()
+    
+    for category_id in category_ids:
+        if category_id and str(category_id).isdigit():
+            category = Category.query.get(int(category_id))
+            if category and category not in component.categories:
+                component.categories.append(category)
 
 
 def _handle_keywords(component, is_edit=False):
@@ -121,6 +220,291 @@ def _handle_picture_uploads(component, is_edit=False):
                 picture_order += 1
 
 
+def _handle_variants(component, is_edit=False):
+    """Handle component variants and their pictures"""
+    
+    all_pending_pictures = []
+    
+    if is_edit:
+        # Handle existing variants - check for updates/removals
+        existing_variant_ids = []
+        for variant in component.variants:
+            variant_key = f'variant_color_{variant.id}'
+            if variant_key in request.form:
+                # Update variant color if changed
+                new_color_id = request.form.get(variant_key, type=int)
+                custom_color_key = f'variant_custom_color_{variant.id}'
+                
+                # Handle custom color creation
+                if new_color_id == 0 or request.form.get(variant_key) == 'custom':
+                    custom_color_name = request.form.get(custom_color_key, '').strip()
+                    if custom_color_name:
+                        # Create new color
+                        new_color = Color(name=custom_color_name)
+                        db.session.add(new_color)
+                        db.session.flush()
+                        new_color_id = new_color.id
+                
+                if new_color_id and new_color_id != variant.color_id:
+                    # Color changed - mark for picture renaming
+                    variant.color_id = new_color_id
+                    # SKU will be regenerated by database trigger
+                    # Picture names will be regenerated and files renamed after commit
+                
+                existing_variant_ids.append(variant.id)
+                
+                # Handle variant picture uploads (returns pending pictures)
+                pending_pictures = _handle_variant_pictures(variant, variant.id)
+                all_pending_pictures.extend(pending_pictures)
+            else:
+                # Variant was removed - delete it (cascade will handle pictures)
+                db.session.delete(variant)
+    
+    # Handle new variants
+    new_variant_count = 1
+    while True:
+        color_key = f'variant_color_new_{new_variant_count}'
+        if color_key not in request.form:
+            break
+            
+        color_id = request.form.get(color_key, type=int)
+        custom_color_key = f'variant_custom_color_new_{new_variant_count}'
+        
+        # Handle custom color for new variant
+        if color_id == 0 or request.form.get(color_key) == 'custom':
+            custom_color_name = request.form.get(custom_color_key, '').strip()
+            if custom_color_name:
+                # Create new color
+                new_color = Color(name=custom_color_name)
+                db.session.add(new_color)
+                db.session.flush()
+                color_id = new_color.id
+        
+        if color_id:
+            # Create new variant
+            variant = ComponentVariant(
+                component_id=component.id,
+                color_id=color_id,
+                is_active=True
+            )
+            db.session.add(variant)
+            db.session.flush()  # Get variant ID for pictures
+            
+            # Handle pictures for new variant (returns pending pictures)
+            pending_pictures = _handle_variant_pictures(variant, f'new_{new_variant_count}')
+            all_pending_pictures.extend(pending_pictures)
+        
+        new_variant_count += 1
+    
+    return all_pending_pictures
+
+
+def _handle_variant_pictures(variant, variant_form_id):
+    """Handle picture uploads and management for a specific variant"""
+    import os
+    import io
+    
+    # Handle new picture uploads
+    picture_files = request.files.getlist(f'variant_images_{variant_form_id}[]')
+    
+    # Get current max order for this variant
+    max_order = db.session.query(func.max(Picture.picture_order)).filter_by(
+        variant_id=variant.id
+    ).scalar() or 0
+    
+    # Store file data in memory until we have the database-generated names
+    pending_pictures = []
+    
+    for picture_file in picture_files:
+        if picture_file and allowed_file(picture_file.filename):
+            # Read file into memory
+            file_data = io.BytesIO(picture_file.read())
+            file_ext = os.path.splitext(picture_file.filename)[1].lower()
+            max_order += 1
+            
+            # Create picture record (database trigger will generate picture_name)
+            picture = Picture(
+                component_id=variant.component_id,
+                variant_id=variant.id,
+                url='',  # Will be set after we save the file with proper name
+                picture_order=max_order,
+                alt_text=f"{variant.component.product_number} - {variant.color.name} - Image {max_order}"
+            )
+            db.session.add(picture)
+            
+            # Store file data for later saving
+            pending_pictures.append({
+                'picture': picture,
+                'file_data': file_data,
+                'extension': file_ext
+            })
+    
+    # Handle existing pictures (for edit mode)
+    if isinstance(variant_form_id, int):  # Only for existing variants
+        # Check which pictures to keep
+        existing_picture_ids = request.form.getlist('existing_pictures')
+        for picture in variant.variant_pictures:
+            if str(picture.id) not in existing_picture_ids:
+                # Delete the file
+                if picture.url:
+                    delete_file(picture.url)
+                # Delete the record (will be handled by cascade)
+                db.session.delete(picture)
+    
+    return pending_pictures
+
+
+def _handle_picture_renames(component, old_data=None):
+    """Handle renaming of existing picture files when component/supplier/color data changes"""
+    import os
+    
+    webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+    
+    # Get all pictures for this component
+    all_pictures = Picture.query.filter_by(component_id=component.id).all()
+    
+    for picture in all_pictures:
+        if picture.url:
+            try:
+                # Get current filename from URL
+                current_filename = picture.url.split('/')[-1]
+                current_path = os.path.join(upload_folder, current_filename)
+                
+                # Refresh picture to get new database-generated name
+                db.session.refresh(picture)
+                
+                if picture.picture_name:
+                    # Get file extension from current filename
+                    ext = os.path.splitext(current_filename)[1]
+                    new_filename = f"{picture.picture_name}{ext}"
+                    new_path = os.path.join(upload_folder, new_filename)
+                    
+                    # Only rename if filename actually changed
+                    if current_filename != new_filename:
+                        if os.path.exists(current_path):
+                            # Remove new file if it exists (shouldn't happen but safety)
+                            if os.path.exists(new_path):
+                                os.remove(new_path)
+                            
+                            # Rename file
+                            os.rename(current_path, new_path)
+                            
+                            # Update URL in database
+                            picture.url = f"{webdav_prefix}/{new_filename}"
+                            db.session.add(picture)
+                            
+                            current_app.logger.info(f"Renamed picture from {current_filename} to {new_filename}")
+                        
+            except Exception as e:
+                current_app.logger.error(f"Error renaming picture {picture.id}: {str(e)}")
+                continue
+
+
+def _handle_picture_deletions(component):
+    """Handle deletion of pictures marked for removal"""
+    
+    # Handle component picture deletions
+    pictures_to_delete = request.form.getlist('delete_pictures')
+    for picture_id in pictures_to_delete:
+        if picture_id.isdigit():
+            picture = Picture.query.filter_by(
+                id=int(picture_id),
+                component_id=component.id,
+                variant_id=None  # Component pictures only
+            ).first()
+            
+            if picture:
+                # Delete file from disk
+                if picture.url:
+                    delete_file(picture.url)
+                
+                # Delete from database
+                db.session.delete(picture)
+    
+    # Handle variant picture deletions (already handled in _handle_variant_pictures)
+    # This is handled per-variant in the variant processing
+
+
+def _save_pending_pictures(pending_pictures):
+    """Save pending pictures with database-generated names to /components/"""
+    import os
+    from PIL import Image
+    
+    webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+    
+    for pending in pending_pictures:
+        picture = pending['picture']
+        file_data = pending['file_data']
+        extension = pending['extension']
+        
+        try:
+            # Refresh picture from database to get the generated picture_name
+            db.session.flush()  # Ensure the picture is in database first
+            db.session.refresh(picture)
+            
+            if not picture.picture_name:
+                current_app.logger.error(f"No picture_name generated for picture {picture.id}")
+                continue
+            
+            # Final filename with extension - ALL pictures go directly in /components/
+            filename = f"{picture.picture_name}{extension}"
+            file_path = os.path.join(upload_folder, filename)
+            
+            # Save the file from memory
+            file_data.seek(0)
+            
+            # Optimize image if it's an image file
+            if extension.lower() in ['.jpg', '.jpeg', '.png']:
+                try:
+                    image = Image.open(file_data)
+                    
+                    # Convert RGBA to RGB if necessary
+                    if image.mode in ('RGBA', 'LA'):
+                        background = Image.new('RGB', image.size, (255, 255, 255))
+                        background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+                        image = background
+                    
+                    # Resize if larger than max size
+                    max_size = (1920, 1920)
+                    image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                    
+                    # Save optimized image
+                    image.save(file_path, format='JPEG', quality=85, optimize=True)
+                except Exception as e:
+                    # If optimization fails, save original
+                    current_app.logger.warning(f"Image optimization failed, saving original: {e}")
+                    file_data.seek(0)
+                    with open(file_path, 'wb') as f:
+                        f.write(file_data.read())
+            else:
+                # Save non-image files directly
+                with open(file_path, 'wb') as f:
+                    f.write(file_data.read())
+            
+            # Set the proper URL - direct path, no subfolders
+            picture.url = f"{webdav_prefix}/{filename}"
+            db.session.add(picture)
+            
+            current_app.logger.info(f"Set picture URL for {picture.id}: {picture.url}")
+            current_app.logger.info(f"Picture saved to: {file_path}")
+            
+        except Exception as e:
+            current_app.logger.error(f"Error saving picture {picture.id}: {str(e)}")
+            # Continue with other pictures even if one fails
+            continue
+    
+    # Commit all URL updates in batch
+    try:
+        db.session.commit()
+        current_app.logger.info(f"Committed URLs for {len(pending_pictures)} pictures")
+    except Exception as e:
+        current_app.logger.error(f"Error committing picture URLs: {str(e)}")
+        db.session.rollback()
+        raise
+
+
 def _get_form_context_data():
     """Get common context data for forms"""
     return {
@@ -132,35 +516,7 @@ def _get_form_context_data():
     }
 
 
-def allowed_file(filename):
-    """Check if the uploaded file has an allowed extension."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def save_uploaded_file(file, folder='uploads'):
-    """Save uploaded file"""
-    if file and allowed_file(file.filename):
-        try:
-            # Generate unique filename
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            
-            # Create upload directory if it doesn't exist
-            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
-            os.makedirs(upload_path, exist_ok=True)
-            
-            # Save file
-            file_path = os.path.join(upload_path, unique_filename)
-            file.save(file_path)
-            
-            # Return relative URL for web access
-            return f"/static/uploads/{unique_filename}"
-            
-        except Exception as e:
-            current_app.logger.error(f"File upload error: {str(e)}")
-            flash(f'Error uploading file: {str(e)}', 'error')
-            return None
-    return None
+# File handling functions are imported from app.utils.file_handling
 
 
 @component_web.route('/')
@@ -463,6 +819,7 @@ def component_detail(id):
             joinedload(Component.supplier),
             joinedload(Component.pictures),
             joinedload(Component.variants).joinedload(ComponentVariant.color),
+            joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures),
             joinedload(Component.keywords)
         ).get_or_404(id)
         
@@ -472,6 +829,15 @@ def component_detail(id):
             type_properties = ComponentTypeProperty.query.filter_by(
                 component_type_id=component.component_type_id
             ).order_by(ComponentTypeProperty.display_order).all()
+        
+        # Debug logging for picture investigation
+        current_app.logger.info(f"Component {component.id} loaded for detail view")
+        current_app.logger.info(f"Component has {len(component.pictures)} component pictures")
+        current_app.logger.info(f"Component has {len(component.variants)} variants")
+        for variant in component.variants:
+            current_app.logger.info(f"Variant {variant.id} ({variant.color.name}) has {len(variant.variant_pictures)} pictures")
+            for picture in variant.variant_pictures:
+                current_app.logger.info(f"  Picture {picture.id}: {picture.picture_name}, URL: {picture.url}")
         
         return render_template('component_detail.html', 
                              component=component,
@@ -496,13 +862,19 @@ def new_component():
                 return redirect(request.url)
             
             # Check for duplicate product number
-            existing = Component.query.filter_by(
-                product_number=form_data['product_number'],
-                supplier_id=form_data['supplier_id']
-            ).first()
+            duplicate_error = _validate_duplicate_product_number(
+                form_data['product_number'], 
+                form_data['supplier_id']
+            )
+            if duplicate_error:
+                flash(duplicate_error, 'error')
+                return redirect(request.url)
             
-            if existing:
-                flash('A component with this product number and supplier already exists.', 'error')
+            # Validate variants and pictures
+            variant_errors = _validate_component_variants(is_edit=False)
+            if variant_errors:
+                for error in variant_errors:
+                    flash(error, 'error')
                 return redirect(request.url)
             
             # Create component
@@ -510,7 +882,6 @@ def new_component():
                 product_number=form_data['product_number'],
                 description=form_data['description'],
                 supplier_id=form_data['supplier_id'],
-                category_id=form_data['category_id'],
                 component_type_id=form_data['component_type_id'],
                 properties={}
             )
@@ -520,13 +891,23 @@ def new_component():
             
             # Handle all associations and uploads
             _handle_component_properties(component, form_data['component_type_id'])
+            _handle_categories(component, is_edit=False)
             _handle_brand_associations(component, is_edit=False)
             _handle_keywords(component, is_edit=False)
             _handle_picture_uploads(component, is_edit=False)
+            pending_pictures = _handle_variants(component, is_edit=False)
             
+            # Commit to trigger database functions (SKU generation, picture naming)
             db.session.commit()
+            
+            # Store component ID before session operations
+            component_id = component.id
+            
+            # Now save pictures with proper names (commits internally)
+            _save_pending_pictures(pending_pictures)
+            
             flash('Component created successfully!', 'success')
-            return redirect(url_for('component_web.component_detail', id=component.id))
+            return redirect(url_for('component_web.component_detail', id=component_id))
         
         except Exception as e:
             db.session.rollback()
@@ -550,27 +931,52 @@ def edit_component(id):
     
     if request.method == 'POST':
         try:
+            # Capture old data for comparison
+            old_data = {
+                'product_number': component.product_number,
+                'supplier_id': component.supplier_id,
+                'variant_colors': {v.id: v.color_id for v in component.variants}
+            }
+            
             # Get and validate form data
             form_data = _get_form_data()
             if not _validate_required_fields(form_data):
                 return redirect(request.url)
             
+            # Check if key fields changed (affects picture naming)
+            product_changed = component.product_number != form_data['product_number']
+            supplier_changed = component.supplier_id != form_data['supplier_id']
+            
             # Update basic fields
             component.product_number = form_data['product_number']
             component.description = form_data['description']
             component.supplier_id = form_data['supplier_id']
-            component.category_id = form_data['category_id']
             component.component_type_id = form_data['component_type_id']
             
             # Handle all associations and uploads
             _handle_component_properties(component, form_data['component_type_id'])
+            _handle_categories(component, is_edit=True)
             _handle_brand_associations(component, is_edit=True)
             _handle_keywords(component, is_edit=True)
+            _handle_picture_deletions(component)  # Handle picture deletions
             _handle_picture_uploads(component, is_edit=True)
+            pending_pictures = _handle_variants(component, is_edit=True)
             
+            # Commit to trigger database functions (SKU generation, picture naming)
             db.session.commit()
+            
+            # Handle picture file renames if key data changed
+            if product_changed or supplier_changed:
+                _handle_picture_renames(component, old_data)
+            
+            # Store component ID before session operations
+            component_id = component.id
+            
+            # Save new pictures with proper names (commits internally)
+            _save_pending_pictures(pending_pictures)
+            
             flash('Component updated successfully!', 'success')
-            return redirect(url_for('component_web.component_detail', id=component.id))
+            return redirect(url_for('component_web.component_detail', id=component_id))
         
         except Exception as e:
             db.session.rollback()
@@ -708,3 +1114,52 @@ def update_pps_status(id):
         flash('Error updating PPS status.', 'error')
     
     return redirect(url_for('component_web.component_detail', id=id))
+
+
+@component_web.route('/api/component/validate-product-number', methods=['POST'])
+def validate_product_number():
+    """Validate product number uniqueness"""
+    try:
+        data = request.get_json()
+        product_number = data.get('product_number', '').strip()
+        supplier_id = data.get('supplier_id')
+        component_id = data.get('component_id')
+        
+        if not product_number:
+            return jsonify({'available': False, 'message': 'Product number is required'})
+        
+        if len(product_number) < 2:
+            return jsonify({'available': False, 'message': 'Product number must be at least 2 characters'})
+        
+        # Build query to check for existing components
+        query = Component.query.filter_by(product_number=product_number)
+        
+        # If supplier is selected, check uniqueness within that supplier
+        if supplier_id:
+            query = query.filter_by(supplier_id=supplier_id)
+            supplier = Supplier.query.get(supplier_id)
+            supplier_name = supplier.supplier_code if supplier else f"Supplier {supplier_id}"
+        else:
+            # If no supplier, check global uniqueness (supplier_id is NULL)
+            query = query.filter(Component.supplier_id.is_(None))
+            supplier_name = "components without supplier"
+        
+        # Exclude current component in edit mode
+        if component_id:
+            query = query.filter(Component.id != component_id)
+        
+        existing = query.first()
+        
+        if existing:
+            if supplier_id:
+                message = f'Product number "{product_number}" already exists for supplier "{supplier_name}"'
+            else:
+                message = f'Product number "{product_number}" already exists for {supplier_name}'
+            
+            return jsonify({'available': False, 'message': message})
+        
+        return jsonify({'available': True, 'message': 'Product number is available'})
+        
+    except Exception as e:
+        current_app.logger.error(f"Product number validation error: {str(e)}")
+        return jsonify({'available': False, 'message': 'Error validating product number'}), 500

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app
 from app import db
 from app.models import Component, ComponentVariant, Color, Picture
+from app.utils.file_handling import save_uploaded_file, allowed_file
 from sqlalchemy import func
 import os
 import uuid
@@ -12,35 +13,7 @@ variant_web = Blueprint('variant_web', __name__)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 
-def allowed_file(filename):
-    """Check if the uploaded file has an allowed extension."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def save_uploaded_file(file, folder='uploads'):
-    """Save uploaded file"""
-    if file and allowed_file(file.filename):
-        try:
-            # Generate unique filename
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            
-            # Create upload directory if it doesn't exist
-            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
-            os.makedirs(upload_path, exist_ok=True)
-            
-            # Save file
-            file_path = os.path.join(upload_path, unique_filename)
-            file.save(file_path)
-            
-            # Return relative URL for web access
-            return f"/static/uploads/{unique_filename}"
-            
-        except Exception as e:
-            current_app.logger.error(f"File upload error: {str(e)}")
-            flash(f'Error uploading file: {str(e)}', 'error')
-            return None
-    return None
+# File handling functions are imported from app.utils.file_handling
 
 
 @variant_web.route('/component/<int:id>/variant/new', methods=['GET', 'POST'])

@@ -69,7 +69,6 @@ def duplicate_component(component_id):
             product_number=f"{original.product_number}_copy_{datetime.now().strftime('%Y%m%d%H%M%S')}",
             description=f"Copy of {original.description}" if original.description else "Copy",
             supplier_id=original.supplier_id,
-            category_id=original.category_id,
             component_type_id=original.component_type_id,
             properties=original.properties.copy() if original.properties else {},
             proto_status='pending',
@@ -80,8 +79,12 @@ def duplicate_component(component_id):
         db.session.add(new_component)
         db.session.flush()  # Get the new component ID
         
+        # Copy categories
+        for category in original.categories:
+            new_component.categories.append(category)
+        
         # Copy brand associations
-        for brand_assoc in original.component_brands:
+        for brand_assoc in original.brand_associations:
             new_brand_assoc = ComponentBrand(
                 component_id=new_component.id,
                 brand_id=brand_assoc.brand_id

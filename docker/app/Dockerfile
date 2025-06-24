@@ -2,11 +2,13 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including davfs2 for WebDAV mounting
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     netcat-openbsd \
+    davfs2 \
+    fuse \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

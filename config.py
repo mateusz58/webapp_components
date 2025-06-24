@@ -6,7 +6,12 @@ class Config:
         'postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database'
     SQLALCHEMY_SCHEMA = 'component_app'  # Specify the schema to use
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app/static/uploads')
-    os.makedirs('static/uploads', exist_ok=True)
-    os.makedirs('static/uploads/variant_uploads', exist_ok=True)
+    
+    # File upload configuration
+    UPLOAD_FOLDER = '/components'  # Mount point for WebDAV
+    UPLOAD_URL_PREFIX = 'http://31.182.67.115/webdav/components'  # External WebDAV URL
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload size
+    
+    # Create local directories for fallback/testing
+    LOCAL_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app/static/uploads')
+    os.makedirs('static/uploads', exist_ok=True)

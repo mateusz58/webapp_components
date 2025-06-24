@@ -27,7 +27,7 @@ def add_variant_pictures(variant_id):
         for picture_file in files:
             if picture_file and picture_file.filename:
                 try:
-                    file_url = save_uploaded_file(picture_file, 'variant_uploads')
+                    file_url = save_uploaded_file(picture_file)
                     if file_url:
                         max_order += 1
                         picture = Picture(

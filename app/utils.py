@@ -69,7 +69,9 @@ def process_component_row(row, results):
             # Update existing component
             component.description = row['description']
             component.component_type_id = component_type.id
-            component.category_id = category.id
+            # Update category relationship
+            component.categories.clear()
+            component.categories.append(category)
             results['updated'] += 1
         else:
             # Create new component
@@ -77,10 +79,13 @@ def process_component_row(row, results):
                 product_number=row['product_number'],
                 description=row['description'],
                 component_type_id=component_type.id,
-                supplier_id=supplier.id,
-                category_id=category.id
+                supplier_id=supplier.id
             )
             db.session.add(component)
+            db.session.flush()  # Get component ID before adding category
+            
+            # Add category relationship
+            component.categories.append(category)
             results['created'] += 1
         
         # Commit to get the component ID if it's a new component

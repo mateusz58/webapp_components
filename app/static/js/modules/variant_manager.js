@@ -282,6 +282,13 @@ class VariantManager {
         
         this.updateVariantSKU(variantId);
         this.updateVariantTitle(variantId);
+        this.updateVariantValidationStatus(variantId);
+        this.updateOverallValidationStatus();
+        
+        // Update submit button state if function exists
+        if (typeof updateSubmitButtonState === 'function') {
+            updateSubmitButtonState();
+        }
         
         // Check for duplicate colors
         if (colorSelect.value && colorSelect.value !== 'custom') {
@@ -404,6 +411,13 @@ class VariantManager {
                     
                     this.addVariantPictureToGrid(variantId, imageData);
                     this.updateVariantMiniatures(variantId);
+                    this.updateVariantValidationStatus(variantId);
+                    this.updateOverallValidationStatus();
+                    
+                    // Update submit button state if function exists
+                    if (typeof updateSubmitButtonState === 'function') {
+                        updateSubmitButtonState();
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -488,6 +502,13 @@ class VariantManager {
         if (pictureItem && confirm('Remove this picture?')) {
             pictureItem.remove();
             this.updateVariantMiniatures(variantId);
+            this.updateVariantValidationStatus(variantId);
+            this.updateOverallValidationStatus();
+            
+            // Update submit button state if function exists
+            if (typeof updateSubmitButtonState === 'function') {
+                updateSubmitButtonState();
+            }
             
             // Also remove from stored files if it's a new upload
             if (this.variantFiles && this.variantFiles.has(variantId)) {
@@ -495,11 +516,6 @@ class VariantManager {
                 // Find and remove the file by matching some identifier
                 // For now, we'll just update the form
                 this.updateFormFiles();
-            }
-            
-            // Update submit button state if function exists
-            if (typeof updateSubmitButtonState === 'function') {
-                updateSubmitButtonState();
             }
         }
     }
@@ -598,6 +614,102 @@ class VariantManager {
         }
         
         return true;
+    }
+    
+    updateVariantValidationStatus(variantId) {
+        const variantCard = document.querySelector(`[data-variant-id="${variantId}"]`);
+        if (!variantCard) return;
+        
+        const colorSelect = variantCard.querySelector(`[name*="variant_color_"]`);
+        const customColorInput = variantCard.querySelector(`[name*="variant_custom_color_"]`);
+        const pictureFiles = variantCard.querySelector(`[name*="variant_images_"]`);
+        const existingPictures = variantCard.querySelectorAll('.picture-item').length;
+        
+        // Check if variant has color
+        const hasColor = (colorSelect && colorSelect.value) || 
+                        (customColorInput && customColorInput.value.trim());
+        
+        // Check if variant has pictures
+        const hasNewFiles = pictureFiles && pictureFiles.files && pictureFiles.files.length > 0;
+        const hasPictures = existingPictures > 0 || hasNewFiles;
+        
+        // Update visual indicators
+        const variantTitle = variantCard.querySelector('.variant-title');
+        const picturesHeader = variantCard.querySelector('.pictures-section-header .form-label');
+        
+        // Color validation indicator
+        if (hasColor) {
+            colorSelect?.classList.remove('error');
+        } else {
+            colorSelect?.classList.add('error');
+        }
+        
+        // Pictures validation indicator
+        if (hasPictures) {
+            picturesHeader?.classList.remove('error');
+        } else if (hasColor) { // Only show picture error if color is selected
+            picturesHeader?.classList.add('error');
+        }
+        
+        // Overall variant status
+        const isValid = hasColor && hasPictures;
+        if (variantTitle) {
+            if (isValid) {
+                variantTitle.style.color = '';
+                variantCard.style.borderLeft = '3px solid #28a745';
+            } else if (hasColor || hasPictures) {
+                variantTitle.style.color = '#ffc107';
+                variantCard.style.borderLeft = '3px solid #ffc107';
+            } else {
+                variantTitle.style.color = '#dc3545';
+                variantCard.style.borderLeft = '3px solid #dc3545';
+            }
+        }
+    }
+    
+    updateOverallValidationStatus() {
+        const allVariants = document.querySelectorAll('[data-variant-id]');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        let hasValidVariants = false;
+        let allVariantsValid = true;
+        
+        allVariants.forEach(variantCard => {
+            const variantId = variantCard.dataset.variantId;
+            const colorSelect = variantCard.querySelector(`[name*="variant_color_"]`);
+            const customColorInput = variantCard.querySelector(`[name*="variant_custom_color_"]`);
+            const pictureFiles = variantCard.querySelector(`[name*="variant_images_"]`);
+            const existingPictures = variantCard.querySelectorAll('.picture-item').length;
+            
+            const hasColor = (colorSelect && colorSelect.value) || 
+                            (customColorInput && customColorInput.value.trim());
+            const hasNewFiles = pictureFiles && pictureFiles.files && pictureFiles.files.length > 0;
+            const hasPictures = existingPictures > 0 || hasNewFiles;
+            
+            if (hasColor && hasPictures) {
+                hasValidVariants = true;
+            } else if (hasColor || hasPictures) {
+                allVariantsValid = false;
+            }
+        });
+        
+        // Update submit button state
+        if (submitBtn) {
+            if (hasValidVariants && allVariantsValid) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-primary');
+            } else if (hasValidVariants) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-warning');
+                submitBtn.title = 'Some variants are incomplete';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.remove('btn-primary', 'btn-warning');
+                submitBtn.title = 'At least one complete variant is required';
+            }
+        }
     }
 }
 
