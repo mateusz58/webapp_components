@@ -5,10 +5,250 @@ This document contains comprehensive workflow documentation for all major featur
 ---
 
 ## Table of Contents
-1. [Component Variants Workflow](#component-variants-workflow)
-2. [Component Creation Workflow](#component-creation-workflow) *(To be added)*
-3. [Brand Management Workflow](#brand-management-workflow) *(To be added)*
-4. [Picture Management Workflow](#picture-management-workflow) *(To be added)*
+1. [Picture Visibility Issue Resolution](#picture-visibility-issue-resolution) *(UPDATED)*
+2. [Testing Framework Workflow](#testing-framework-workflow) 
+3. [Component Variants Workflow](#component-variants-workflow)
+4. [Component Creation Workflow](#component-creation-workflow) *(To be added)*
+5. [Brand Management Workflow](#brand-management-workflow) *(To be added)*
+6. [Picture Management Workflow](#picture-management-workflow) *(To be added)*
+
+---
+
+## Picture Visibility Issue Resolution
+
+### Current Implementation Status
+**Issue**: Pictures don't appear immediately on component detail page after create/edit redirect.
+**Status**: AJAX refresh solution implemented - awaiting validation.
+
+### 1. Problem Analysis
+
+#### 1.1 Root Cause
+- SQLAlchemy session caching prevents fresh variant picture data loading
+- Template renders with stale data before session refresh occurs
+- Backend session clearing insufficient for immediate resolution
+
+#### 1.2 Failed Solutions
+1. **Backend Session Clearing**: `db.session.expunge_all()` + explicit refresh loops
+2. **Query Optimization**: Enhanced `joinedload` for variant pictures
+3. **Debug Logging**: Confirmed pictures save correctly but don't load immediately
+
+### 2. AJAX Refresh Solution (Current Implementation)
+
+#### 2.1 Architecture
+```
+Component Detail Page Load
+├── Template renders with initial data (potentially stale)
+├── JavaScript executes multiple refresh attempts:
+│   ├── 500ms: First attempt
+│   ├── 1.5s: Second attempt  
+│   └── 3s: Final fallback
+├── AJAX calls /api/components/<id>/variants
+├── Fresh data updates Alpine.js reactively
+└── Pictures appear without manual refresh
+```
+
+#### 2.2 Implementation Files
+```
+app/api/component_api.py (lines 395-465)
+├── @component_api.route('/components/<int:component_id>/variants')
+├── db.session.expunge_all() for fresh data
+├── Explicit variant/picture refresh loops
+└── JSON response with complete variant data
+
+app/static/js/pages/component_detail.js
+├── ComponentDetailManager class
+├── Multiple refresh attempts with timing
+├── Alpine.js data updates
+└── Console logging for debugging
+
+app/templates/component_detail.html (line 1189)
+└── Script inclusion for component detail pages
+```
+
+#### 2.3 Key Features
+- **Aggressive Refresh**: Multiple attempts ensure data loading
+- **Alpine.js Integration**: Updates component data reactively
+- **Error Handling**: Retry logic with exponential backoff
+- **Debugging**: Console logs for troubleshooting
+
+### 3. Testing and Validation
+
+#### 3.1 Selenium Test Framework
+```
+tests/selenium/
+├── test_component_picture_visibility.py (Main test)
+├── test_ajax_endpoint.py (API validation)
+├── pages/ (Page Object Model)
+├── utils/ (Driver management, image generation)
+└── config/ (Test configuration)
+```
+
+#### 3.2 Manual Testing Process
+1. **Create Component**: Use `/component/new` with variants + pictures
+2. **Monitor Console**: Check browser developer tools for JavaScript logs
+3. **Observe Behavior**: Verify pictures appear without manual refresh
+4. **Timing Analysis**: Note if multiple attempts needed
+
+#### 3.3 Expected Behavior
+- Pictures should appear within 3 seconds of page load
+- Console should show "Refreshing variant data..." messages
+- No manual refresh required
+- Variant switching should work immediately
+
+### 4. Next Steps if Issue Persists
+
+#### 4.1 Alternative Approaches
+1. **Client-Side Image Loading**: Pre-load images via JavaScript
+2. **Template-Level Fix**: Enhanced server-side session handling
+3. **Caching Strategy**: Implement Redis for session data
+4. **Database Optimization**: Review PostgreSQL transaction isolation
+
+#### 4.2 Debugging Steps
+1. Monitor browser Network tab for API calls
+2. Check application logs: `docker-compose logs`
+3. Verify AJAX endpoint response: `curl http://localhost:6002/api/components/<id>/variants`
+4. Test timing adjustments in JavaScript
+
+---
+
+## Testing Framework Workflow
+
+### Overview
+Comprehensive Selenium-based testing framework for automated component creation and picture visibility testing. Built to reproduce and verify fixes for the critical picture display issue.
+
+### 1. Test Framework Structure
+
+#### 1.1 Modular Architecture
+```
+modular_component_test.py
+├── ComponentFormModule (Base class)
+├── EssentialInformationModule
+├── KeywordsModule  
+├── ImageGeneratorModule
+├── VariantsModule
+├── FormSubmissionModule
+├── PictureTestModule
+└── ModularComponentTest (Main orchestrator)
+```
+
+#### 1.2 Key Features
+- **Modular Design**: Each form section handled by separate module
+- **Image Generation**: Automatically creates colored test images
+- **Complete Form Filling**: Handles all required fields
+- **Evidence Collection**: Screenshots at each step
+- **Issue Reproduction**: Tests immediate vs post-refresh picture visibility
+
+### 2. Test Execution Flow
+
+#### 2.1 Setup Phase
+1. Initialize Chrome/Chromium driver
+2. Navigate to component creation form
+3. Generate test images for variants
+
+#### 2.2 Form Filling Phase
+1. **Essential Information**: Product number, description, component type, supplier
+2. **Keywords**: Add relevant search keywords  
+3. **Variants**: Add color variants with generated pictures
+4. **Validation**: Ensure all required fields completed
+
+#### 2.3 Submission and Testing Phase
+1. Submit form and capture redirect URL
+2. **Immediate Test**: Check picture visibility right after redirect
+3. **Post-Refresh Test**: Refresh page and check picture visibility again
+4. **Comparison**: Identify if pictures only appear after refresh
+
+#### 2.4 Results Analysis
+- ✅ **PASS**: Pictures visible immediately after redirect
+- ❌ **FAIL**: Pictures only visible after manual refresh (confirms bug)
+- ⚠️ **WARNING**: No pictures found even after refresh
+
+### 3. Usage Instructions
+
+#### 3.1 Prerequisites
+```bash
+# Install dependencies
+pip3 install selenium pillow
+
+# Ensure Chrome/Chromium and ChromeDriver installed
+sudo apt install chromium-browser chromium-chromedriver
+```
+
+#### 3.2 Running Tests
+```bash
+# Start application
+./start.sh start
+
+# Run comprehensive test
+python3 modular_component_test.py
+
+# Check results
+ls /tmp/*screenshot*  # View evidence screenshots
+```
+
+#### 3.3 Test Configuration
+```python
+# Customize test variants
+test_variants = [
+    {'color': 'Red'},
+    {'color': 'Blue'},
+    {'color': 'Green'}
+]
+
+# Run with custom variants
+test.run_full_test(test_variants)
+```
+
+### 4. Evidence Collection
+
+#### 4.1 Screenshots Captured
+- `01_main_page_*.png` - Application homepage
+- `02_form_loaded_*.png` - Component creation form
+- `03_basic_info_filled_*.png` - After filling essential information
+- `04_variant_*_added_*.png` - After adding each variant
+- `05_before_submit_*.png` - Form ready for submission
+- `immediate_after_redirect_*.png` - Detail page immediately after redirect
+- `after_manual_refresh_*.png` - Detail page after manual refresh
+
+#### 4.2 Debug Information
+- Detailed logging of each step
+- Picture URL detection and counting
+- Form validation status tracking
+- Browser interaction timing
+
+### 5. Extension Points
+
+#### 5.1 Adding New Test Modules
+```python
+class NewFormSectionModule(ComponentFormModule):
+    def fill_section(self, data):
+        # Implementation for new form section
+        pass
+```
+
+#### 5.2 Custom Test Scenarios
+```python
+# Add to ModularComponentTest
+def run_edge_case_test(self):
+    # Custom test scenario implementation
+    pass
+```
+
+### 6. Troubleshooting
+
+#### 6.1 Common Issues
+- **File Upload Fails**: Check image generation and file paths
+- **Form Validation Errors**: Ensure all required fields filled
+- **Browser Issues**: Verify Chrome/Chromium installation
+- **Network Issues**: Check application accessibility
+
+#### 6.2 Debug Options
+```python
+# Enable verbose logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Keep browser open longer for manual inspection
+time.sleep(60)  # Increase inspection time
+```
 
 ---
 

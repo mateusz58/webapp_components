@@ -499,6 +499,17 @@ def _save_pending_pictures(pending_pictures):
     try:
         db.session.commit()
         current_app.logger.info(f"Committed URLs for {len(pending_pictures)} pictures")
+        
+        # Small delay to ensure database writes are fully flushed
+        import time
+        time.sleep(0.1)
+        
+        # Debug logging: check that pictures are actually saved in DB
+        for pending in pending_pictures:
+            picture = pending['picture']
+            db.session.refresh(picture)  # Refresh from DB
+            current_app.logger.info(f"Final picture state - ID: {picture.id}, URL: {picture.url}, Name: {picture.picture_name}")
+            
     except Exception as e:
         current_app.logger.error(f"Error committing picture URLs: {str(e)}")
         db.session.rollback()
@@ -814,6 +825,10 @@ def component_detail(id):
     Display detailed view of a single component
     """
     try:
+        # Clear any existing session state to avoid caching issues
+        db.session.expunge_all()
+        
+        # Force fresh query to avoid any session caching issues
         component = Component.query.options(
             joinedload(Component.component_type),
             joinedload(Component.supplier),
@@ -822,6 +837,12 @@ def component_detail(id):
             joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures),
             joinedload(Component.keywords)
         ).get_or_404(id)
+        
+        # Explicitly refresh variant pictures to ensure they're loaded
+        for variant in component.variants:
+            db.session.refresh(variant)
+            for picture in variant.variant_pictures:
+                db.session.refresh(picture)
         
         # Get component type properties
         type_properties = []
@@ -833,11 +854,25 @@ def component_detail(id):
         # Debug logging for picture investigation
         current_app.logger.info(f"Component {component.id} loaded for detail view")
         current_app.logger.info(f"Component has {len(component.pictures)} component pictures")
+        for comp_pic in component.pictures:
+            current_app.logger.info(f"  Component picture {comp_pic.id}: {comp_pic.picture_name}, URL: {comp_pic.url}")
+        
         current_app.logger.info(f"Component has {len(component.variants)} variants")
         for variant in component.variants:
             current_app.logger.info(f"Variant {variant.id} ({variant.color.name}) has {len(variant.variant_pictures)} pictures")
             for picture in variant.variant_pictures:
-                current_app.logger.info(f"  Picture {picture.id}: {picture.picture_name}, URL: {picture.url}")
+                current_app.logger.info(f"  Variant picture {picture.id}: {picture.picture_name}, URL: {picture.url}")
+                
+        # Check if picture files exist on filesystem
+        import os
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+        for variant in component.variants:
+            for picture in variant.variant_pictures:
+                if picture.url:
+                    filename = picture.url.split('/')[-1]
+                    file_path = os.path.join(upload_folder, filename)
+                    file_exists = os.path.exists(file_path)
+                    current_app.logger.info(f"File {filename} exists on disk: {file_exists}")
         
         return render_template('component_detail.html', 
                              component=component,
@@ -905,6 +940,9 @@ def new_component():
             
             # Now save pictures with proper names (commits internally)
             _save_pending_pictures(pending_pictures)
+            
+            # Clear session cache to ensure fresh data load on redirect
+            db.session.expunge_all()
             
             flash('Component created successfully!', 'success')
             return redirect(url_for('component_web.component_detail', id=component_id))
@@ -974,6 +1012,9 @@ def edit_component(id):
             
             # Save new pictures with proper names (commits internally)
             _save_pending_pictures(pending_pictures)
+            
+            # Clear session cache to ensure fresh data load on redirect
+            db.session.expunge_all()
             
             flash('Component updated successfully!', 'success')
             return redirect(url_for('component_web.component_detail', id=component_id))

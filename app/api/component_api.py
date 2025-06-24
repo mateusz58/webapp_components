@@ -390,3 +390,76 @@ def manage_component_brands(component_id):
         db.session.rollback()
         current_app.logger.error(f"Component brand management error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@component_api.route('/components/<int:component_id>/variants')
+def get_component_variants(component_id):
+    """
+    API endpoint to get fresh variant data with pictures
+    Addresses picture visibility issue by providing fresh data via AJAX
+    """
+    try:
+        # Clear session cache to ensure fresh data
+        db.session.expunge_all()
+        
+        # Query component with variants and pictures
+        component = Component.query.options(
+            joinedload(Component.variants).joinedload(ComponentVariant.color),
+            joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures),
+            joinedload(Component.pictures)
+        ).get_or_404(component_id)
+        
+        # Explicitly refresh variant data to ensure pictures are loaded
+        for variant in component.variants:
+            db.session.refresh(variant)
+            for picture in variant.variant_pictures:
+                db.session.refresh(picture)
+        
+        # Format variant data for frontend
+        variants_data = []
+        for variant in component.variants:
+            variant_images = []
+            for picture in variant.variant_pictures:
+                variant_images.append({
+                    'id': picture.id,
+                    'name': picture.picture_name,
+                    'url': picture.url,
+                    'order': picture.picture_order,
+                    'altText': picture.alt_text or ""
+                })
+            
+            # Sort images by order
+            variant_images.sort(key=lambda x: x['order'])
+            
+            variants_data.append({
+                'id': variant.id,
+                'name': variant.get_color_display_name(),
+                'colorName': variant.color.name,
+                'colorHex': "#ccc",
+                'sku': variant.variant_sku or "",
+                'images': variant_images
+            })
+        
+        # Also include component images
+        component_images = []
+        for picture in component.pictures:
+            component_images.append({
+                'id': picture.id,
+                'name': picture.picture_name,
+                'url': picture.url,
+                'order': picture.picture_order
+            })
+        
+        component_images.sort(key=lambda x: x['order'])
+        
+        return jsonify({
+            'success': True,
+            'component_id': component_id,
+            'variants': variants_data,
+            'component_images': component_images,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting component variants: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
