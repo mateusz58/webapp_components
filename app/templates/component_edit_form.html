@@ -64,6 +64,8 @@
 
         <!-- Main Form -->
         <form id="componentForm" method="POST" enctype="multipart/form-data" novalidate>
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <!-- Essential Information Section -->
             {% include 'sections/essential_information.html' %}
@@ -173,22 +175,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form validation and submission
     form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if (validateForm()) {
-            {% if component %}
-            // For editing, show change summary modal first
-            if (typeof showChangeSummaryModal === 'function') {
-                showChangeSummaryModal();
-            } else {
-                // Fallback: direct submission if modal function not available
-                submitFormDirectly();
-            }
-            {% else %}
-            // For new components, submit directly
-            submitFormDirectly();
-            {% endif %}
+        if (!validateForm()) {
+            e.preventDefault();
+            return false;
         }
+        
+        {% if component %}
+        // For editing, prevent default and show change summary modal first
+        e.preventDefault();
+        if (typeof showChangeSummaryModal === 'function') {
+            showChangeSummaryModal();
+        } else {
+            // Fallback: direct submission if modal function not available
+            submitFormDirectly();
+        }
+        {% else %}
+        // For new components, allow normal form submission after validation
+        // This ensures proper redirect handling with URL parameters
+        console.log('Allowing normal form submission for new component');
+        
+        // Ensure variant files are properly attached before submission
+        if (window.variantManager && typeof window.variantManager.updateFormFiles === 'function') {
+            window.variantManager.updateFormFiles();
+        }
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
+        
+        // Let the form submit normally (don't prevent default)
+        {% endif %}
     });
     
     function submitFormDirectly() {
