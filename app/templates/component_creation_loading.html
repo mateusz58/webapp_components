@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Creating Component - Please Wait{% endblock %}
+
+{% block extra_css %}
+<style>
+.creation-loading {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.loading-card {
+    background: white;
+    border-radius: 16px;
+    padding: 3rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+}
+
+.loading-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 2rem auto;
+    border: 6px solid #e2e8f0;
+    border-top: 6px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+}
+
+.loading-message {
+    font-size: 1.1rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.progress-container {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+.progress-bar {
+    background: #e2e8f0;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.step-icon.active {
+    background: #3b82f6;
+    animation: pulse 2s infinite;
+}
+
+.step-icon.completed {
+    background: #10b981;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.estimated-time {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-style: italic;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="creation-loading">
+    <div class="loading-card">
+        <div class="loading-icon"></div>
+        
+        <h1 class="loading-title">Creating Your Component</h1>
+        
+        <p class="loading-message">
+            We're setting up your component with all images and variants. 
+            This ensures everything is ready when you view the component details.
+        </p>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="progress-steps">
+                <div class="progress-step">
+                    <div class="step-icon completed" id="step1">✓</div>
+                    <span>Saved to Database</span>
+                </div>
+                <div class="progress-step">
+                    <div class="step-icon active" id="step2">2</div>
+                    <span>Processing Images</span>
+                </div>
+                <div class="progress-step">
+                    <div class="step-icon" id="step3">3</div>
+                    <span>Verifying Access</span>
+                </div>
+                <div class="progress-step">
+                    <div class="step-icon" id="step4">4</div>
+                    <span>Ready!</span>
+                </div>
+            </div>
+        </div>
+        
+        <p class="estimated-time" id="estimatedTime">
+            Estimated time: 10-20 seconds
+        </p>
+        
+        <div style="margin-top: 2rem; padding: 1rem; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e; font-size: 0.875rem;">
+                <strong>Please don't close this page.</strong> We're ensuring all images are properly uploaded and accessible.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh to check completion status
+let currentStep = 2;
+let progress = 25;
+let startTime = Date.now();
+
+function updateProgress() {
+    const progressFill = document.getElementById('progressFill');
+    const estimatedTime = document.getElementById('estimatedTime');
+    
+    // Simulate progress based on time elapsed
+    const elapsed = (Date.now() - startTime) / 1000;
+    
+    if (elapsed < 5) {
+        progress = 25 + (elapsed / 5) * 25; // 25% to 50% in first 5 seconds
+        document.getElementById('step2').textContent = '⟳';
+        document.getElementById('step2').className = 'step-icon active';
+    } else if (elapsed < 12) {
+        progress = 50 + ((elapsed - 5) / 7) * 25; // 50% to 75% in next 7 seconds
+        currentStep = 3;
+        document.getElementById('step2').textContent = '✓';
+        document.getElementById('step2').className = 'step-icon completed';
+        document.getElementById('step3').textContent = '⟳';
+        document.getElementById('step3').className = 'step-icon active';
+    } else {
+        progress = 75 + ((elapsed - 12) / 8) * 25; // 75% to 100% after 12 seconds
+        currentStep = 4;
+        document.getElementById('step3').textContent = '✓';
+        document.getElementById('step3').className = 'step-icon completed';
+        document.getElementById('step4').textContent = '⟳';
+        document.getElementById('step4').className = 'step-icon active';
+    }
+    
+    progressFill.style.width = Math.min(progress, 95) + '%';
+    
+    const remaining = Math.max(0, 20 - elapsed);
+    if (remaining > 0) {
+        estimatedTime.textContent = `Estimated time remaining: ${Math.ceil(remaining)} seconds`;
+    } else {
+        estimatedTime.textContent = 'Almost done...';
+    }
+}
+
+// Update progress every second
+setInterval(updateProgress, 1000);
+
+// Check for completion every 2 seconds
+setInterval(() => {
+    fetch('{{ url_for("component_web.check_creation_status", component_id=component_id) }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.ready) {
+                // Mark as completed and redirect
+                document.getElementById('step4').textContent = '✓';
+                document.getElementById('step4').className = 'step-icon completed';
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('estimatedTime').textContent = 'Complete! Redirecting...';
+                
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("component_web.component_detail", id=component_id) }}';
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking status:', error);
+        });
+}, 2000);
+</script>
+{% endblock %}

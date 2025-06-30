@@ -3,83 +3,182 @@
 {% block title %}{{ component.product_number }} - Component Details{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/component-detail.css') }}">
+<!-- Performance: Preload critical CSS -->
+<link rel="preload" href="{{ url_for('static', filename='css/component-detail/main.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="{{ url_for('static', filename='css/component-detail/gallery.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="{{ url_for('static', filename='css/component-detail/loading.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+
+<!-- Fallback for browsers that don't support preload -->
+<noscript>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/gallery.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/loading.css') }}">
+</noscript>
+
+<!-- Non-critical CSS loaded async -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/responsive.css') }}" media="print" onload="this.media='all'">
 {% endblock %}
 
 {% block content %}
-<div x-data="componentDetail()" class="fade-in">
-    {% include 'sections/component_header.html' %}
+<!-- Main Component Detail Application -->
+<main class="component-detail" x-data="componentDetailApp()" 
+      {% if request.args.get('loading') == 'true' %}data-loading="true"{% endif %}>
+    
+    <!-- Component Header Section -->
+    <section class="component-header">
+        {% include 'sections/component_header.html' %}
+    </section>
 
-    <div class="row">
-        <!-- Main Content -->
-        <div class="col-lg-8">
-            {% include 'sections/variant_gallery.html' %}
+    <!-- Main Content -->
+    <div class="component-content" style="grid-template-columns: 1fr;">
+        
+        <!-- Primary Content Area -->
+        <div class="component-content__main">
+            
+            <!-- Image Gallery Section - Using Original Working Gallery -->
+            <section class="image-gallery">
+                {% include 'sections/variant_gallery.html' %}
+            </section>
 
-            {% include 'sections/status_workflow.html' %}
+            <!-- Status Workflow Section -->
+            <section class="status-workflow">
+                {% include 'sections/status_workflow.html' %}
+            </section>
 
-            {% include 'sections/component_info_tabs.html' %}
+            <!-- Component Information Tabs -->
+            <section class="component-info">
+                {% include 'sections/component_info_tabs.html' %}
+            </section>
         </div>
 
-        {% include 'sections/sidebar_actions.html' %}
     </div>
 
-    {% include 'sections/lightbox_modal.html' %}
-    {% include 'sections/delete_modal.html' %}
-</div>
+</main>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/components/component-detail-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/alpine-component-detail.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/component_detail.js') }}"></script>
-<script>
-    // Initialize Alpine component with server data
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('componentDetail', () => {
-            const instance = componentDetail();
-            
-            // Populate with server data
-            instance.componentImages = [
-                {% for picture in component.pictures|sort(attribute='picture_order') %}
-                    {
-                        id: {{ picture.id }},
-                        name: '{{ picture.picture_name }}',
-                        url: '{{ picture.url }}',
-                        order: {{ picture.picture_order }}
-                    }{% if not loop.last %},{% endif %}
-                {% endfor %}
-            ];
-            
-            instance.variants = [
-                {% for variant in component.variants %}
-                    {
-                        id: {{ variant.id }},
-                        name: '{{ variant.get_color_display_name() }}',
-                        colorName: '{{ variant.color.name }}',
-                        colorHex: '{{ variant.color.hex_code or "#ccc" }}',
-                        sku: '{{ variant.variant_sku or "" }}',
-                        images: [
-                            {% for picture in variant.variant_pictures|sort(attribute='picture_order') %}
-                                {
-                                    id: {{ picture.id }},
-                                    name: '{{ picture.picture_name }}',
-                                    url: '{{ picture.url }}',
-                                    order: {{ picture.picture_order }},
-                                    altText: '{{ picture.alt_text or "" }}'
-                                }{% if not loop.last %},{% endif %}
-                            {% endfor %}
-                        ]
-                    }{% if not loop.last %},{% endif %}
-                {% endfor %}
-            ];
-            
-            return instance;
-        });
-    });
+<!-- DNS prefetch for external resources -->
+<link rel="dns-prefetch" href="//31.182.67.115">
 
-    // Initialize icons after page load
-    document.addEventListener('DOMContentLoaded', function() {
-        lucide.createIcons();
+<!-- Critical JavaScript - Load immediately -->
+<script src="{{ url_for('static', filename='js/component-detail/core.js') }}"></script>
+
+<!-- Component-specific modules - Load with defer for performance -->
+<script src="{{ url_for('static', filename='js/component-detail/state-management.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/component-detail/gallery.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/component-detail/loading-system.js') }}" defer></script>
+
+<!-- Application Bootstrap - Minimal inline JavaScript -->
+<script>
+// Critical: Immediate loading state detection
+(function() {
+    const hasLoadingParam = new URLSearchParams(window.location.search).get('loading') === 'true';
+    if (hasLoadingParam) {
+        document.documentElement.classList.add('loading-active');
+        console.log('⚡ Component Detail: Immediate loading state activated');
+    }
+})();
+
+// Pass component creation time to frontend for new component detection
+window.componentCreatedAt = new Date('{{ component.created_at.isoformat() }}').getTime();
+
+// Debug logging for component data
+console.log('Template rendered with component data:');
+console.log('Component ID:', {{ component.id }});
+console.log('Component pictures count:', {{ component.pictures|length }});
+console.log('Component variants count:', {{ component.variants|length }});
+{% for variant in component.variants %}
+console.log('Variant {{ variant.id }} ({{ variant.color.name }}) pictures:', {{ variant.variant_pictures|length }});
+{% endfor %}
+
+// Store server data globally so it's always available - complete structure
+window.componentServerData = {
+    component: {
+        id: {{ component.id }},
+        productNumber: '{{ component.product_number }}',
+        description: '{{ component.description or "" }}',
+        createdAt: '{{ component.created_at.isoformat() }}'
+    },
+    componentImages: [
+        {% for picture in component.pictures|sort(attribute='picture_order') %}
+            {
+                id: {{ picture.id }},
+                name: '{{ picture.picture_name }}',
+                url: '{{ picture.url }}',
+                order: {{ picture.picture_order }},
+                altText: '{{ picture.alt_text or "" }}'
+            }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    variants: [
+        {% for variant in component.variants %}
+            {
+                id: {{ variant.id }},
+                name: '{{ variant.get_color_display_name() }}',
+                colorName: '{{ variant.color.name }}',
+                colorHex: '{{ variant.color.hex_code or "#ccc" }}',
+                sku: '{{ variant.variant_sku or "" }}',
+                images: [
+                    {% for picture in variant.variant_pictures|sort(attribute='picture_order') %}
+                        {
+                            id: {{ picture.id }},
+                            name: '{{ picture.picture_name }}',
+                            url: '{{ picture.url }}',
+                            order: {{ picture.picture_order }},
+                            altText: '{{ picture.alt_text or "" }}'
+                        }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+};
+
+// Debug Alpine component creation
+console.log('=== TEMPLATE SCRIPT EXECUTING ===');
+console.log('Alpine available:', typeof Alpine);
+console.log('ComponentDetailApp function available:', typeof ComponentDetailApp);
+console.log('Current URL:', window.location.href);
+
+// Alpine.js registration function
+function registerComponentDetail() {
+    console.log('🔥 Registering ComponentDetailApp with Alpine');
+    if (typeof ComponentDetailApp === 'function') {
+        Alpine.data('componentDetailApp', ComponentDetailApp);
+        console.log('✅ Component Detail: Alpine.js component registered');
+        return true;
+    } else {
+        console.warn('⚠️ Component Detail: ComponentDetailApp not found');
+        return false;
+    }
+}
+
+// Try to register immediately if Alpine and ComponentDetailApp are already available
+if (typeof Alpine !== 'undefined' && Alpine.data && typeof ComponentDetailApp === 'function') {
+    registerComponentDetail();
+} else {
+    // Otherwise wait for Alpine to initialize
+    document.addEventListener('alpine:init', () => {
+        console.log('🔥 Alpine.js alpine:init event fired');
+        registerComponentDetail();
     });
+}
+
+// Fallback: register on DOM content loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 DOM Content Loaded');
+    console.log('Alpine after DOM load:', typeof Alpine);
+    console.log('ComponentDetailApp after DOM load:', typeof ComponentDetailApp);
+    
+    // Try registration if not already done
+    if (typeof Alpine !== 'undefined' && Alpine.data && typeof ComponentDetailApp === 'function') {
+        registerComponentDetail();
+    }
+    
+    // Initialize icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
 </script>
 {% endblock %}

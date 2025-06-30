@@ -1,12 +1,13 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, session
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, ComponentTypeProperty, Color
 from app.utils.file_handling import save_uploaded_file, allowed_file, delete_file
 from sqlalchemy import or_, and_, func, desc, asc
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 import os
 import uuid
+import time
 from datetime import datetime, timedelta
 
 component_web = Blueprint('component_web', __name__)
@@ -426,6 +427,77 @@ def _handle_picture_deletions(component):
     # This is handled per-variant in the variant processing
 
 
+def _verify_images_accessible(component_id, max_retries=3, retry_delay=2):
+    """Fast parallel verification of image accessibility"""
+    import requests
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    current_app.logger.info(f"Starting fast image verification for component {component_id}")
+    
+    # Get fresh component data with optimized query
+    component = Component.query.options(
+        selectinload(Component.pictures),
+        selectinload(Component.variants).selectinload(ComponentVariant.variant_pictures)
+    ).get(component_id)
+    
+    if not component:
+        current_app.logger.error(f"Component {component_id} not found for verification")
+        return False
+    
+    # Collect all image URLs
+    all_urls = []
+    for picture in component.pictures:
+        if picture.url:
+            all_urls.append(picture.url)
+    
+    for variant in component.variants:
+        for picture in variant.variant_pictures:
+            if picture.url:
+                all_urls.append(picture.url)
+    
+    if not all_urls:
+        current_app.logger.info(f"No images to verify for component {component_id}")
+        return True
+    
+    current_app.logger.info(f"Verifying {len(all_urls)} images in parallel for component {component_id}")
+    
+    def check_single_url(url):
+        """Check a single URL with optimized settings"""
+        try:
+            response = requests.head(url, timeout=3, allow_redirects=False)
+            return url, response.status_code == 200, response.status_code
+        except Exception as e:
+            return url, False, str(e)
+    
+    for attempt in range(1, max_retries + 1):
+        current_app.logger.info(f"Verification attempt {attempt}/{max_retries}")
+        
+        failed_urls = []
+        
+        # Use ThreadPoolExecutor for parallel requests
+        with ThreadPoolExecutor(max_workers=min(10, len(all_urls))) as executor:
+            future_to_url = {executor.submit(check_single_url, url): url for url in all_urls}
+            
+            for future in as_completed(future_to_url, timeout=15):
+                url, success, status = future.result()
+                if not success:
+                    failed_urls.append(f"{url} ({status})")
+        
+        if not failed_urls:
+            current_app.logger.info(f"All {len(all_urls)} images verified accessible for component {component_id}")
+            return True
+        else:
+            current_app.logger.warning(f"Attempt {attempt}: {len(failed_urls)} images not accessible")
+            
+            if attempt < max_retries:
+                current_app.logger.info(f"Waiting {retry_delay}s before retry...")
+                time.sleep(retry_delay)
+    
+    current_app.logger.error(f"Image verification failed after {max_retries} attempts for component {component_id}")
+    return False
+
+
 def _save_pending_pictures(pending_pictures):
     """Save pending pictures with database-generated names to /components/"""
     import os
@@ -434,85 +506,91 @@ def _save_pending_pictures(pending_pictures):
     webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
     upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
     
-    for pending in pending_pictures:
-        picture = pending['picture']
-        file_data = pending['file_data']
-        extension = pending['extension']
-        
-        try:
-            # Refresh picture from database to get the generated picture_name
-            db.session.flush()  # Ensure the picture is in database first
-            db.session.refresh(picture)
-            
-            if not picture.picture_name:
-                current_app.logger.error(f"No picture_name generated for picture {picture.id}")
-                continue
-            
-            # Final filename with extension - ALL pictures go directly in /components/
-            filename = f"{picture.picture_name}{extension}"
-            file_path = os.path.join(upload_folder, filename)
-            
-            # Save the file from memory
-            file_data.seek(0)
-            
-            # Optimize image if it's an image file
-            if extension.lower() in ['.jpg', '.jpeg', '.png']:
-                try:
-                    image = Image.open(file_data)
-                    
-                    # Convert RGBA to RGB if necessary
-                    if image.mode in ('RGBA', 'LA'):
-                        background = Image.new('RGB', image.size, (255, 255, 255))
-                        background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-                        image = background
-                    
-                    # Resize if larger than max size
-                    max_size = (1920, 1920)
-                    image.thumbnail(max_size, Image.Resampling.LANCZOS)
-                    
-                    # Save optimized image
-                    image.save(file_path, format='JPEG', quality=85, optimize=True)
-                except Exception as e:
-                    # If optimization fails, save original
-                    current_app.logger.warning(f"Image optimization failed, saving original: {e}")
-                    file_data.seek(0)
-                    with open(file_path, 'wb') as f:
-                        f.write(file_data.read())
-            else:
-                # Save non-image files directly
-                with open(file_path, 'wb') as f:
-                    f.write(file_data.read())
-            
-            # Set the proper URL - direct path, no subfolders
-            picture.url = f"{webdav_prefix}/{filename}"
-            db.session.add(picture)
-            
-            current_app.logger.info(f"Set picture URL for {picture.id}: {picture.url}")
-            current_app.logger.info(f"Picture saved to: {file_path}")
-            
-        except Exception as e:
-            current_app.logger.error(f"Error saving picture {picture.id}: {str(e)}")
-            # Continue with other pictures even if one fails
-            continue
+    # Track saved files for rollback
+    saved_files = []
     
-    # Commit all URL updates in batch
     try:
-        db.session.commit()
-        current_app.logger.info(f"Committed URLs for {len(pending_pictures)} pictures")
-        
-        # Small delay to ensure database writes are fully flushed
-        import time
-        time.sleep(0.1)
-        
-        # Debug logging: check that pictures are actually saved in DB
         for pending in pending_pictures:
             picture = pending['picture']
-            db.session.refresh(picture)  # Refresh from DB
-            current_app.logger.info(f"Final picture state - ID: {picture.id}, URL: {picture.url}, Name: {picture.picture_name}")
+            file_data = pending['file_data']
+            extension = pending['extension']
+            
+            try:
+                # Refresh picture from database to get the generated picture_name
+                db.session.flush()  # Ensure the picture is in database first
+                db.session.refresh(picture)
+                
+                if not picture.picture_name:
+                    current_app.logger.error(f"No picture_name generated for picture {picture.id}")
+                    continue
+                
+                # Final filename with extension - ALL pictures go directly in /components/
+                filename = f"{picture.picture_name}{extension}"
+                file_path = os.path.join(upload_folder, filename)
+                
+                # Save the file from memory
+                file_data.seek(0)
+                
+                # Optimize image if it's an image file
+                if extension.lower() in ['.jpg', '.jpeg', '.png']:
+                    try:
+                        image = Image.open(file_data)
+                        
+                        # Convert RGBA to RGB if necessary
+                        if image.mode in ('RGBA', 'LA'):
+                            background = Image.new('RGB', image.size, (255, 255, 255))
+                            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+                            image = background
+                        
+                        # Resize if larger than max size
+                        max_size = (1920, 1920)
+                        image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                        
+                        # Save optimized image
+                        image.save(file_path, format='JPEG', quality=85, optimize=True)
+                    except Exception as e:
+                        # If optimization fails, save original
+                        current_app.logger.warning(f"Image optimization failed, saving original: {e}")
+                        file_data.seek(0)
+                        with open(file_path, 'wb') as f:
+                            f.write(file_data.read())
+                else:
+                    # Save non-image files directly
+                    with open(file_path, 'wb') as f:
+                        f.write(file_data.read())
+                
+                # Track saved file for potential rollback
+                saved_files.append(file_path)
+                
+                # Set the proper URL - direct path, no subfolders
+                picture.url = f"{webdav_prefix}/{filename}"
+                db.session.add(picture)
+                
+                current_app.logger.info(f"Set picture URL for {picture.id}: {picture.url}")
+                current_app.logger.info(f"Picture saved to: {file_path}")
+                
+            except Exception as e:
+                current_app.logger.error(f"Error saving picture {picture.id}: {str(e)}")
+                # Continue with other pictures even if one fails
+                continue
+        
+        # Commit all URL updates in batch
+        db.session.commit()
+        current_app.logger.info(f"Committed URLs for {len(pending_pictures)} pictures")
             
     except Exception as e:
         current_app.logger.error(f"Error committing picture URLs: {str(e)}")
         db.session.rollback()
+        
+        # Clean up any saved files on failure
+        for file_path in saved_files:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    current_app.logger.info(f"Cleaned up file after rollback: {file_path}")
+                except Exception as cleanup_error:
+                    current_app.logger.error(f"Failed to clean up file {file_path}: {cleanup_error}")
+        
         raise
 
 
@@ -574,8 +652,7 @@ def index():
         query = Component.query.options(
             joinedload(Component.component_type),
             joinedload(Component.supplier),
-            joinedload(Component.pictures),
-            joinedload(Component.keywords)
+            selectinload(Component.keywords)
         )
         
         # Apply filters
@@ -829,13 +906,16 @@ def component_detail(id):
         db.session.expunge_all()
         
         # Force fresh query to avoid any session caching issues
+        # Using selectinload for better performance with multiple collections
         component = Component.query.options(
             joinedload(Component.component_type),
             joinedload(Component.supplier),
-            joinedload(Component.pictures),
-            joinedload(Component.variants).joinedload(ComponentVariant.color),
-            joinedload(Component.variants).joinedload(ComponentVariant.variant_pictures),
-            joinedload(Component.keywords)
+            selectinload(Component.pictures),
+            selectinload(Component.variants).joinedload(ComponentVariant.color),
+            selectinload(Component.variants).selectinload(ComponentVariant.variant_pictures),
+            selectinload(Component.keywords),
+            selectinload(Component.brand_associations).joinedload(ComponentBrand.brand),
+            selectinload(Component.categories)
         ).get_or_404(id)
         
         # Explicitly refresh variant pictures to ensure they're loaded
@@ -938,14 +1018,48 @@ def new_component():
             # Store component ID before session operations
             component_id = component.id
             
-            # Now save pictures with proper names (commits internally)
+            # Now save pictures with proper names (single commit)
             _save_pending_pictures(pending_pictures)
             
             # Clear session cache to ensure fresh data load on redirect
             db.session.expunge_all()
             
-            flash('Component created successfully!', 'success')
-            return redirect(url_for('component_web.component_detail', id=component_id))
+            current_app.logger.info(f"Component {component_id} creation completed, starting background verification")
+            
+            # Store creation completion in session for status checking
+            session[f'component_creation_{component_id}'] = {
+                'status': 'verifying',
+                'created_at': time.time()
+            }
+            
+            # Start background verification (async-like using threading)
+            import threading
+            
+            def verify_in_background():
+                try:
+                    images_verified = _verify_images_accessible(component_id)
+                    session[f'component_creation_{component_id}'] = {
+                        'status': 'ready' if images_verified else 'ready_with_warning',
+                        'created_at': time.time(),
+                        'verified': images_verified
+                    }
+                    current_app.logger.info(f"Background verification completed for component {component_id}: {images_verified}")
+                except Exception as e:
+                    current_app.logger.error(f"Background verification failed for component {component_id}: {e}")
+                    session[f'component_creation_{component_id}'] = {
+                        'status': 'ready_with_warning',
+                        'created_at': time.time(),
+                        'verified': False
+                    }
+            
+            # Start verification in background
+            verification_thread = threading.Thread(target=verify_in_background)
+            verification_thread.daemon = True
+            verification_thread.start()
+            
+            # Redirect immediately to loading page
+            flash('Component is being created...', 'info')
+            return redirect(url_for('component_web.component_creation_loading', component_id=component_id))
         
         except Exception as e:
             db.session.rollback()
@@ -958,6 +1072,47 @@ def new_component():
     context['component'] = None
     
     return render_template('component_edit_form.html', **context)
+
+
+@component_web.route('/component/creation-loading/<int:component_id>')
+def component_creation_loading(component_id):
+    """Show loading page while component creation completes"""
+    # Verify component exists
+    component = Component.query.get_or_404(component_id)
+    
+    return render_template('component_creation_loading.html', component_id=component_id)
+
+
+@component_web.route('/api/component/creation-status/<int:component_id>')
+def check_creation_status(component_id):
+    """Check if component creation and verification is complete"""
+    import time
+    
+    # Get status from session
+    session_key = f'component_creation_{component_id}'
+    creation_info = session.get(session_key)
+    
+    if not creation_info:
+        # If no session info, assume it's ready (fallback)
+        return jsonify({'ready': True, 'verified': False})
+    
+    status = creation_info.get('status', 'verifying')
+    created_at = creation_info.get('created_at', time.time())
+    verified = creation_info.get('verified', False)
+    
+    # Auto-complete after 20 seconds regardless of verification status
+    if time.time() - created_at > 20:
+        # Clean up session
+        session.pop(session_key, None)
+        return jsonify({'ready': True, 'verified': verified, 'timeout': True})
+    
+    # Check if ready
+    if status in ['ready', 'ready_with_warning']:
+        # Clean up session
+        session.pop(session_key, None)
+        return jsonify({'ready': True, 'verified': verified})
+    
+    return jsonify({'ready': False, 'status': status})
 
 
 @component_web.route('/component/edit/<int:id>', methods=['GET', 'POST'])
@@ -1016,7 +1171,18 @@ def edit_component(id):
             # Clear session cache to ensure fresh data load on redirect
             db.session.expunge_all()
             
-            flash('Component updated successfully!', 'success')
+            # For edits, if new pictures were added, verify accessibility
+            if pending_pictures:
+                current_app.logger.info(f"Component {component_id} edit completed with new pictures, verifying accessibility")
+                images_verified = _verify_images_accessible(component_id)
+                
+                if images_verified:
+                    flash('Component updated successfully!', 'success')
+                else:
+                    flash('Component updated successfully! New images may take a moment to load.', 'warning')
+            else:
+                flash('Component updated successfully!', 'success')
+            
             return redirect(url_for('component_web.component_detail', id=component_id))
         
         except Exception as e:

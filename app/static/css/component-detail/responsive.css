@@ -1,0 +1,508 @@
+/**
+ * Component Detail Responsive Styles
+ * Mobile-first responsive design and breakpoint management
+ * Built from scratch following TDD methodology
+ */
+
+/* === BREAKPOINT VARIABLES === */
+:root {
+  --cd-breakpoint-sm: 640px;
+  --cd-breakpoint-md: 768px;
+  --cd-breakpoint-lg: 1024px;
+  --cd-breakpoint-xl: 1280px;
+  --cd-breakpoint-2xl: 1536px;
+}
+
+/* === MOBILE FIRST (DEFAULT) === */
+/* Base styles are mobile-first, then enhanced for larger screens */
+
+.component-detail {
+  padding: var(--cd-space-sm);
+}
+
+.component-header {
+  padding: var(--cd-space-md) var(--cd-space-sm);
+  margin-bottom: var(--cd-space-lg);
+}
+
+.component-header__title {
+  font-size: var(--cd-text-2xl);
+}
+
+.component-header__meta {
+  flex-direction: column;
+  gap: var(--cd-space-sm);
+}
+
+/* Single column layout on mobile */
+.component-content {
+  grid-template-columns: 1fr;
+  gap: var(--cd-space-lg);
+  padding: 0;
+}
+
+.component-sidebar {
+  position: static;
+  order: -1; /* Show sidebar first on mobile */
+  padding: var(--cd-space-md);
+}
+
+.component-sidebar__actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+/* Mobile gallery adjustments */
+.image-gallery__main {
+  min-height: 250px;
+}
+
+.image-gallery__variants {
+  padding: var(--cd-space-sm);
+}
+
+.variant-selector {
+  font-size: var(--cd-text-xs);
+  padding: var(--cd-space-xs) var(--cd-space-sm);
+}
+
+.variant-selector__color-swatch {
+  width: 16px;
+  height: 16px;
+}
+
+.image-gallery__thumbnails {
+  padding: var(--cd-space-xs);
+}
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+}
+
+/* Mobile tabs */
+.tabs__nav {
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs__button {
+  flex-shrink: 0;
+  padding: var(--cd-space-sm) var(--cd-space-md);
+  font-size: var(--cd-text-sm);
+}
+
+/* Mobile lightbox adjustments */
+.lightbox__nav {
+  width: 40px;
+  height: 40px;
+}
+
+.lightbox__nav--prev {
+  left: 10px;
+}
+
+.lightbox__nav--next {
+  right: 10px;
+}
+
+.lightbox__close {
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+}
+
+.lightbox__info {
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  padding: var(--cd-space-sm);
+}
+
+/* Mobile loading states */
+.loading-state {
+  padding: var(--cd-space-lg);
+  min-height: 250px;
+}
+
+.loading-state__spinner {
+  width: 48px;
+  height: 48px;
+}
+
+.loading-overlay__content {
+  padding: var(--cd-space-lg);
+  margin: var(--cd-space-md);
+}
+
+/* === SMALL TABLETS (640px+) === */
+@media (min-width: 640px) {
+  .component-detail {
+    padding: var(--cd-space-md);
+  }
+  
+  .component-header {
+    padding: var(--cd-space-lg) var(--cd-space-md);
+  }
+  
+  .component-header__title {
+    font-size: var(--cd-text-3xl);
+  }
+  
+  .component-header__meta {
+    flex-direction: row;
+    gap: var(--cd-space-lg);
+  }
+  
+  .component-sidebar {
+    order: 0; /* Reset sidebar order */
+  }
+  
+  .component-sidebar__actions {
+    flex-direction: column;
+  }
+  
+  .image-gallery__main {
+    min-height: 300px;
+  }
+  
+  .variant-selector {
+    font-size: var(--cd-text-sm);
+    padding: var(--cd-space-sm) var(--cd-space-md);
+  }
+  
+  .variant-selector__color-swatch {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .thumbnail {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .loading-state {
+    min-height: 350px;
+  }
+}
+
+/* === TABLETS (768px+) === */
+@media (min-width: 768px) {
+  .component-content {
+    grid-template-columns: 1fr 280px;
+    gap: var(--cd-space-xl);
+    padding: 0 var(--cd-space-sm);
+  }
+  
+  .component-sidebar {
+    position: sticky;
+    top: var(--cd-space-xl);
+    padding: var(--cd-space-lg);
+  }
+  
+  .image-gallery__main {
+    min-height: 350px;
+  }
+  
+  .image-gallery__variants {
+    padding: var(--cd-space-md);
+  }
+  
+  .variant-selector__color-swatch {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .thumbnail {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .tabs__nav {
+    overflow-x: visible;
+  }
+  
+  .tabs__button {
+    padding: var(--cd-space-md) var(--cd-space-lg);
+  }
+  
+  .lightbox__nav {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .lightbox__nav--prev {
+    left: -60px;
+  }
+  
+  .lightbox__nav--next {
+    right: -60px;
+  }
+  
+  .lightbox__close {
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .lightbox__info {
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    padding: var(--cd-space-md);
+  }
+  
+  .loading-state {
+    min-height: 400px;
+  }
+  
+  .loading-state__spinner {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+/* === DESKTOP (1024px+) === */
+@media (min-width: 1024px) {
+  .component-content {
+    grid-template-columns: 1fr 320px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--cd-space-md);
+  }
+  
+  .component-sidebar {
+    padding: var(--cd-space-xl);
+  }
+  
+  .image-gallery__main {
+    min-height: 400px;
+  }
+  
+  .image-gallery__main-image {
+    max-height: 500px;
+  }
+  
+  /* Enhanced hover effects on desktop */
+  .thumbnail:hover {
+    transform: scale(1.05);
+  }
+  
+  .variant-selector:hover {
+    transform: translateY(-1px);
+  }
+  
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* Better spacing for desktop */
+  .component-detail section {
+    padding: var(--cd-space-xl);
+  }
+}
+
+/* === LARGE DESKTOP (1280px+) === */
+@media (min-width: 1280px) {
+  .component-header {
+    padding: var(--cd-space-xl) var(--cd-space-lg);
+  }
+  
+  .component-header__title {
+    font-size: var(--cd-text-4xl);
+  }
+  
+  .image-gallery__main {
+    min-height: 450px;
+  }
+  
+  .image-gallery__main-image {
+    max-height: 600px;
+  }
+  
+  /* Larger thumbnails on large screens */
+  .thumbnail {
+    width: 90px;
+    height: 90px;
+  }
+  
+  /* More space for content */
+  .component-content {
+    max-width: 1600px;
+  }
+}
+
+/* === EXTRA LARGE DESKTOP (1536px+) === */
+@media (min-width: 1536px) {
+  .component-content {
+    grid-template-columns: 1fr 360px;
+    max-width: 1800px;
+  }
+  
+  .image-gallery__main {
+    min-height: 500px;
+  }
+  
+  .image-gallery__main-image {
+    max-height: 700px;
+  }
+  
+  .thumbnail {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* === LANDSCAPE ORIENTATION === */
+@media (orientation: landscape) and (max-height: 600px) {
+  .lightbox__image {
+    max-height: 85vh;
+  }
+  
+  .lightbox__info {
+    display: none; /* Hide info on short landscape screens */
+  }
+  
+  .component-header {
+    padding: var(--cd-space-md) var(--cd-space-sm);
+    margin-bottom: var(--cd-space-md);
+  }
+  
+  .component-header__title {
+    font-size: var(--cd-text-xl);
+  }
+}
+
+/* === HIGH DPI DISPLAYS === */
+@media (min-resolution: 2dppx) {
+  .image-gallery__main-image,
+  .thumbnail__image,
+  .lightbox__image {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* === PRINT STYLES === */
+@media print {
+  .component-detail {
+    background: white;
+    padding: 0;
+  }
+  
+  .component-content {
+    grid-template-columns: 1fr;
+    gap: var(--cd-space-md);
+  }
+  
+  .component-sidebar,
+  .lightbox-overlay,
+  .loading-state,
+  .loading-overlay {
+    display: none !important;
+  }
+  
+  .image-gallery__main {
+    min-height: auto;
+  }
+  
+  .image-gallery__thumbnails {
+    display: none;
+  }
+  
+  .image-gallery__variants {
+    display: none;
+  }
+  
+  .btn {
+    display: none;
+  }
+  
+  .tabs__nav {
+    display: none;
+  }
+  
+  .component-detail section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* === ACCESSIBILITY - REDUCE MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  .thumbnail:hover,
+  .variant-selector:hover,
+  .btn:hover {
+    transform: none;
+  }
+  
+  .fade-in,
+  .slide-in,
+  .gallery-fade-enter-active,
+  .lightbox-slide-enter-active {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* === TOUCH DEVICES === */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .thumbnail:hover,
+  .variant-selector:hover,
+  .btn:hover {
+    transform: none;
+    background: initial;
+    border-color: initial;
+  }
+  
+  /* Larger touch targets */
+  .btn {
+    min-height: 44px;
+    padding: var(--cd-space-md) var(--cd-space-lg);
+  }
+  
+  .tabs__button {
+    min-height: 44px;
+    padding: var(--cd-space-md) var(--cd-space-lg);
+  }
+  
+  .thumbnail {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .lightbox__nav,
+  .lightbox__close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* === CONTAINER QUERIES (FUTURE-PROOFING) === */
+/* When container queries are widely supported */
+@supports (container-type: inline-size) {
+  .component-content {
+    container-type: inline-size;
+  }
+  
+  @container (min-width: 800px) {
+    .image-gallery__thumbnails {
+      flex-wrap: wrap;
+    }
+  }
+  
+  @container (max-width: 600px) {
+    .variant-selector__name {
+      display: none;
+    }
+  }
+}

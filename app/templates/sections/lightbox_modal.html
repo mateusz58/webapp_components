@@ -1,12 +1,9 @@
-<!-- IMPROVED Lightbox Modal -->
 <div class="lightbox" :class="{ 'active': lightboxOpen }" @click="closeLightbox()">
-    <!-- Main Image -->
     <img :src="currentImages[lightboxIndex]?.url"
          :alt="currentImages[lightboxIndex]?.name"
          class="lightbox-content"
          @click.stop>
 
-    <!-- Navigation Controls -->
     <template x-if="currentImages.length > 1">
         <div>
             <button class="lightbox-prev" @click.stop="previousImage()">
@@ -18,12 +15,10 @@
         </div>
     </template>
 
-    <!-- Close Button -->
     <button class="lightbox-close" @click="closeLightbox()">
         ×
     </button>
 
-    <!-- Image Info -->
     <div class="lightbox-info">
         <div class="fw-bold" x-text="currentImages[lightboxIndex]?.name"></div>
         <div class="small opacity-75" x-text="`Order: ${currentImages[lightboxIndex]?.order} • ${lightboxIndex + 1} of ${currentImages.length}`"></div>
