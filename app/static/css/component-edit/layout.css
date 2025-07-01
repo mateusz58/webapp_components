@@ -1,0 +1,44 @@
+/**
+ * Layout Styles - Grid and Page Structure
+ */
+
+/* Layout Grid */
+.component-form-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+}
+
+@media (min-width: 1024px) {
+    .component-form-layout {
+        grid-template-columns: 2fr 1fr;
+        padding: var(--spacing-xl);
+    }
+}
+
+/* Header Section */
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    color: white;
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.page-header h1 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.page-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.header-actions {
+    margin-top: var(--spacing-md);
+}
