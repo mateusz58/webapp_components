@@ -2,12 +2,13 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, ComponentTypeProperty, Color
-from app.utils.file_handling import save_uploaded_file, allowed_file, delete_file
+from app.utils.file_handling import save_uploaded_file, allowed_file, delete_file, generate_picture_name
 from sqlalchemy import or_, and_, func, desc, asc
 from sqlalchemy.orm import joinedload, selectinload
 import os
 import uuid
 import time
+import io
 from datetime import datetime, timedelta
 
 component_web = Blueprint('component_web', __name__)
@@ -17,6 +18,55 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 200
 SHOW_ALL_LIMIT = 1000
+
+
+def _save_pending_files_atomically(all_pending_files):
+    """Save files atomically with proper URL generation"""
+    saved_files = []
+    try:
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+        
+        # Create upload directory if it doesn't exist
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        for file_info in all_pending_files:
+            file_path = os.path.join(upload_folder, file_info['filename'])
+            
+            # Save file to WebDAV
+            file_info['file_data'].seek(0)
+            with open(file_path, 'wb') as f:
+                f.write(file_info['file_data'].read())
+            
+            # Track saved file for potential cleanup
+            saved_files.append(file_path)
+            
+            # Update picture URL in database - get fresh picture object from database
+            picture_id = file_info['picture'].id
+            picture = Picture.query.get(picture_id)
+            if picture:
+                current_app.logger.info(f"Setting URL for picture {picture_id}: {file_info['url']}")
+                picture.url = file_info['url']
+                db.session.add(picture)
+            else:
+                current_app.logger.error(f"Could not find picture with ID {picture_id}")
+        
+        # Commit URL updates
+        db.session.commit()
+        
+    except Exception as e:
+        current_app.logger.error(f"Error saving files: {str(e)}")
+        
+        # Cleanup any files that were saved
+        for file_path in saved_files:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as cleanup_error:
+                current_app.logger.error(f"Error cleaning up file {file_path}: {cleanup_error}")
+        
+        # Rollback URL updates
+        db.session.rollback()
+        raise
 
 
 def _get_form_data():
@@ -162,21 +212,67 @@ def _handle_picture_uploads(component, is_edit=False):
         ).scalar() or 0
         picture_order = max_order + 1
     else:
+        # Check for regular pictures field first
         pictures = request.files.getlist('pictures')
+        
+        # If no regular pictures, check for variant-based pictures (API field naming)
+        if not any(f.filename for f in pictures):
+            variant_pictures = []
+            variant_index = 1
+            while True:
+                variant_files = request.files.getlist(f'variant_images_{variant_index}[]')
+                if not any(f.filename for f in variant_files):
+                    break
+                variant_pictures.extend(variant_files)
+                variant_index += 1
+            pictures = variant_pictures
+        
         picture_order = 1
     
+    # Save pictures with proper URL generation using database triggers
+    all_pending_files = []
     for picture_file in pictures:
-        if picture_file and allowed_file(picture_file.filename):
-            url = save_uploaded_file(picture_file)
-            if url:
+        if picture_file and picture_file.filename and allowed_file(picture_file.filename):
+            try:
+                # Read file into memory for atomic save after DB commit
+                file_data = io.BytesIO(picture_file.read())
+                file_ext = os.path.splitext(picture_file.filename)[1].lower()
+                
+                # Generate picture name using Python utility function (consistent with API)
+                generated_name = generate_picture_name(component, None, picture_order)
+                
+                # Create picture record with generated name
                 picture = Picture(
                     component_id=component.id,
-                    url=url,
+                    picture_name=generated_name,
+                    url='',  # Will be set after files are saved
                     picture_order=picture_order,
                     alt_text=f"{component.product_number} - Image {picture_order}"
                 )
                 db.session.add(picture)
-                picture_order += 1
+                db.session.flush()  # Get picture ID
+                
+                # Store file data for atomic save after DB commit
+                if picture.picture_name:
+                    filename = f"{picture.picture_name}{file_ext}"
+                    webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+                    
+                    all_pending_files.append({
+                        'picture': picture,
+                        'file_data': file_data,
+                        'filename': filename,
+                        'url': f"{webdav_prefix}/{filename}"
+                    })
+                    
+                    picture_order += 1
+                    
+            except Exception as e:
+                current_app.logger.error(f"Error preparing picture: {str(e)}")
+                continue
+    
+    # After database operations, save files atomically
+    if all_pending_files:
+        _save_pending_files_atomically(all_pending_files)
 
 
 def _handle_variants(component, is_edit=False):

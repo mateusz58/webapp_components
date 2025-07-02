@@ -1,8 +1,8 @@
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app, send_file, session, url_for
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, Color
-from app.utils.file_handling import save_uploaded_file, allowed_file
+from app.utils.file_handling import save_uploaded_file, allowed_file, generate_picture_name
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload, selectinload
 import io
@@ -13,8 +13,8 @@ from datetime import datetime
 component_api = Blueprint('component_api', __name__)
 
 
-@component_api.route('/component/create-with-variants', methods=['POST'])
-def create_component_with_variants():
+@component_api.route('/component/create', methods=['POST'])
+def create_component():
     """
     Create a component with variants and pictures in a single API call
     Handles multipart form data with component details, variants, and file uploads
@@ -61,6 +61,7 @@ def create_component_with_variants():
         # Process variants
         created_variants = []
         variant_index = 1
+        all_pending_files = []  # Track ALL files to save after DB commit
         
         # Look for variant data in form (variant_color_1, variant_color_2, etc.)
         while True:
@@ -120,9 +121,12 @@ def create_component_with_variants():
             db.session.add(variant)
             db.session.flush()  # Get variant ID
             
-            # Handle variant pictures
+            # Handle variant pictures - prepare for atomic file operations
             variant_pictures = []
             uploaded_files = request.files.getlist(images_key)
+            
+            current_app.logger.info(f"Processing variant {variant_index}, images_key: {images_key}")
+            current_app.logger.info(f"Found {len(uploaded_files)} files: {[f.filename for f in uploaded_files]}")
             
             if uploaded_files and any(f.filename for f in uploaded_files):
                 picture_order = 1
@@ -130,47 +134,67 @@ def create_component_with_variants():
                 for picture_file in uploaded_files:
                     if picture_file and picture_file.filename and allowed_file(picture_file.filename):
                         try:
-                            # Read file into memory
+                            # Read file into memory for later processing
                             file_data = io.BytesIO(picture_file.read())
                             file_ext = os.path.splitext(picture_file.filename)[1].lower()
                             
                             # Create picture record (database trigger will generate picture_name)
+                            current_app.logger.info(f"Creating picture: component_id={component.id}, variant_id={variant.id}, order={picture_order}")
+                            
+                            # Check if variant and color are properly loaded
+                            db.session.refresh(variant)
+                            db.session.refresh(component)
+                            current_app.logger.info(f"Variant color check: variant.color={getattr(variant, 'color', 'NOT_LOADED')}")
+                            current_app.logger.info(f"Component supplier check: component.supplier={getattr(component, 'supplier', 'NOT_LOADED')}")
+                            
+                            # Generate picture name using Python utility function (reliable and maintainable)
+                            generated_name = generate_picture_name(component, variant, picture_order)
+                            current_app.logger.info(f"Generated picture name: '{generated_name}'")
+                            
+                            if not generated_name:
+                                current_app.logger.error(f"Failed to generate picture name for component {component.id}, variant {variant.id}, order {picture_order}")
+                                continue
+                            
                             picture = Picture(
                                 component_id=component.id,
                                 variant_id=variant.id,
-                                url='',  # Will be set after file is saved
+                                picture_name=generated_name,  # Set directly instead of relying on trigger
+                                url='',  # Will be set after files are saved
                                 picture_order=picture_order,
-                                alt_text=f"{component.product_number} - {variant.color.name} - Image {picture_order}"
+                                alt_text=f"{component.product_number} - Image {picture_order}"
                             )
                             db.session.add(picture)
-                            db.session.flush()  # Get picture ID and trigger naming
+                            db.session.flush()  # Get picture ID
+                            current_app.logger.info(f"Picture created: ID={picture.id}, name='{picture.picture_name}'")
                             
-                            # Save file with database-generated name
+                            # Store file data for atomic save after DB commit
+                            current_app.logger.info(f"Picture created with ID {picture.id}, name: '{picture.picture_name}', order: {picture.picture_order}")
                             if picture.picture_name:
                                 filename = f"{picture.picture_name}{file_ext}"
-                                upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
                                 webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
                                 
-                                file_path = os.path.join(upload_folder, filename)
-                                file_data.seek(0)
-                                with open(file_path, 'wb') as f:
-                                    f.write(file_data.read())
+                                current_app.logger.info(f"Preparing file for atomic save: {filename} -> {webdav_prefix}/{filename}")
+                                all_pending_files.append({
+                                    'picture': picture,
+                                    'file_data': file_data,
+                                    'filename': filename,
+                                    'url': f"{webdav_prefix}/{filename}"
+                                })
                                 
-                                # Set the proper URL
-                                picture.url = f"{webdav_prefix}/{filename}"
-                                db.session.add(picture)
-                                
+                                # Add to variant pictures list for response
                                 variant_pictures.append({
                                     'id': picture.id,
                                     'name': picture.picture_name,
-                                    'url': picture.url,
+                                    'url': f"{webdav_prefix}/{filename}",
                                     'order': picture.picture_order
                                 })
-                                
-                                picture_order += 1
+                            else:
+                                current_app.logger.error(f"Picture name is empty for picture ID {picture.id} - database trigger may have failed")
+                            
+                            picture_order += 1
                                 
                         except Exception as e:
-                            current_app.logger.error(f"Error processing picture: {str(e)}")
+                            current_app.logger.error(f"Error preparing picture: {str(e)}")
                             continue
             
             # Add variant to created list
@@ -185,17 +209,110 @@ def create_component_with_variants():
             
             variant_index += 1
         
-        # Commit all changes
+        # Commit database changes first
+        current_app.logger.info(f"Committing database changes. Pending files to save: {len(all_pending_files)}")
         db.session.commit()
+        
+        # Now save all files atomically
+        saved_files = []
+        current_app.logger.info(f"Starting atomic file save for {len(all_pending_files)} files")
+        try:
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+            current_app.logger.info(f"Upload folder: {upload_folder}")
+            
+            # Create upload directory if it doesn't exist
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            if not all_pending_files:
+                current_app.logger.warning("No files to save - all_pending_files is empty!")
+            
+            for file_info in all_pending_files:
+                file_path = os.path.join(upload_folder, file_info['filename'])
+                
+                # Save file to WebDAV
+                file_info['file_data'].seek(0)
+                with open(file_path, 'wb') as f:
+                    f.write(file_info['file_data'].read())
+                
+                # Track saved file for potential cleanup
+                saved_files.append(file_path)
+                
+                # Update picture URL in database - get fresh picture object from database
+                picture_id = file_info['picture'].id
+                picture = Picture.query.get(picture_id)
+                if picture:
+                    current_app.logger.info(f"Setting URL for picture {picture_id}: {file_info['url']}")
+                    picture.url = file_info['url']
+                    db.session.add(picture)
+                else:
+                    current_app.logger.error(f"Could not find picture with ID {picture_id}")
+            
+            # Commit URL updates
+            db.session.commit()
+            
+        except Exception as e:
+            current_app.logger.error(f"Error saving files: {str(e)}")
+            
+            # Cleanup any files that were saved
+            for file_path in saved_files:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as cleanup_error:
+                    current_app.logger.error(f"Error cleaning up file {file_path}: {cleanup_error}")
+            
+            # Rollback URL updates
+            db.session.rollback()
+            
+            return jsonify({'success': False, 'error': f'Failed to save files: {str(e)}'}), 500
+        
+        # Integrate with web workflow: set up loading page session and background verification
+        import time
+        import threading
+        
+        component_id = component.id
+        
+        # Store creation completion in session for loading page status checking
+        session[f'component_creation_{component_id}'] = {
+            'status': 'verifying',
+            'created_at': time.time()
+        }
+        
+        # Start background verification (same as web route)
+        def verify_in_background():
+            try:
+                # Import here to avoid circular imports
+                from app.web.component_routes import _verify_images_accessible
+                images_verified = _verify_images_accessible(component_id)
+                session[f'component_creation_{component_id}'] = {
+                    'status': 'ready' if images_verified else 'ready_with_warning',
+                    'created_at': time.time(),
+                    'verified': images_verified
+                }
+                current_app.logger.info(f"API: Background verification completed for component {component_id}: {images_verified}")
+            except Exception as e:
+                current_app.logger.error(f"API: Background verification failed for component {component_id}: {e}")
+                session[f'component_creation_{component_id}'] = {
+                    'status': 'ready_with_warning',
+                    'created_at': time.time(),
+                    'verified': False
+                }
+        
+        verification_thread = threading.Thread(target=verify_in_background)
+        verification_thread.daemon = True
+        verification_thread.start()
+        
+        # Return redirect URL to integrate with loading page workflow
+        loading_url = url_for('component_web.component_creation_loading', component_id=component_id)
         
         return jsonify({
             'success': True,
+            'redirect_url': loading_url,
             'message': f'Component created with {len(created_variants)} variants',
             'component': {
                 'id': component.id,
                 'product_number': component.product_number,
-                'description': component.description,
-                'variants': created_variants
+                'variants_count': len(created_variants)
             }
         })
         

@@ -11,6 +11,17 @@
     display: none;
 }
 
+.validation-summary h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--danger-color);
+    font-size: 1rem;
+}
+
+.validation-summary ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
 /* Highlight changed fields */
 .field-changed {
     animation: highlightField 2s ease-in-out;

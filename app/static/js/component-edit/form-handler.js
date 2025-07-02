@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add CSRF token to headers for API call
             const csrfToken = document.querySelector('[name="csrf_token"]')?.value;
             
-            const response = await fetch('/api/component/create-with-variants', {
+            const response = await fetch('/api/component/create', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
@@ -124,16 +124,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (result.success) {
                     const componentId = result.component.id;
-                    const variantCount = result.component.variants.length;
+                    const variantCount = result.component.variants_count || 0;
                     
                     console.log(`✅ Component ${componentId} created with ${variantCount} variants`);
                     
-                    // Show success message
-                    submitBtn.innerHTML = `<div class="spinner"></div> Success! Redirecting...`;
+                    // Show success message and redirect to loading page
+                    submitBtn.innerHTML = `<div class="spinner"></div> Success! Redirecting to loading page...`;
                     
-                    // Redirect to component detail page
+                    // Redirect to loading page (API now provides the URL)
                     setTimeout(() => {
-                        window.location.href = `/component/${componentId}`;
+                        if (result.redirect_url) {
+                            window.location.href = result.redirect_url;
+                        } else {
+                            // Fallback to direct component detail if no loading page URL
+                            window.location.href = `/component/${componentId}`;
+                        }
                     }, 1000);
                 } else {
                     throw new Error(result.error || 'Component creation failed');
@@ -701,7 +706,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body text-center">
-                            <img id="picturePreviewImage" src="" alt="" class="img-fluid" style="max-height: 70vh;">
+                            <img id="picturePreviewImage" src="" alt="" class="img-fluid">
                             <div class="mt-3">
                                 <strong>Filename:</strong> <span id="picturePreviewFilename"></span>
                             </div>

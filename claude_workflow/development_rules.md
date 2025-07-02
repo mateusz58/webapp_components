@@ -152,19 +152,31 @@ component = Component.query.options(
 ).get_or_404(id)
 ```
 
-### Picture Saving Pattern (REQUIRED)
+### Atomic File Operations Pattern (REQUIRED)
 ```python
-# Always track saved files for rollback
-saved_files = []
+# CRITICAL: Database operations BEFORE file operations
+all_pending_files = []  # Track files to save after DB commit
+saved_files = []        # Track saved files for cleanup
+
 try:
-    # Save files and track paths
-    saved_files.append(file_path)
-    db.session.commit()
+    # 1. Database operations first
+    # Create component/variants/pictures (triggers generate names)
+    db.session.commit()  # Commit database first
+    
+    # 2. File operations second  
+    for file_info in all_pending_files:
+        file_path = save_file_with_db_name(file_info)
+        saved_files.append(file_path)
+        # Update URLs in database
+    
+    db.session.commit()  # Commit URL updates
+    
 except Exception:
-    # Clean up saved files on failure
+    # Clean up any saved files on failure
     for file_path in saved_files:
         if os.path.exists(file_path):
             os.remove(file_path)
+    db.session.rollback()
     raise
 ```
 
@@ -190,6 +202,45 @@ except Exception:
 - Test SKU/name generation after changes
 
 ## Code Quality Standards
+
+### Code Documentation Rules
+- **NO COMMENTS IN PYTHON FILES**: Never add comments, docstrings, or explanatory text to .py files
+- **External Documentation Only**: Use markdown files in claude_workflow/ for all documentation
+- **Clean Code**: Code should be self-explanatory without comments
+- **Database Documentation**: Maintain separate database schema documentation
+
+### Debugging and Logging Requirements (CRITICAL)
+- **COMPREHENSIVE LOGGING**: Always add detailed logging for complex operations
+- **LOG CRITICAL PATHS**: File operations, database operations, API calls must be logged
+- **LOG VARIABLES**: Log important variable values (IDs, file names, counts, status)
+- **LOG ERRORS**: Every exception must be logged with context
+- **LOG FLOW**: Log entry/exit of critical functions with parameters
+
+#### Required Logging Pattern:
+```python
+# Log function entry with parameters
+current_app.logger.info(f"Starting operation X with param1={param1}, param2={param2}")
+
+# Log important variable values
+current_app.logger.info(f"Found {len(items)} items to process")
+
+# Log before critical operations
+current_app.logger.info(f"About to save file: {filename} to {path}")
+
+# Log results of operations
+current_app.logger.info(f"File saved successfully: {file_path}")
+
+# Log errors with context
+current_app.logger.error(f"Failed to save file {filename}: {str(e)}")
+```
+
+#### When to Add Logging:
+1. **File Operations**: Upload, save, delete operations
+2. **Database Operations**: Create, update, commit operations
+3. **API Endpoints**: Request processing, validation, response
+4. **Complex Logic**: Multi-step operations, loops, conditionals
+5. **Error Handling**: All exception blocks
+6. **Background Tasks**: Threading, async operations
 
 ### Error Handling
 - Implement comprehensive try/catch blocks
@@ -262,19 +313,23 @@ class TestComponentPictureVisibility:
 ## API-First Architecture Patterns (NEW - JULY 2025)
 
 ### Separation of Concerns (MANDATORY)
-**CRITICAL RULE**: Clear separation between web routes and API endpoints established during variant management migration:
+**CRITICAL RULE**: Clear separation between web routes and API endpoints established during variant management migration.
+
+**📚 COMPREHENSIVE DOCUMENTATION**: See `claude_workflow/endpoint_separation_guide.md` for detailed patterns, security fixes, and code review findings.
 
 #### Web Routes (`/app/web/`)
 - **Purpose**: Page rendering and navigation only
 - **Responsibilities**: Template rendering, form display, redirect logic
 - **NO DATA OPERATIONS**: Forms should not process variants, pictures, or complex operations
 - **Pattern**: Return rendered templates or simple redirects
+- **Blueprint Naming**: Use `_web` suffix (e.g., `component_web`, `admin_web`)
+- **Response Type**: ALWAYS `render_template()` or `redirect()`
 
 ```python
 # Good: Web route for page rendering
 @component_web.route('/components/<int:id>/edit')
 def edit_component(id):
-    component = get_component_with_relationships(id)
+    component = Component.query.get_or_404(id)  # Simple query only
     return render_template('component_edit_form.html', component=component)
 
 # Bad: Web route doing complex data operations (OLD PATTERN)
@@ -289,6 +344,9 @@ def create_component():
 - **Responsibilities**: CRUD operations, file handling, validation, database operations
 - **Return JSON**: Always return structured JSON responses
 - **Proper Error Handling**: HTTP status codes and error messages
+- **Blueprint Naming**: Use `_api` or `_api_bp` suffix
+- **URL Pattern**: ALL routes must be under `/api` prefix
+- **Response Type**: ALWAYS use `ApiResponse` utility class
 
 ```python
 # Good: API endpoint for data operations
@@ -296,10 +354,20 @@ def create_component():
 def add_variant_pictures(variant_id):
     try:
         # Business logic here
-        return jsonify({'success': True, 'pictures': pictures_data})
+        return ApiResponse.success('Pictures added', {'pictures': pictures_data})
+    except ValidationError as e:
+        return ApiResponse.validation_error(e.errors)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        return ApiResponse.server_error()
 ```
+
+### Security Requirements (CRITICAL)
+- **CSRF Protection**: ALL forms must include `{{ csrf_token() }}`
+- **API CSRF**: ALL AJAX requests must include `X-CSRFToken` header
+- **Input Validation**: Use validator classes before database operations
+- **SQL Injection Prevention**: Use SQLAlchemy queries, never string concatenation
+- **File Upload Security**: Validate extensions, size, content type
 
 ### JavaScript API Integration Pattern
 **MANDATORY**: Frontend must use API endpoints for real-time operations:

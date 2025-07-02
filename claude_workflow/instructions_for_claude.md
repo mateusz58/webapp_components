@@ -1,16 +1,22 @@
 # Instructions for Claude
 
+## 🚨 FIRST STEP - READ PROJECT STATUS
+**Before doing any work, ALWAYS read `claude_workflow/project_status.md`** to understand:
+- Current critical issues requiring immediate attention
+- Active development priorities and tasks
+- Recent completions and system status
+
 ## Project Overview - START HERE
 **Flask-based Component Management System** for manufacturing components with variants, suppliers, brands, and pictures. PostgreSQL database with `component_app` schema. Docker containerized.
 
 ## ✅ CRITICAL ISSUES RESOLVED
 
-### API Migration Complete (July 2025)
-**Variant Management API Migration**: Complete separation of web routes and API endpoints
-- **Root Cause**: Picture upload disconnection between JavaScript and backend form processing
-- **Solution**: Migrated to API-first architecture with real-time operations
-- **Status**: FULLY COMPLETE - All variant operations now use proper API endpoints
-- **Result**: Seamless editing/adding of components with variant pictures
+### Picture Upload Workflow Fixed (January 2025)
+**Component Creation Picture Upload**: API/Web communication bridge implemented
+- **Root Cause**: API endpoint and web workflow were disconnected causing broken picture uploads
+- **Solution**: API endpoint now integrates with web loading page workflow  
+- **Status**: FULLY COMPLETE - Component creation with variants and pictures working
+- **Result**: Complete workflow from form → API → loading page → verification → component detail
 
 ### Picture Loading Indicator System
 **Component creation redirect now shows proper loading feedback**
@@ -20,13 +26,13 @@
 - **Result**: Users see clear loading feedback during picture processing
 
 ## 🟢 CURRENT STATUS - ALL SYSTEMS OPERATIONAL
-**API-First Architecture Complete**: Clear separation between web routes and API endpoints
-- **WebDAV Integration**: ✅ WORKING - Images save to WebDAV with proper path handling
-- **Real-time Variant Operations**: ✅ WORKING - Add/remove/edit variants without page reload
+**Complete Component Creation Workflow**: API/Web communication bridge working perfectly
+- **Component Creation**: ✅ WORKING - Full workflow with variants and pictures
+- **WebDAV Integration**: ✅ WORKING - Atomic file operations with database-generated names  
+- **Loading Page System**: ✅ WORKING - Professional loading with background verification
 - **Database Trigger Integration**: ✅ WORKING - Proper SKU and picture name generation
-- **Loading Indicators**: ✅ WORKING - Professional loading states for all operations
-- **Error Handling**: ✅ WORKING - Graceful error recovery with user feedback
-- **Modular CSS/JS**: ✅ WORKING - Both detail and edit forms use consistent modular structure
+- **Error Handling**: ✅ WORKING - Atomic operations with file cleanup on failure
+- **API/Web Communication**: ✅ WORKING - API sets session status and returns loading URL
 
 ## Essential Architecture
 - **Backend**: Flask with Blueprints (`app/web/` and `app/api/`)
@@ -112,6 +118,8 @@ Read these for deeper details when needed:
 - `CLAUDE.md` - Complete architecture documentation  
 - `claude_workflow/project_status.md` - Current issues and priorities
 - `claude_workflow/development_rules.md` - Detailed patterns and constraints
+- `claude_workflow/endpoint_separation_guide.md` - API/Web separation patterns and security fixes
+- `claude_workflow/database_schema_guide.md` - Complete PostgreSQL schema documentation
 - `claude_workflow/selenium_testing_guidelines.md` - Selenium E2E testing framework
 - `claude_workflow/architecture_overview.md` - Full system architecture
 
@@ -138,15 +146,64 @@ Read these for deeper details when needed:
   - Architecture evolves
   - New essential information emerges
 
+- **Update `database_schema_guide.md`** when:
+  - Database schema changes occur
+  - New tables or relationships added
+  - Triggers or functions modified
+  - Performance issues with queries identified
+
 **ALWAYS use TodoWrite tool** for complex multi-step tasks
 
-## Current Development Focus
-1. **Use API-first patterns** - All new features should follow established API/web route separation
-2. **Follow TDD methodology** for all new development (MANDATORY)
-3. **Use modular architecture** - CSS/JS organized into focused modules
-4. **Follow selectinload patterns** for database queries
-5. **Maintain CSRF protection** on all forms and API endpoints
-6. **Use comprehensive testing** with Selenium for UI validation
+## Database Documentation Responsibilities (MANDATORY)
+
+**Database Connection**: `postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database`  
+**Schema**: `component_app`
+
+### Regular Database Documentation Tasks:
+1. **Monitor Schema Changes**: Check for new tables, columns, or relationships
+2. **Document Triggers**: Keep track of PostgreSQL functions and triggers
+3. **Update Relationships**: Maintain accurate relationship documentation
+4. **Performance Analysis**: Document query performance issues and solutions
+5. **Data Flow Documentation**: Keep picture upload and SKU generation workflows current
+
+### Critical Database Rules:
+- **Never manually set**: `variant_sku` or `picture_name` (auto-generated by triggers)
+- **Always use schema**: All models inherit from Base class with `component_app` schema
+- **Picture management**: Files stored in WebDAV at `/components/` with auto-generated names
+- **Unique constraints**: Respect `product_number + supplier_id` and `component_id + color_id` uniqueness
+- **Status workflow**: Components have three-tier approval (Proto → SMS → PPS)
+
+## 🎯 CURRENT WORK PRIORITIES
+
+**ALWAYS check `claude_workflow/project_status.md` for current issues and priorities.**
+
+The project status file contains:
+- 🔴 Active critical issues requiring immediate attention
+- 🟡 Current development tasks and priorities  
+- ✅ Recently completed work and achievements
+- 📊 Performance metrics and system status
+- 🔧 Debugging information and analysis
+
+**Before starting any work, read project_status.md to understand what needs to be done.**
+
+## ⚡ CRITICAL COMPONENT CREATION WORKFLOW (WORKING)
+
+### Complete Flow:
+1. **Form Submit** → JavaScript prevents default → Calls `/api/component/create`
+2. **API Processing** → Creates component + variants + pictures with atomic operations
+3. **Session Setup** → API sets `component_creation_{id}` session status = 'verifying' 
+4. **Verification Start** → API starts background thread with `_verify_images_accessible()`
+5. **API Response** → Returns `redirect_url` to loading page
+6. **JavaScript Redirect** → Navigates to `component_creation_loading.html`
+7. **Loading Page** → Polls `/api/component/creation-status/<id>` every 2 seconds
+8. **Verification Complete** → Session status changes to 'ready'
+9. **Final Redirect** → Loading page redirects to `component/<id>` detail view
+
+### Key Implementation:
+- **Endpoint**: `/api/component/create` (handles complete creation)
+- **Form Fields**: `variant_color_{id}`, `variant_images_{id}[]` (generated by JavaScript)
+- **File Operations**: Atomic - database first, then files with cleanup on failure
+- **WebDAV Names**: Uses database-generated names like `supplier_product_color_1.jpg`
 
 ## API-First Development Rules (NEW - JULY 2025)
 **MANDATORY for all new features**: Follow the established separation of concerns:

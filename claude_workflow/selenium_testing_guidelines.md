@@ -1,9 +1,38 @@
 # Selenium Testing Guidelines
 
-**Last Updated**: July 1, 2025 - Added API-Based Testing Patterns
+**Last Updated**: July 2, 2025 - Active Debugging Priority
 
 ## Overview
 Selenium tests are located in `tests/selenium/` and follow the Page Object Model pattern for maintainability. These tests handle end-to-end user workflows and critical UI interactions, including the new API-based variant management system.
+
+## 🔥 CURRENT PRIORITY: Active Debugging (July 2, 2025)
+**Selenium testing is ACTIVELY USED for debugging critical picture URL generation issue**
+
+### Critical Bug Investigation Workflow:
+1. **Run Selenium Test**: `test_component_picture_visibility.py` reproduces issue reliably
+2. **Monitor Logs**: Application logs show API calls but missing file operations  
+3. **Database Verification**: Picture records created but URLs empty
+4. **File System Check**: No files saved to `/components/` directory
+5. **Debug Enhanced**: Added comprehensive logging to API route
+
+### Active Testing Commands:
+```bash
+# Run the critical debugging test
+cd /mnt/c/Users/Administrator/DataspellProjects/webapp_components/tests/selenium
+python test_component_picture_visibility.py
+
+# Monitor logs in parallel
+docker-compose logs -f app | grep -E "(Processing variant|Picture created|Setting URL|Error saving)"
+
+# Check database after test
+psql "postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database" -c "SELECT id, picture_name, url FROM component_app.picture WHERE component_id = [NEW_ID];"
+```
+
+### Expected Debug Output:
+- ✅ Files received: `test_image_red_X.jpg`, `test_image_green_X.jpg`
+- ✅ Picture names generated: `sab_auto-test-X_red_1`, `sab_auto-test-X_green_1`  
+- ❌ **MISSING**: "Preparing file for atomic save" logs
+- ❌ **MISSING**: "Setting URL for picture" logs
 
 ## Selenium Testing Rules (MANDATORY)
 

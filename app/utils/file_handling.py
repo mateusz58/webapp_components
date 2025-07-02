@@ -21,6 +21,44 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def generate_picture_name(component, variant=None, picture_order=1):
+    """
+    Generate picture name using Python logic.
+    
+    Args:
+        component: Component object with supplier and product_number
+        variant: Optional ComponentVariant object with color (None for component pictures)
+        picture_order: Integer order of the picture
+        
+    Returns:
+        String picture name following the pattern:
+        - Variant: "supplier_product_color_order" or "product_color_order"
+        - Component: "supplier_product_main_order" or "product_main_order"
+    """
+    # Get supplier code (normalized)
+    supplier_code = ""
+    if component.supplier and component.supplier.supplier_code:
+        supplier_code = component.supplier.supplier_code.lower().strip()
+    
+    # Get product number (normalized)
+    product_number = component.product_number.lower().replace(' ', '_').strip()
+    
+    # Get color name (normalized)
+    if variant and variant.color:
+        color_name = variant.color.name.lower().replace(' ', '_').strip()
+    else:
+        # For component-level pictures, use 'main'
+        color_name = 'main'
+    
+    # Generate name based on pattern
+    if supplier_code:
+        # Pattern: supplier_code_product_number_color_name_order
+        return f"{supplier_code}_{product_number}_{color_name}_{picture_order}"
+    else:
+        # Pattern: product_number_color_name_order
+        return f"{product_number}_{color_name}_{picture_order}"
+
+
 def generate_unique_filename(filename: str) -> str:
     """Generate a unique filename while preserving the extension."""
     if not filename:
