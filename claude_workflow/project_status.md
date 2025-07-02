@@ -1,7 +1,33 @@
 # Project Status
 
 **Last Updated**: July 2, 2025  
-**Status**: ✅ ALL SYSTEMS OPERATIONAL - PICTURE GENERATION FULLY RESOLVED
+**Status**: ✅ COMPONENT PERSISTENCE ISSUES RESOLVED - API ARCHITECTURE IMPROVEMENT NEEDED
+
+## ✅ RESOLVED: Component Association Persistence Issues (July 2, 2025)
+
+### ✅ COMPLETE SOLUTION: Fixed Brand, Category, Keyword Persistence
+**Problem**: Component creation via `/component/new` was not persisting brands, categories, keywords, or properties to database tables
+**Root Cause**: Field name mismatch between frontend form data and API endpoint expectations, plus missing SQLAlchemy relationships
+
+**Final Implementation**:
+- ✅ **Fixed Field Name Detection**: API now handles multiple possible field name variations (`brand_id` vs `brand_ids[]`, `category_ids` vs `category_ids[]`)
+- ✅ **Fixed SQLAlchemy Relationships**: Added missing `categories` relationship to Component model 
+- ✅ **Eliminated Code Duplication**: Created shared utility functions in `app/utils/association_handlers.py`
+- ✅ **Enhanced Logging**: Added comprehensive debugging for form data reception and processing
+- ✅ **Edit Mode Support**: Both creation and editing now properly handle association changes
+
+**Database Tables Now Properly Populated**:
+- ✅ `component_app.component_brand` - Brand associations
+- ✅ `component_app.component_category` - Category associations (many-to-many)
+- ✅ `component_app.keyword_component` - Keyword associations
+- ✅ `component.properties` JSON field - Dynamic component properties
+
+## 🟡 CURRENT PRIORITY: API Architecture Consistency (July 2, 2025)
+
+### 🔧 ARCHITECTURE ISSUE: Missing Component Edit API Endpoint
+**Problem**: Component editing still uses web route POST `/component/edit/<id>` instead of dedicated API endpoint
+**Impact**: Inconsistent architecture - creation uses API but editing uses web route
+**Required**: Add dedicated `PUT /api/component/<id>` endpoint for editing components
 
 ## ✅ RESOLVED: Component Detail Lightbox Issue (July 2, 2025)
 

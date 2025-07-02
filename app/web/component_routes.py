@@ -129,78 +129,8 @@ def _validate_duplicate_product_number(product_number, supplier_id, component_id
     return None
 
 
-def _handle_component_properties(component, component_type_id):
-    """Handle dynamic component properties"""
-    if component_type_id:
-        type_properties = ComponentTypeProperty.query.filter_by(
-            component_type_id=component_type_id
-        ).all()
-        
-        properties = {}
-        for prop in type_properties:
-            value = request.form.get(f'property_{prop.property_name}')
-            if value:
-                properties[prop.property_name] = value
-        
-        component.properties = properties
-
-
-def _handle_brand_associations(component, is_edit=False):
-    """Handle component-brand associations"""
-    if is_edit:
-        # Remove existing associations for edit
-        ComponentBrand.query.filter_by(component_id=component.id).delete()
-    
-    brand_ids = request.form.getlist('brand_ids[]')
-    for brand_id in brand_ids:
-        if brand_id.isdigit():
-            brand_assoc = ComponentBrand(
-                component_id=component.id,
-                brand_id=int(brand_id)
-            )
-            db.session.add(brand_assoc)
-
-
-def _handle_categories(component, is_edit=False):
-    """Handle component-category associations"""
-    # Try to get category_ids[] (multiple categories) or fall back to category_id (single category)
-    category_ids = request.form.getlist('category_ids[]')
-    if not category_ids:
-        # Fall back to single category_id for backward compatibility
-        single_category_id = request.form.get('category_id')
-        if single_category_id:
-            category_ids = [single_category_id]
-    
-    if is_edit:
-        component.categories.clear()
-    
-    for category_id in category_ids:
-        if category_id and str(category_id).isdigit():
-            category = Category.query.get(int(category_id))
-            if category and category not in component.categories:
-                component.categories.append(category)
-
-
-def _handle_keywords(component, is_edit=False):
-    """Handle component keywords"""
-    keywords_input = request.form.get('keywords', '').strip()
-    
-    if is_edit:
-        component.keywords.clear()
-    
-    if keywords_input:
-        keyword_names = [k.strip() for k in keywords_input.split(',') if k.strip()]
-        for keyword_name in keyword_names:
-            keyword = Keyword.query.filter_by(name=keyword_name).first()
-            if not keyword:
-                keyword = Keyword(name=keyword_name)
-                db.session.add(keyword)
-                db.session.flush()
-            
-            if not is_edit and keyword not in component.keywords:
-                component.keywords.append(keyword)
-            elif is_edit:
-                component.keywords.append(keyword)
+# Association handling functions moved to app.utils.association_handlers
+# to eliminate code duplication between web routes and API endpoints
 
 
 def _handle_picture_uploads(component, is_edit=False):
@@ -989,11 +919,18 @@ def new_component():
             db.session.add(component)
             db.session.flush()  # Get component ID before handling associations
             
-            # Handle all associations and uploads
-            _handle_component_properties(component, form_data['component_type_id'])
-            _handle_categories(component, is_edit=False)
-            _handle_brand_associations(component, is_edit=False)
-            _handle_keywords(component, is_edit=False)
+            # Handle all associations using shared utility functions
+            from app.utils.association_handlers import (
+                handle_component_properties, 
+                handle_brand_associations, 
+                handle_categories, 
+                handle_keywords
+            )
+            
+            handle_component_properties(component, form_data['component_type_id'])
+            handle_brand_associations(component, is_edit=False)
+            handle_categories(component, is_edit=False)
+            handle_keywords(component, is_edit=False)
             _handle_picture_uploads(component, is_edit=False)
             # Note: Variants are now handled via API endpoints, not form processing
             
@@ -1129,11 +1066,18 @@ def edit_component(id):
             component.supplier_id = form_data['supplier_id']
             component.component_type_id = form_data['component_type_id']
             
-            # Handle all associations and uploads
-            _handle_component_properties(component, form_data['component_type_id'])
-            _handle_categories(component, is_edit=True)
-            _handle_brand_associations(component, is_edit=True)
-            _handle_keywords(component, is_edit=True)
+            # Handle all associations using shared utility functions
+            from app.utils.association_handlers import (
+                handle_component_properties, 
+                handle_brand_associations, 
+                handle_categories, 
+                handle_keywords
+            )
+            
+            handle_component_properties(component, form_data['component_type_id'])
+            handle_brand_associations(component, is_edit=True)
+            handle_categories(component, is_edit=True)
+            handle_keywords(component, is_edit=True)
             _handle_picture_deletions(component)  # Handle picture deletions
             _handle_picture_uploads(component, is_edit=True)
             # Note: Variants are now handled via API endpoints

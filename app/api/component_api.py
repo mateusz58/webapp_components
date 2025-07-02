@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, send_file, session, url_for
 from werkzeug.utils import secure_filename
 from app import db
-from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, Color
+from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, Color, ComponentTypeProperty
 from app.utils.file_handling import save_uploaded_file, allowed_file, generate_picture_name
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload, selectinload
@@ -20,11 +20,24 @@ def create_component():
     Handles multipart form data with component details, variants, and file uploads
     """
     try:
+        # DEBUG: Log all received form data
+        current_app.logger.info("=== API CREATE COMPONENT - RECEIVED FORM DATA ===")
+        for key, value in request.form.items():
+            current_app.logger.info(f"Form field: {key} = {value}")
+        
+        current_app.logger.info("=== API CREATE COMPONENT - RECEIVED FORM LISTS ===")
+        for key in request.form.keys():
+            if key.endswith('[]'):
+                values = request.form.getlist(key)
+                current_app.logger.info(f"Form list: {key} = {values}")
+        
         # Get basic component data
         product_number = request.form.get('product_number', '').strip()
         description = request.form.get('description', '').strip()
         component_type_id = request.form.get('component_type_id', type=int)
         supplier_id = request.form.get('supplier_id', type=int) if request.form.get('supplier_id') else None
+        
+        current_app.logger.info(f"Basic data: product_number={product_number}, component_type_id={component_type_id}, supplier_id={supplier_id}")
         
         # Validate required fields
         if not product_number:
@@ -57,6 +70,20 @@ def create_component():
         
         db.session.add(component)
         db.session.flush()  # Get component ID
+        
+        # Handle all associations using shared utility functions
+        from app.utils.association_handlers import (
+            handle_component_properties, 
+            handle_brand_associations, 
+            handle_categories, 
+            handle_keywords,
+            get_association_counts
+        )
+        
+        handle_component_properties(component, component_type_id)
+        handle_brand_associations(component, is_edit=False)
+        handle_categories(component, is_edit=False)
+        handle_keywords(component, is_edit=False)
         
         # Process variants
         created_variants = []
@@ -305,14 +332,20 @@ def create_component():
         # Return redirect URL to integrate with loading page workflow
         loading_url = url_for('component_web.component_creation_loading', component_id=component_id)
         
+        # Build summary of what was created
+        association_counts = get_association_counts(component)
+        
+        current_app.logger.info(f"Component {component.id} created with: {len(created_variants)} variants, {association_counts['brands_count']} brands, {association_counts['categories_count']} categories, {association_counts['keywords_count']} keywords, {association_counts['properties_count']} properties")
+        
         return jsonify({
             'success': True,
             'redirect_url': loading_url,
-            'message': f'Component created with {len(created_variants)} variants',
+            'message': f'Component created with {len(created_variants)} variants, {association_counts["brands_count"]} brands, {association_counts["categories_count"]} categories, {association_counts["keywords_count"]} keywords',
             'component': {
                 'id': component.id,
                 'product_number': component.product_number,
-                'variants_count': len(created_variants)
+                'variants_count': len(created_variants),
+                **association_counts
             }
         })
         

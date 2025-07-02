@@ -108,9 +108,8 @@ class Category(Base):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     
-    # Many-to-many relationship to components
-    components = db.relationship('Component', secondary=component_category, lazy='subquery',
-                                backref=db.backref('categories', lazy=True))
+    # Many-to-many relationship to components (backref defined in Component model)
+    # components = db.relationship('Component', secondary=component_category, lazy='subquery')
 
     def __repr__(self):
         return f'<Category {self.name}>'
@@ -265,6 +264,10 @@ class Component(Base):
     keywords = db.relationship('Keyword', secondary=keyword_component, lazy='subquery',
                               backref=db.backref('components', lazy=True))
 
+    # Many-to-many relationship to categories
+    categories = db.relationship('Category', secondary=component_category, lazy='subquery',
+                                backref=db.backref('components', lazy=True))
+
     # Use the ComponentBrand association object for the brand relationship
     brand_associations = db.relationship('ComponentBrand', back_populates='component', cascade='all, delete-orphan')
 
@@ -408,18 +411,15 @@ class Component(Base):
             categories.append(cat)
         return categories
 
-    @property
-    def categories(self):
-        """Get all categories for this component (many-to-many)"""
-        return self.get_categories()
+    # @property removed - now using SQLAlchemy relationship directly
 
     def get_category_names(self):
         """Get list of category names for this component"""
-        return [category.name for category in self.get_categories()]
+        return [category.name for category in self.categories]
 
     def has_category(self, category_name):
         """Check if component has a specific category"""
-        return any(category.name == category_name for category in self.get_categories())
+        return any(category.name == category_name for category in self.categories)
 
     # Variant management methods
     def create_variant(self, color_id, variant_name=None, description=None):

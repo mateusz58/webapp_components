@@ -1,6 +1,6 @@
 # Development Rules & Patterns
 
-**Last Updated**: July 1, 2025 - Added API-First Patterns and Modular Architecture
+**Last Updated**: July 2, 2025 - Added Association Handling Patterns and Code Deduplication Rules
 
 ## TDD (Test-Driven Development) Methodology
 
@@ -563,3 +563,83 @@ When encountering large monolithic CSS/JS files:
 - Test migrations in development first
 - Backup before production migrations
 - Schema: `component_app`
+
+## Association Handling Patterns (NEW - July 2025)
+
+### Shared Utility Functions (MANDATORY)
+**Location**: `app/utils/association_handlers.py`
+
+**Rule**: All component association handling MUST use shared utility functions to eliminate code duplication.
+
+#### Required Functions
+```python
+# Handle all types of associations consistently
+handle_brand_associations(component, is_edit=False)
+handle_categories(component, is_edit=False) 
+handle_keywords(component, is_edit=False)
+handle_component_properties(component, component_type_id)
+get_association_counts(component)
+```
+
+#### Usage Pattern
+```python
+# In both API endpoints and web routes
+from app.utils.association_handlers import (
+    handle_component_properties, 
+    handle_brand_associations, 
+    handle_categories, 
+    handle_keywords
+)
+
+# Create/Edit mode handling
+handle_component_properties(component, component_type_id)
+handle_brand_associations(component, is_edit=is_editing)
+handle_categories(component, is_edit=is_editing)
+handle_keywords(component, is_edit=is_editing)
+```
+
+### Field Name Detection (CRITICAL)
+**Problem**: Frontend forms may send data with varying field names
+**Solution**: Check multiple field name patterns
+
+```python
+# Example: Handle both single and array field names
+brand_field_names = ['brand_ids[]', 'brand_id', 'brands[]', 'brands', 'selected_brands[]']
+for field_name in brand_field_names:
+    values = request.form.getlist(field_name)
+    if values:
+        # Process found values
+```
+
+### Edit Mode Requirements
+- **Brands**: Delete existing `ComponentBrand` records before adding new ones
+- **Categories**: Use `component.categories.clear()` before adding new ones  
+- **Keywords**: Use `component.keywords.clear()` before adding new ones
+- **Properties**: Replace entire `properties` JSON object
+
+### Database Tables Affected
+- `component_app.component_brand` - Brand associations
+- `component_app.component_category` - Category associations (many-to-many)
+- `component_app.keyword_component` - Keyword associations  
+- `component.properties` JSON field - Dynamic properties
+
+## API Architecture Consistency Rules (NEW - July 2025)
+
+### API-First Development (MANDATORY)
+- **Creation**: Use API endpoints (`POST /api/component/create`)
+- **Editing**: Use API endpoints (`PUT /api/component/<id>`) - NEEDS IMPLEMENTATION
+- **Reading**: Use API endpoints (`GET /api/components/<id>/edit-data`)
+- **Web Routes**: Only for page rendering and navigation
+
+### Consistent Response Format
+```python
+return jsonify({
+    'success': True,
+    'message': 'Operation completed successfully',
+    'component': {
+        'id': component.id,
+        'product_number': component.product_number,
+        **get_association_counts(component)
+    }
+})
+```
