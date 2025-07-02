@@ -23,10 +23,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form validation and submission
     form.addEventListener('submit', function(e) {
-        if (!validateForm()) {
+        console.log('🚀 Form submission attempted');
+        const isValid = validateForm();
+        console.log('🔍 Form validation result:', isValid);
+        
+        if (!isValid) {
+            console.log('❌ Form validation failed - preventing submission');
             e.preventDefault();
             return false;
         }
+        
+        console.log('✅ Form validation passed - proceeding with submission');
         
         if (window.isEditMode) {
             // For editing, prevent default and show change summary modal first
@@ -38,38 +45,133 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitFormDirectly();
             }
         } else {
-            // For new components, allow normal form submission after validation
-            console.log('Allowing normal form submission for new component');
-            
-            // Ensure variant files are properly attached before submission
-            if (window.variantManager && typeof window.variantManager.updateFormFiles === 'function') {
-                window.variantManager.updateFormFiles();
-            }
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
-            
-            // Let the form submit normally (don't prevent default)
+            // For new components, handle creation and then variants via API
+            e.preventDefault();
+            handleNewComponentSubmission();
         }
     });
     
-    function submitFormDirectly() {
-        // Ensure variant files are properly attached before submission
-        if (window.variantManager && typeof window.variantManager.updateFormFiles === 'function') {
-            window.variantManager.updateFormFiles();
+    async function submitFormDirectly() {
+        try {
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner"></div> Processing picture changes...';
+            
+            // Process staged picture changes first (for edit mode)
+            if (window.isEditMode && window.variantManager && typeof window.variantManager.processStagedChanges === 'function') {
+                const success = await window.variantManager.processStagedChanges();
+                if (!success) {
+                    // If picture processing failed, stop form submission
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = window.isEditMode ? 'Update Component' : 'Create Component';
+                    return;
+                }
+            }
+            
+            // Ensure variant files are properly attached before submission (for new components)
+            if (!window.isEditMode && window.variantManager && typeof window.variantManager.updateFormFiles === 'function') {
+                window.variantManager.updateFormFiles();
+            }
+            
+            // Update loading state
+            submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
+            
+            // Submit form
+            form.submit();
+        } catch (error) {
+            console.error('Error during form submission:', error);
+            
+            // Reset button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = window.isEditMode ? 'Update Component' : 'Create Component';
+            
+            // Show error message
+            if (window.variantManager && typeof window.variantManager.showErrorMessage === 'function') {
+                window.variantManager.showErrorMessage(`Failed to submit form: ${error.message}`);
+            } else {
+                alert(`Failed to submit form: ${error.message}`);
+            }
         }
-        
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
-        
-        // Submit form
-        form.submit();
     }
     
     // Make submitFormDirectly available globally for modal
     window.submitFormDirectly = submitFormDirectly;
+    
+    // Handle new component creation with API-based variant management
+    async function handleNewComponentSubmission() {
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner"></div> Creating Component with Variants...';
+            
+            // Use the comprehensive API endpoint that handles everything at once
+            const formData = new FormData(form);
+            
+            // Add CSRF token to headers for API call
+            const csrfToken = document.querySelector('[name="csrf_token"]')?.value;
+            
+            const response = await fetch('/api/component/create-with-variants', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+            
+            if (response.ok) {
+                // Component and variants created successfully via API
+                const result = await response.json();
+                
+                if (result.success) {
+                    const componentId = result.component.id;
+                    const variantCount = result.component.variants.length;
+                    
+                    console.log(`✅ Component ${componentId} created with ${variantCount} variants`);
+                    
+                    // Show success message
+                    submitBtn.innerHTML = `<div class="spinner"></div> Success! Redirecting...`;
+                    
+                    // Redirect to component detail page
+                    setTimeout(() => {
+                        window.location.href = `/component/${componentId}`;
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Component creation failed');
+                }
+            } else {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+            
+        } catch (error) {
+            console.error('Error creating component:', error);
+            showError(`Failed to create component: ${error.message}`);
+            
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Create Component';
+        }
+    }
+    
+    // Show error message
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger';
+        errorDiv.style.marginBottom = '1rem';
+        errorDiv.innerHTML = `
+            <strong>Error:</strong> ${message}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        
+        // Insert at top of form
+        form.insertBefore(errorDiv, form.firstChild);
+        
+        // Remove after 10 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 10000);
+    }
 
     // Real-time validation
     form.addEventListener('input', function(e) {

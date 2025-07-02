@@ -3,19 +3,30 @@
 ## Project Overview - START HERE
 **Flask-based Component Management System** for manufacturing components with variants, suppliers, brands, and pictures. PostgreSQL database with `component_app` schema. Docker containerized.
 
-## ✅ CRITICAL ISSUE RESOLVED
-**Picture Loading Indicator System**: Component creation redirect now shows proper loading feedback
+## ✅ CRITICAL ISSUES RESOLVED
+
+### API Migration Complete (July 2025)
+**Variant Management API Migration**: Complete separation of web routes and API endpoints
+- **Root Cause**: Picture upload disconnection between JavaScript and backend form processing
+- **Solution**: Migrated to API-first architecture with real-time operations
+- **Status**: FULLY COMPLETE - All variant operations now use proper API endpoints
+- **Result**: Seamless editing/adding of components with variant pictures
+
+### Picture Loading Indicator System
+**Component creation redirect now shows proper loading feedback**
 - **Root Cause**: Loading indicator wasn't visible during component/new → component/<id> redirect
 - **Solution**: Multi-layer loading detection with CSS, Alpine.js, and URL parameters
 - **Status**: RESOLVED - Loading indicator works correctly with WebDAV integration
 - **Result**: Users see clear loading feedback during picture processing
 
-## 🟡 CURRENT STATUS
-**System Working Correctly**: All components functional with comprehensive loading indicators
-- **WebDAV Integration**: ✅ WORKING - Images save to WebDAV and load properly
-- **Loading Indicators**: ✅ WORKING - Multi-layer system provides immediate feedback
-- **Auto-refresh System**: ✅ WORKING - API calls refresh image data automatically
-- **URL Parameter System**: ✅ WORKING - Reliable redirect detection implemented
+## 🟢 CURRENT STATUS - ALL SYSTEMS OPERATIONAL
+**API-First Architecture Complete**: Clear separation between web routes and API endpoints
+- **WebDAV Integration**: ✅ WORKING - Images save to WebDAV with proper path handling
+- **Real-time Variant Operations**: ✅ WORKING - Add/remove/edit variants without page reload
+- **Database Trigger Integration**: ✅ WORKING - Proper SKU and picture name generation
+- **Loading Indicators**: ✅ WORKING - Professional loading states for all operations
+- **Error Handling**: ✅ WORKING - Graceful error recovery with user feedback
+- **Modular CSS/JS**: ✅ WORKING - Both detail and edit forms use consistent modular structure
 
 ## Essential Architecture
 - **Backend**: Flask with Blueprints (`app/web/` and `app/api/`)
@@ -70,7 +81,8 @@ except Exception:
 ## Key File Locations
 - **Main Routes**: `app/web/component_routes.py` (component CRUD)
 - **Models**: `app/models.py` (database structure)
-- **Frontend**: `app/static/js/components/alpine-component-detail.js` (picture visibility)
+- **Frontend (Detail)**: `app/static/js/component-detail/` (modular detail page functionality)
+- **Frontend (Edit)**: `app/static/js/component-edit/` (modular edit form functionality)
 - **Templates**: `app/templates/component_detail.html`, `component_edit_form.html`
 - **Tests**: `tests/selenium/test_component_picture_visibility.py`
 
@@ -129,11 +141,30 @@ Read these for deeper details when needed:
 **ALWAYS use TodoWrite tool** for complex multi-step tasks
 
 ## Current Development Focus
-1. **Continue feature development** - Core picture system working
+1. **Use API-first patterns** - All new features should follow established API/web route separation
 2. **Follow TDD methodology** for all new development (MANDATORY)
-3. **Follow selectinload patterns** for database queries
-4. **Maintain CSRF protection** on all forms
-5. **Use comprehensive testing** with Selenium for UI validation
+3. **Use modular architecture** - CSS/JS organized into focused modules
+4. **Follow selectinload patterns** for database queries
+5. **Maintain CSRF protection** on all forms and API endpoints
+6. **Use comprehensive testing** with Selenium for UI validation
+
+## API-First Development Rules (NEW - JULY 2025)
+**MANDATORY for all new features**: Follow the established separation of concerns:
+
+### Web Routes (`/app/web/`)
+- **Purpose**: Page rendering and navigation only
+- **DO**: Return templates, handle redirects, display forms
+- **DON'T**: Process complex data, handle file uploads, manage variants/pictures
+
+### API Endpoints (`/app/api/`)
+- **Purpose**: Data operations and business logic
+- **DO**: CRUD operations, file handling, validation, JSON responses
+- **DON'T**: Render templates or handle navigation
+
+### Frontend Integration
+- **Real-time Operations**: Use API endpoints with JavaScript for immediate feedback
+- **Form Submissions**: Web routes for component creation, API for variant management
+- **Error Handling**: Professional loading states and graceful error recovery
 
 ## Picture Loading System Status
 - **Multi-Layer Loading Detection**: ✅ CSS + Alpine.js + URL parameters

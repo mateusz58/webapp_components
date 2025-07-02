@@ -2,11 +2,13 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
+csrf = CSRFProtect()
 
 
 def pluralize(count, singular='', plural='s'):
@@ -45,6 +47,7 @@ def create_app(config_class=Config):
 
     # Initialize extensions with the app
     db.init_app(app)
+    csrf.init_app(app)
     
     # Set up migrations without auto migration
     migrate.init_app(
@@ -143,5 +146,11 @@ def create_app(config_class=Config):
         app.register_blueprint(brand_bp)
     except ImportError as e:
         app.logger.warning(f"Brand web routes not available: {e}")
+    
+    try:
+        from app.web.admin_routes import admin_web
+        app.register_blueprint(admin_web)
+    except ImportError as e:
+        app.logger.warning(f"Admin web routes not available: {e}")
 
     return app

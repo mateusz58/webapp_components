@@ -14,7 +14,7 @@ class DriverManager:
     """Manages WebDriver setup and configuration"""
     
     @staticmethod
-    def create_chrome_driver():
+    def create_chrome_driver(enable_logging=False):
         """Create and configure Chrome WebDriver"""
         try:
             # Set up Chrome options
@@ -30,6 +30,12 @@ class DriverManager:
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
+            
+            # Enable console logging if requested
+            if enable_logging:
+                chrome_options.add_argument("--enable-logging")
+                chrome_options.add_argument("--log-level=0")
+                chrome_options.set_capability('goog:loggingPrefs', {'browser': 'ALL'})
             
             # For WSL environment
             if 'WSL' in os.environ.get('WSL_DISTRO_NAME', ''):

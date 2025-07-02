@@ -1,6 +1,6 @@
 # Development Rules & Patterns
 
-**Last Updated**: June 30, 2025 - Added Loading System Patterns
+**Last Updated**: July 1, 2025 - Added API-First Patterns and Modular Architecture
 
 ## TDD (Test-Driven Development) Methodology
 
@@ -258,6 +258,229 @@ class TestComponentPictureVisibility:
 - **Coverage.py** for code coverage tracking
 - **Factory Boy** for test data generation
 - **Mock/patch** for external dependencies (WebDAV)
+
+## API-First Architecture Patterns (NEW - JULY 2025)
+
+### Separation of Concerns (MANDATORY)
+**CRITICAL RULE**: Clear separation between web routes and API endpoints established during variant management migration:
+
+#### Web Routes (`/app/web/`)
+- **Purpose**: Page rendering and navigation only
+- **Responsibilities**: Template rendering, form display, redirect logic
+- **NO DATA OPERATIONS**: Forms should not process variants, pictures, or complex operations
+- **Pattern**: Return rendered templates or simple redirects
+
+```python
+# Good: Web route for page rendering
+@component_web.route('/components/<int:id>/edit')
+def edit_component(id):
+    component = get_component_with_relationships(id)
+    return render_template('component_edit_form.html', component=component)
+
+# Bad: Web route doing complex data operations (OLD PATTERN)
+@component_web.route('/components', methods=['POST'])
+def create_component():
+    # Complex variant/picture processing - SHOULD BE IN API
+    pass
+```
+
+#### API Endpoints (`/app/api/`)
+- **Purpose**: Data operations and business logic
+- **Responsibilities**: CRUD operations, file handling, validation, database operations
+- **Return JSON**: Always return structured JSON responses
+- **Proper Error Handling**: HTTP status codes and error messages
+
+```python
+# Good: API endpoint for data operations
+@variant_api.route('/<int:variant_id>/pictures', methods=['POST'])
+def add_variant_pictures(variant_id):
+    try:
+        # Business logic here
+        return jsonify({'success': True, 'pictures': pictures_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+
+### JavaScript API Integration Pattern
+**MANDATORY**: Frontend must use API endpoints for real-time operations:
+
+```javascript
+// Good: API-first frontend pattern
+class VariantManager {
+    async createVariantViaAPI(variantId) {
+        const response = await fetch('/api/variant/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.csrfToken
+            },
+            body: JSON.stringify(variantData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            this.updateUI(result);
+        } else {
+            this.handleError(response);
+        }
+    }
+}
+
+// Bad: Form-based approach (OLD PATTERN)
+function submitVariantForm() {
+    // Submitting forms for real-time operations
+}
+```
+
+### Smart Creation Workflow Pattern
+**NEW PATTERN**: Component creation with API-based variant management:
+
+1. **Component Creation**: Submit form to create component (web route)
+2. **Extract Component ID**: From redirect URL or response
+3. **Variant Creation**: Use API endpoints to create variants with pictures
+4. **Real-time Updates**: No page reload needed for variant operations
+
+```javascript
+// Implementation pattern
+async function handleNewComponentSubmission() {
+    // 1. Create component via form submission
+    const formData = new FormData(form);
+    // Remove variant fields - they'll be handled via API
+    removeVariantFields(formData);
+    
+    const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData
+    });
+    
+    // 2. Extract component ID from redirect
+    const componentId = extractComponentId(response);
+    
+    // 3. Create variants via API
+    await this.createVariantsViaAPI(componentId);
+    
+    // 4. Redirect to component detail
+    window.location.href = response.url;
+}
+```
+
+### File Handling with Database Integration
+**CRITICAL PATTERN**: Proper WebDAV and database trigger integration:
+
+```python
+# Good: Let database generate names, then save files
+@variant_api.route('/<int:variant_id>/pictures', methods=['POST'])
+def add_variant_pictures(variant_id):
+    try:
+        # 1. Create picture records (triggers generate names)
+        pictures = []
+        for file in files:
+            picture = Picture(
+                component_id=variant.component_id,
+                variant_id=variant_id,
+                picture_order=order,
+                # DO NOT set picture_name - database trigger handles this
+            )
+            db.session.add(picture)
+        
+        db.session.commit()  # Triggers generate picture names
+        
+        # 2. Save files with generated names
+        for picture, file in zip(pictures, files):
+            file_path = f"/components/{picture.picture_name}"
+            save_uploaded_file(file, file_path)
+            picture.url = f"http://31.182.67.115/webdav{file_path}"
+        
+        db.session.commit()
+        return jsonify({'success': True, 'pictures': pictures_data})
+        
+    except Exception as e:
+        db.session.rollback()
+        # Clean up any saved files
+        cleanup_saved_files(saved_files)
+        return jsonify({'error': str(e)}), 500
+```
+
+### Error Handling and User Feedback
+**ENHANCED PATTERN**: Professional loading states and error handling:
+
+```javascript
+// Loading states for API operations
+async function performOperation() {
+    try {
+        this.showLoadingIndicator('Processing...');
+        
+        const response = await this.apiCall();
+        
+        if (response.ok) {
+            this.showSuccessMessage('Operation completed');
+            this.updateUI(response.data);
+        } else {
+            throw new Error(`Server error: ${response.status}`);
+        }
+    } catch (error) {
+        this.showErrorMessage(`Operation failed: ${error.message}`);
+    } finally {
+        this.hideLoadingIndicator();
+    }
+}
+```
+
+## Modular Architecture Patterns (ESTABLISHED)
+
+### Frontend Organization Rules
+**MANDATORY**: All new features must follow modular architecture pattern established for component-detail and component-edit:
+
+#### CSS Module Structure
+```
+app/static/css/<feature-name>/
+├── main.css           # Entry point with @import statements
+├── variables.css      # Design system variables
+├── base.css           # Reset and typography
+├── layout.css         # Grid and page structure
+├── <feature>.css      # Feature-specific styles (variants, forms, etc.)
+└── responsive.css     # Mobile and accessibility
+```
+
+#### JavaScript Module Structure  
+```
+app/static/js/<feature-name>/
+├── <main-handler>.js  # Primary functionality (e.g., form-handler.js)
+├── <feature1>.js      # Specific feature modules (e.g., variant-manager.js)
+├── <feature2>.js      # Additional features (e.g., keyword-autocomplete.js)
+└── utils.js           # Shared utilities (if needed)
+```
+
+### Modular Architecture Benefits
+- **Maintainability**: Each file focuses on single responsibility
+- **Debugging**: Issues can be traced to specific modules
+- **Performance**: Better browser caching of modular files
+- **Consistency**: Same patterns across all forms/pages
+- **Scalability**: New features added as separate modules
+
+### Refactoring Guidelines
+When encountering large monolithic CSS/JS files:
+1. **Analyze sections**: Look for natural boundaries (comments, functionality)
+2. **Create module structure**: Follow established patterns
+3. **Extract incrementally**: One module at a time with testing
+4. **Update references**: Template files to point to new modules
+5. **Delete original**: Only after verification all modules work
+
+### Template Integration
+```html
+<!-- Template data initialization -->
+<script>
+    window.featureData = {{ template_data|tojson }};
+    window.isEditMode = {{ is_edit|tojson }};
+</script>
+
+<!-- Modular CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feature-name/main.css') }}">
+
+<!-- Modular JavaScript -->
+<script src="{{ url_for('static', filename='js/feature-name/main-handler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/feature-name/feature-manager.js') }}"></script>
+```
 
 ## Deployment Patterns
 

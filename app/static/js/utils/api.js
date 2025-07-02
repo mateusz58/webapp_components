@@ -15,6 +15,27 @@ class ApiUtils {
     };
 
     /**
+     * Get CSRF token from cookie
+     * @returns {string} CSRF token
+     */
+    static getCsrfToken() {
+        const name = 'csrf_token=';
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const cookies = decodedCookie.split(';');
+        
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.indexOf(name) === 0) {
+                return cookie.substring(name.length);
+            }
+        }
+        
+        // Fallback to meta tag if cookie not found
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        return metaToken ? metaToken.getAttribute('content') : '';
+    }
+
+    /**
      * Make GET request
      * @param {string} url - Request URL
      * @param {Object} options - Additional fetch options
@@ -96,11 +117,14 @@ class ApiUtils {
      * @returns {Promise} Response promise
      */
     static async request(url, options = {}) {
+        const csrfToken = this.getCsrfToken();
+        
         const config = {
             ...this.defaultOptions,
             ...options,
             headers: {
                 ...this.defaultOptions.headers,
+                'X-CSRFToken': csrfToken,
                 ...options.headers
             }
         };

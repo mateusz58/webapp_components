@@ -1,7 +1,9 @@
 # Selenium Testing Guidelines
 
+**Last Updated**: July 1, 2025 - Added API-Based Testing Patterns
+
 ## Overview
-Selenium tests are located in `tests/selenium/` and follow the Page Object Model pattern for maintainability. These tests handle end-to-end user workflows and critical UI interactions.
+Selenium tests are located in `tests/selenium/` and follow the Page Object Model pattern for maintainability. These tests handle end-to-end user workflows and critical UI interactions, including the new API-based variant management system.
 
 ## Selenium Testing Rules (MANDATORY)
 
@@ -329,17 +331,129 @@ def ci_driver():
 - **Browser logs** - Capture console errors and warnings
 - **Video recording** - For complex workflow failures (optional)
 
-## Current Testing Priorities
+## API-Based Testing Patterns (NEW - JULY 2025)
+
+### Testing Real-time API Operations
+**CRITICAL**: Test the new API-first variant management system:
+
+```python
+# File: tests/selenium/test_api_based_operations.py
+class TestAPIBasedVariantManagement:
+    """Tests for API-first variant operations"""
+    
+    def test_real_time_variant_creation(self):
+        """Create variant via API without page reload"""
+        # Given: Component edit page is loaded
+        edit_page = ComponentEditPage(self.driver)
+        edit_page.load(self.test_component.id)
+        
+        # When: User adds new variant with API
+        edit_page.add_variant_via_ui("Green")
+        edit_page.upload_pictures_for_variant("Green", [test_image_path])
+        
+        # Then: Variant appears immediately without refresh
+        variants = edit_page.get_displayed_variants()
+        assert "Green" in [v.color_name for v in variants]
+        
+        # And: Pictures are visible immediately
+        pictures = edit_page.get_variant_pictures("Green")
+        assert len(pictures) > 0
+    
+    def test_api_error_handling_workflow(self):
+        """Test graceful error handling for API failures"""
+        # Given: Network issues or API failures
+        edit_page = ComponentEditPage(self.driver)
+        edit_page.load(self.test_component.id)
+        
+        # When: API operation fails
+        # Simulate network failure or server error
+        
+        # Then: User sees helpful error message
+        error_message = edit_page.get_error_message()
+        assert "Failed to create variant" in error_message
+        
+        # And: UI remains functional for retry
+        assert edit_page.is_retry_button_visible()
+    
+    def test_loading_states_during_api_operations(self):
+        """Test professional loading indicators"""
+        edit_page = ComponentEditPage(self.driver)
+        edit_page.load(self.test_component.id)
+        
+        # When: Starting variant creation
+        edit_page.start_variant_creation("Blue")
+        
+        # Then: Loading indicator is visible
+        assert edit_page.is_loading_indicator_visible()
+        
+        # When: Operation completes
+        edit_page.wait_for_variant_creation_complete()
+        
+        # Then: Loading indicator disappears
+        assert not edit_page.is_loading_indicator_visible()
+```
+
+### Testing Smart Creation Workflow
+```python
+def test_component_creation_with_api_variants(self):
+    """Test new creation workflow: component first, then variants via API"""
+    # Given: Component creation form
+    create_page = ComponentCreatePage(self.driver)
+    create_page.load()
+    
+    # When: User fills form with variants
+    create_page.fill_component_details("TEST-001", "Test Component")
+    create_page.add_variant("Red", [test_image_path])
+    create_page.add_variant("Blue", [test_image_path])
+    create_page.submit_form()
+    
+    # Then: Redirected to detail page with variants
+    detail_page = ComponentDetailPage(self.driver)
+    detail_page.wait_for_component_load()
+    
+    variants = detail_page.get_displayed_variants()
+    assert len(variants) == 2
+    assert "Red" in [v.color_name for v in variants]
+    assert "Blue" in [v.color_name for v in variants]
+    
+    # And: All pictures are visible immediately
+    for variant in variants:
+        pictures = detail_page.get_variant_pictures(variant.color_name)
+        assert len(pictures) > 0
+```
+
+### Testing File Upload Integration
+```python
+def test_webdav_file_integration(self):
+    """Test proper WebDAV file handling with database triggers"""
+    edit_page = ComponentEditPage(self.driver)
+    edit_page.load(self.test_component.id)
+    
+    # When: Upload picture for variant
+    edit_page.upload_picture_for_variant("Red", test_image_path)
+    
+    # Then: Picture appears with correct WebDAV URL
+    picture_url = edit_page.get_picture_url("Red", 0)
+    assert "http://31.182.67.115/webdav/components" in picture_url
+    
+    # And: Picture name follows database naming convention
+    picture_name = edit_page.get_picture_name("Red", 0)
+    assert "_red_1" in picture_name.lower()  # Follows naming pattern
+```
+
+## Current Testing Priorities (UPDATED)
 
 ### Immediate Focus (Critical)
-1. **Picture visibility after variant creation** - Main issue resolution
-2. **AJAX refresh mechanism validation** - Current solution testing
-3. **Component edit workflows** - Prevent regressions
+1. **API-based variant operations** - Real-time creation, editing, deletion
+2. **Smart creation workflow** - Component first, then variants via API
+3. **Error handling and recovery** - Graceful failure handling
+4. **Loading states and UX** - Professional feedback during operations
 
 ### Secondary Priorities
-1. **Cross-browser compatibility** - Chrome, Firefox
-2. **Performance testing** - Page load times, AJAX response times
-3. **Mobile responsiveness** - Touch interactions, responsive layouts
+1. **Cross-browser compatibility** - Chrome, Firefox with API operations
+2. **Performance testing** - API response times, real-time updates
+3. **File upload integration** - WebDAV and database trigger testing
+4. **Mobile responsiveness** - Touch interactions with API operations
 
 ## Test Markers
 ```python

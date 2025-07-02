@@ -267,3 +267,20 @@
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
 }
+
+/* Pending indicator for miniatures */
+.mini-pending {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    border: 1px solid white;
+}
+
+.miniature-item.pending {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
+}

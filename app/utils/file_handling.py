@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from flask import current_app
 import io
 from typing import Optional, Tuple
+from .webdav_utils import is_webdav_mounted, log_webdav_status
 
 
 # File configuration
@@ -71,21 +72,31 @@ def save_uploaded_file(file, folder: str = '', optimize_images: bool = True) -> 
         if not unique_filename:
             return None
 
-        # Try to save to WebDAV mount point first
+        # Check if WebDAV is properly mounted
         upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+        webdav_available = is_webdav_mounted(upload_folder)
         
-        # Save directly to WebDAV root (no subfolder)
-        if folder:
-            upload_path = os.path.join(upload_folder, folder)
-        else:
-            upload_path = upload_folder
+        if not webdav_available:
+            current_app.logger.warning("WebDAV not properly mounted. Logging status...")
+            log_webdav_status()
         
-        try:
-            os.makedirs(upload_path, exist_ok=True)
-            file_path = os.path.join(upload_path, unique_filename)
-            webdav_available = True
-        except (OSError, PermissionError) as e:
-            current_app.logger.warning(f"WebDAV mount not available: {e}. Falling back to local storage.")
+        # Choose upload path based on WebDAV availability
+        if webdav_available:
+            # Save directly to WebDAV root (no subfolder)
+            if folder:
+                upload_path = os.path.join(upload_folder, folder)
+            else:
+                upload_path = upload_folder
+            
+            try:
+                os.makedirs(upload_path, exist_ok=True)
+                file_path = os.path.join(upload_path, unique_filename)
+            except (OSError, PermissionError) as e:
+                current_app.logger.error(f"Error accessing WebDAV mount: {e}")
+                webdav_available = False
+        
+        if not webdav_available:
+            current_app.logger.warning("Falling back to local storage due to WebDAV issues.")
             # Fall back to local storage
             local_folder = current_app.config.get('LOCAL_UPLOAD_FOLDER', 'app/static/uploads')
             if folder:
@@ -94,7 +105,6 @@ def save_uploaded_file(file, folder: str = '', optimize_images: bool = True) -> 
                 upload_path = local_folder
             os.makedirs(upload_path, exist_ok=True)
             file_path = os.path.join(upload_path, unique_filename)
-            webdav_available = False
 
         # Optimize images if requested and file is an image
         if optimize_images and any(ext in file.filename.lower() for ext in ['jpg', 'jpeg', 'png']):

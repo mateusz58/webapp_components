@@ -144,7 +144,7 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
         if (window.APP_INFO && window.APP_INFO.environment === 'development') {
             console.log('[DEBUG] mouseenter event:', e.target);
         }
-        if (e.target.matches('.variant-color-dot[data-has-image="true"]')) {
+        if (e.target && e.target.matches && e.target.matches('.variant-color-dot[data-has-image="true"]')) {
             const dot = e.target;
             const card = dot.closest('.component-card');
             if (!card) {
@@ -201,7 +201,7 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
             };
             testImg.src = variantImgUrl;
         }
-        else if (e.target.matches('.variant-color-dot[data-has-image="false"]')) {
+        else if (e.target && e.target.matches && e.target.matches('.variant-color-dot[data-has-image="false"]')) {
             const dot = e.target;
             const card = dot.closest('.component-card');
             if (!card) {
@@ -237,7 +237,7 @@ window.enableVariantImagePreview = function enableVariantImagePreview() {
     }, true);
     
     document.addEventListener('mouseleave', function(e) {
-        if (e.target.matches('.variant-color-dot[data-has-image="true"]') || e.target.matches('.variant-color-dot[data-has-image="false"]')) {
+        if (e.target && e.target.matches && (e.target.matches('.variant-color-dot[data-has-image="true"]') || e.target.matches('.variant-color-dot[data-has-image="false"]'))) {
             const dot = e.target;
             const card = dot.closest('.component-card');
             if (!card) return;
