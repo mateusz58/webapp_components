@@ -1,0 +1,289 @@
+/**
+ * Component Detail Workflow Styles
+ * Approval workflow section styling with status-based color coding
+ * Built from scratch following TDD methodology
+ */
+
+/* === APPROVAL WORKFLOW === */
+.status-workflow {
+  background: white;
+  border-radius: var(--cd-radius-lg);
+  border: 1px solid var(--cd-gray-200);
+  overflow: hidden;
+  box-shadow: var(--cd-shadow-sm);
+}
+
+.status-workflow h3 {
+  padding: var(--cd-space-lg);
+  margin: 0;
+  background: var(--cd-gray-50);
+  border-bottom: 1px solid var(--cd-gray-200);
+  color: var(--cd-gray-900);
+  font-weight: 600;
+}
+
+/* Workflow Steps */
+.workflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cd-space-md);
+  padding: var(--cd-space-lg);
+  border-bottom: 1px solid var(--cd-gray-100);
+  cursor: pointer;
+  transition: all var(--cd-transition);
+  position: relative;
+}
+
+.workflow-step:last-of-type {
+  border-bottom: none;
+}
+
+.workflow-step:hover {
+  background: var(--cd-gray-25);
+}
+
+.workflow-step.border-primary {
+  background: var(--cd-primary-light);
+  border-left: 4px solid var(--cd-primary);
+}
+
+/* Workflow Icons */
+.workflow-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid;
+  transition: all var(--cd-transition);
+}
+
+/* Status-based styling */
+.workflow-step.pending .workflow-icon {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+.workflow-step.ok .workflow-icon {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #16a34a;
+}
+
+.workflow-step.not_ok .workflow-icon {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+/* Workflow step backgrounds */
+.workflow-step.pending {
+  background: linear-gradient(135deg, #fffef7 0%, #fefdf4 100%);
+  border-left: 4px solid #f59e0b;
+}
+
+.workflow-step.ok {
+  background: linear-gradient(135deg, #f6fffe 0%, #f0fdf4 100%);
+  border-left: 4px solid #22c55e;
+}
+
+.workflow-step.not_ok {
+  background: linear-gradient(135deg, #fffafa 0%, #fef2f2 100%);
+  border-left: 4px solid #ef4444;
+}
+
+/* Enhanced badges */
+.workflow-step .badge {
+  font-size: var(--cd-text-xs);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.workflow-step .badge.bg-success {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  color: white;
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+}
+
+.workflow-step .badge.bg-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: white;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.workflow-step .badge.bg-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: white;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+/* Status Update Forms */
+.status-update-form {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all var(--cd-transition-slow);
+  background: var(--cd-gray-50);
+  border-top: 1px solid var(--cd-gray-200);
+}
+
+.status-update-form.show {
+  max-height: 200px;
+  opacity: 1;
+  padding: var(--cd-space-lg);
+}
+
+.status-update-form .form-select,
+.status-update-form .form-control {
+  border-radius: var(--cd-radius);
+  border: 1px solid var(--cd-gray-300);
+  transition: all var(--cd-transition);
+}
+
+.status-update-form .form-select:focus,
+.status-update-form .form-control:focus {
+  border-color: var(--cd-primary);
+  box-shadow: 0 0 0 3px var(--cd-primary-light);
+  outline: none;
+}
+
+.status-update-form .btn-primary-modern {
+  background: linear-gradient(135deg, var(--cd-primary), var(--cd-primary-dark));
+  border: none;
+  border-radius: var(--cd-radius);
+  font-weight: 600;
+  transition: all var(--cd-transition);
+}
+
+.status-update-form .btn-primary-modern:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Comment display */
+.workflow-step .bg-light {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid var(--cd-gray-200);
+  border-radius: var(--cd-radius);
+  font-style: italic;
+}
+
+/* Progress indicators */
+.workflow-step::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--cd-gray-200);
+  transition: all var(--cd-transition);
+}
+
+.workflow-step.ok::before {
+  background: linear-gradient(to bottom, #22c55e, #16a34a);
+}
+
+.workflow-step.not_ok::before {
+  background: linear-gradient(to bottom, #ef4444, #dc2626);
+}
+
+.workflow-step.pending::before {
+  background: linear-gradient(to bottom, #f59e0b, #d97706);
+}
+
+/* Workflow step content */
+.workflow-step h6 {
+  color: var(--cd-gray-900);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.workflow-step .text-muted {
+  color: var(--cd-gray-600) !important;
+  font-size: var(--cd-text-sm);
+}
+
+.workflow-step .text-end .text-muted {
+  font-size: var(--cd-text-xs);
+  margin-top: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .workflow-step {
+    padding: var(--cd-space-md);
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .workflow-icon {
+    align-self: flex-start;
+    margin-bottom: var(--cd-space-sm);
+  }
+  
+  .status-update-form .row {
+    gap: var(--cd-space-md);
+  }
+  
+  .status-update-form .col-md-4,
+  .status-update-form .col-md-6,
+  .status-update-form .col-md-2 {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Animation for form appearance */
+@keyframes slideDown {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 200px;
+    opacity: 1;
+  }
+}
+
+.status-update-form.show {
+  animation: slideDown var(--cd-transition-slow) ease-out;
+}
+
+/* Workflow completion indicator */
+.workflow-step.ok .workflow-icon::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #16a34a;
+  border-radius: 50%;
+  top: -2px;
+  right: -2px;
+  box-shadow: 0 0 0 2px white;
+}
+
+/* Hover effects */
+.workflow-step:hover .workflow-icon {
+  transform: scale(1.05);
+}
+
+.workflow-step:hover .badge {
+  transform: scale(1.02);
+}
+
+/* Focus states for accessibility */
+.workflow-step:focus {
+  outline: 2px solid var(--cd-primary);
+  outline-offset: 2px;
+}
+
+.workflow-step:focus .workflow-icon {
+  box-shadow: 0 0 0 3px var(--cd-primary-light);
+}

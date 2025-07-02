@@ -7,12 +7,16 @@
 <link rel="preload" href="{{ url_for('static', filename='css/component-detail/main.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="preload" href="{{ url_for('static', filename='css/component-detail/gallery.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="preload" href="{{ url_for('static', filename='css/component-detail/loading.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="{{ url_for('static', filename='css/component-detail/workflow.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="{{ url_for('static', filename='css/component-detail/tabs.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
 
 <!-- Fallback for browsers that don't support preload -->
 <noscript>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/gallery.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/loading.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/workflow.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-detail/tabs.css') }}">
 </noscript>
 
 <!-- Non-critical CSS loaded async -->
@@ -117,6 +121,7 @@
 <script src="{{ url_for('static', filename='js/component-detail/state-management.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/component-detail/gallery.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/component-detail/loading-system.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/component-detail/tabs.js') }}" defer></script>
 
 <!-- Application Bootstrap - Minimal inline JavaScript -->
 <script>

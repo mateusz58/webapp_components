@@ -1,8 +1,13 @@
 <!-- Status Workflow -->
 <div class="status-workflow">
-    <h3 class="h5 mb-3 fw-bold">
+    <h3 class="h5 mb-0 fw-bold">
         <i data-lucide="workflow" class="me-2" style="width: 20px; height: 20px;"></i>
         Approval Workflow
+        {% set total_approved = [component.proto_status, component.sms_status, component.pps_status].count('ok') %}
+        {% set total_steps = 3 %}
+        <span class="badge bg-{{ 'success' if total_approved == total_steps else ('warning' if total_approved > 0 else 'secondary') }} ms-2">
+            {{ total_approved }}/{{ total_steps }} Approved
+        </span>
     </h3>
 
     <!-- Proto Status -->
@@ -22,7 +27,14 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">Proto Review</h6>
-                    <small class="text-muted">Initial prototype assessment</small>
+                    <small class="text-muted">Initial prototype assessment and design validation</small>
+                    {% if component.proto_status == 'ok' %}
+                    <div class="mt-1"><small class="text-success fw-bold">✓ Prototype approved for production</small></div>
+                    {% elif component.proto_status == 'not_ok' %}
+                    <div class="mt-1"><small class="text-danger fw-bold">✗ Prototype requires modifications</small></div>
+                    {% else %}
+                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting prototype review</small></div>
+                    {% endif %}
                 </div>
                 <div class="text-end">
                     <span class="badge bg-{{ 'success' if component.proto_status == 'ok' else ('danger' if component.proto_status == 'not_ok' else 'warning') }}">
@@ -44,6 +56,7 @@
     <!-- Status Update Form -->
     <div class="status-update-form" :class="{ 'show': activeStatusForm === 'proto' }">
         <form method="POST" action="{{ url_for('component_web.update_proto_status', id=component.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row">
                 <div class="col-md-4">
                     <select name="status" class="form-select form-control-modern" required>
@@ -80,7 +93,14 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">SMS Review</h6>
-                    <small class="text-muted">Safety and material standards</small>
+                    <small class="text-muted">Safety and material standards compliance</small>
+                    {% if component.sms_status == 'ok' %}
+                    <div class="mt-1"><small class="text-success fw-bold">✓ Safety standards approved</small></div>
+                    {% elif component.sms_status == 'not_ok' %}
+                    <div class="mt-1"><small class="text-danger fw-bold">✗ Safety issues require resolution</small></div>
+                    {% else %}
+                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting safety review</small></div>
+                    {% endif %}
                 </div>
                 <div class="text-end">
                     <span class="badge bg-{{ 'success' if component.sms_status == 'ok' else ('danger' if component.sms_status == 'not_ok' else 'warning') }}">
@@ -102,6 +122,7 @@
     <!-- SMS Status Update Form -->
     <div class="status-update-form" :class="{ 'show': activeStatusForm === 'sms' }">
         <form method="POST" action="{{ url_for('component_web.update_sms_status', id=component.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row">
                 <div class="col-md-4">
                     <select name="status" class="form-select form-control-modern" required>
@@ -138,7 +159,14 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">PPS Review</h6>
-                    <small class="text-muted">Production and packaging standards</small>
+                    <small class="text-muted">Production and packaging standards verification</small>
+                    {% if component.pps_status == 'ok' %}
+                    <div class="mt-1"><small class="text-success fw-bold">✓ Production ready for release</small></div>
+                    {% elif component.pps_status == 'not_ok' %}
+                    <div class="mt-1"><small class="text-danger fw-bold">✗ Production issues need addressing</small></div>
+                    {% else %}
+                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting production review</small></div>
+                    {% endif %}
                 </div>
                 <div class="text-end">
                     <span class="badge bg-{{ 'success' if component.pps_status == 'ok' else ('danger' if component.pps_status == 'not_ok' else 'warning') }}">
@@ -160,6 +188,7 @@
     <!-- PPS Status Update Form -->
     <div class="status-update-form" :class="{ 'show': activeStatusForm === 'pps' }">
         <form method="POST" action="{{ url_for('component_web.update_pps_status', id=component.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row">
                 <div class="col-md-4">
                     <select name="status" class="form-select form-control-modern" required>

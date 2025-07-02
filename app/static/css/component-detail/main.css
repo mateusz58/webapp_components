@@ -38,6 +38,9 @@
   --cd-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --cd-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   
+  /* Additional grays */
+  --cd-gray-25: #fafafa;
+  
   /* Font sizes */
   --cd-text-xs: 0.75rem;
   --cd-text-sm: 0.875rem;

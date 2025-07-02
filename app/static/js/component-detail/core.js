@@ -109,6 +109,12 @@ function ComponentDetailApp() {
             // Check if we should show loading state
             this.checkForLoadingState();
             
+            // Initialize tabs system if available
+            if (window.ComponentDetailTabs) {
+                window.ComponentDetailTabs.init(this);
+                console.log('📑 ComponentDetailApp: Tabs system initialized');
+            }
+            
             console.log('✅ ComponentDetailApp: Initialization complete');
         },
         
