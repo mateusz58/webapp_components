@@ -440,15 +440,40 @@ function ComponentDetailApp() {
         
         openLightbox(imageIndex) {
             console.log('🔍 ComponentDetailApp: Opening lightbox at index:', imageIndex);
-            this.lightboxIndex = imageIndex;
+            console.log('🖼️ Current images available:', this.currentImages.length);
+            console.log('📷 Images:', this.currentImages);
+            
+            if (this.currentImages.length === 0) {
+                console.warn('⚠️ No images available to display in lightbox');
+                return;
+            }
+            
+            // Ensure index is valid
+            const validIndex = Math.max(0, Math.min(imageIndex, this.currentImages.length - 1));
+            
+            this.lightboxIndex = validIndex;
             this.lightboxOpen = true;
+            
+            // Prevent body scroll when lightbox is open
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            
+            console.log('✅ Lightbox opened:', {
+                index: this.lightboxIndex,
+                isOpen: this.lightboxOpen,
+                imageUrl: this.currentImages[this.lightboxIndex]?.url
+            });
         },
         
         closeLightbox() {
             console.log('🔍 ComponentDetailApp: Closing lightbox');
             this.lightboxOpen = false;
-            document.body.style.overflow = 'auto';
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+            
+            console.log('✅ Lightbox closed');
         },
         
         nextImage() {

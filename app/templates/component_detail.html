@@ -53,6 +53,56 @@
 
     </div>
 
+    <!-- Lightbox Modal - Inside Alpine component scope -->
+    <div x-show="lightboxOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="lightbox-overlay"
+         @click="closeLightbox()"
+         @keydown.escape.window="closeLightbox()"
+         x-cloak>
+        
+        <!-- Close Button -->
+        <button @click="closeLightbox()" 
+                class="lightbox__close"
+                aria-label="Close lightbox">
+            <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+        </button>
+        
+        <!-- Main Lightbox Content -->
+        <div class="lightbox" @click.stop>
+            <!-- Navigation Buttons -->
+            <button @click.stop="previousImage()" 
+                    x-show="currentImages.length > 1"
+                    class="lightbox__nav lightbox__nav--prev"
+                    aria-label="Previous image">
+                <i data-lucide="chevron-left" style="width: 24px; height: 24px;"></i>
+            </button>
+            
+            <button @click.stop="nextImage()" 
+                    x-show="currentImages.length > 1"
+                    class="lightbox__nav lightbox__nav--next"
+                    aria-label="Next image">
+                <i data-lucide="chevron-right" style="width: 24px; height: 24px;"></i>
+            </button>
+            
+            <!-- Lightbox Image -->
+            <img :src="currentImages[lightboxIndex]?.url" 
+                 :alt="currentImages[lightboxIndex]?.name"
+                 class="lightbox__image">
+        </div>
+        
+        <!-- Image Counter -->
+        <div x-show="currentImages.length > 1" 
+             class="lightbox__counter">
+            <span x-text="lightboxIndex + 1"></span> / <span x-text="currentImages.length"></span>
+        </div>
+    </div>
+
 </main>
 {% endblock %}
 
@@ -140,42 +190,20 @@ console.log('Alpine available:', typeof Alpine);
 console.log('ComponentDetailApp function available:', typeof ComponentDetailApp);
 console.log('Current URL:', window.location.href);
 
-// Alpine.js registration function
-function registerComponentDetail() {
-    console.log('🔥 Registering ComponentDetailApp with Alpine');
+// Simplified Alpine.js registration - no race conditions
+document.addEventListener('alpine:init', () => {
+    console.log('🔥 Alpine.js alpine:init event fired');
     if (typeof ComponentDetailApp === 'function') {
         Alpine.data('componentDetailApp', ComponentDetailApp);
         console.log('✅ Component Detail: Alpine.js component registered');
-        return true;
     } else {
         console.warn('⚠️ Component Detail: ComponentDetailApp not found');
-        return false;
     }
-}
+});
 
-// Try to register immediately if Alpine and ComponentDetailApp are already available
-if (typeof Alpine !== 'undefined' && Alpine.data && typeof ComponentDetailApp === 'function') {
-    registerComponentDetail();
-} else {
-    // Otherwise wait for Alpine to initialize
-    document.addEventListener('alpine:init', () => {
-        console.log('🔥 Alpine.js alpine:init event fired');
-        registerComponentDetail();
-    });
-}
-
-// Fallback: register on DOM content loaded
+// Initialize icons after DOM loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🎯 DOM Content Loaded');
-    console.log('Alpine after DOM load:', typeof Alpine);
-    console.log('ComponentDetailApp after DOM load:', typeof ComponentDetailApp);
-    
-    // Try registration if not already done
-    if (typeof Alpine !== 'undefined' && Alpine.data && typeof ComponentDetailApp === 'function') {
-        registerComponentDetail();
-    }
-    
-    // Initialize icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
