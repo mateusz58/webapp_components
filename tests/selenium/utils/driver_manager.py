@@ -3,10 +3,15 @@ WebDriver management utilities
 """
 import logging
 import os
+import sys
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from config.test_config import TestConfig
+
+# Import the config module directly
+config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
+sys.path.insert(0, config_path)
+from test_config import TestConfig
 
 logger = logging.getLogger(__name__)
 

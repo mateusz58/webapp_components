@@ -13,12 +13,17 @@ logger = logging.getLogger(__name__)
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+# Add config path for direct import
+config_path = os.path.join(current_dir, 'config')
+sys.path.insert(0, config_path)
 
 from utils.driver_manager import DriverManager
 from pages.component_form_page import ComponentFormPage
 from pages.component_detail_page import ComponentDetailPage
-from config.test_config import TestConfig
+from test_config import TestConfig
 
 class LoadingIndicatorTest:
     """Test loading indicator during component creation redirect"""

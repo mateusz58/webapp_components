@@ -78,9 +78,11 @@ class ComponentEditJSONParsingTests(unittest.TestCase):
         if not self.test_component:
             self.skipTest("No test component available")
         
-        # Valid JSON data
+        # Valid JSON data (use shorter product number to avoid 50 char limit)
+        import time
+        unique_suffix = int(time.time() * 1000) % 1000
         test_data = {
-            'product_number': f'{self.test_component.product_number}_json_test',
+            'product_number': f'JSON-TEST-{unique_suffix}',
             'description': 'Updated via valid JSON test',
             'component_type_id': self.test_component.component_type_id,
             'supplier_id': self.test_component.supplier_id,
@@ -241,15 +243,17 @@ class ComponentEditJSONParsingTests(unittest.TestCase):
             response_text = response.data.decode('utf-8')
             print(f"📊 Response: {response_text}")
         
-        # Should return proper JSON error
-        self.assertEqual(response.status_code, 400, f"Expected 400 for invalid component ID")
+        # Should return proper JSON error with 404 (not found)
+        self.assertEqual(response.status_code, 404, f"Expected 404 for invalid component ID")
         self.assertTrue(response.is_json, f"Error response should be JSON")
         
         result = response.get_json()
         print(f"✅ JSON error response: {json.dumps(result, indent=2)}")
         
-        self.assertFalse(result.get('success'), "Expected success=False for invalid component")
-        self.assertIn('not found', result.get('error', '').lower(), "Error should mention component not found")
+        # Verify error structure
+        self.assertFalse(result['success'])
+        self.assertEqual(result['code'], 'NOT_FOUND')
+        self.assertIn('Component 999999 not found', result['error'])
         
         print(f"✅ TEST PASSED: Invalid component ID handled with proper JSON error")
 

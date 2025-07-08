@@ -11,10 +11,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+# Add config path for direct import
+config_path = os.path.join(current_dir, 'config')
+sys.path.insert(0, config_path)
 
 from utils.driver_manager import DriverManager
-from config.test_config import TestConfig
+from test_config import TestConfig
 
 class DirectLoadingTest:
     """Test loading indicator by direct navigation"""
@@ -164,6 +169,12 @@ def main():
     success = test.run()
     
     sys.exit(0 if success else 1)
+
+# Pytest-compatible test functions
+def test_direct_loading_with_pytest():
+    """Pytest wrapper for direct loading test"""
+    test = DirectLoadingTest()
+    assert test.run() == True, "Direct loading test failed"
 
 if __name__ == "__main__":
     main()

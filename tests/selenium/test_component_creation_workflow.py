@@ -92,20 +92,35 @@ class TestComponentCreationWorkflow(unittest.TestCase):
                 "a[href*='/components/new']",
                 "a[href*='/components/create']", 
                 ".btn-create-component",
-                ".create-component",
-                "a:contains('New Component')",
-                "a:contains('Create Component')",
-                "a:contains('Add Component')"
+                ".create-component"
+            ]
+            
+            # XPath selectors for text-based matching (CSS :contains() not supported)
+            xpath_selectors = [
+                "//a[contains(text(), 'New Component')]",
+                "//a[contains(text(), 'Create Component')]",
+                "//a[contains(text(), 'Add Component')]"
             ]
             
             nav_link = None
+            # Try CSS selectors first
             for selector in navigation_selectors:
                 try:
                     nav_link = self.driver.find_element(By.CSS_SELECTOR, selector)
-                    print(f"🔍 Found navigation link with selector: {selector}")
+                    print(f"🔍 Found navigation link with CSS selector: {selector}")
                     break
                 except NoSuchElementException:
                     continue
+            
+            # If CSS selectors didn't work, try XPath selectors
+            if nav_link is None:
+                for selector in xpath_selectors:
+                    try:
+                        nav_link = self.driver.find_element(By.XPATH, selector)
+                        print(f"🔍 Found navigation link with XPath selector: {selector}")
+                        break
+                    except NoSuchElementException:
+                        continue
             
             if nav_link:
                 print(f"🔍 Step 3: Clicking navigation link...")

@@ -880,11 +880,22 @@ def update_component(component_id):
         return jsonify(result), 200
         
     except ValueError as e:
-        current_app.logger.error(f"Validation error updating component {component_id}: {str(e)}")
+        error_message = str(e)
+        current_app.logger.error(f"Validation error updating component {component_id}: {error_message}")
         current_app.logger.error(f"Full traceback: ", exc_info=True)
+        
+        # Check if it's a "not found" error
+        if 'not found' in error_message.lower():
+            return jsonify({
+                'success': False,
+                'error': error_message,
+                'code': 'NOT_FOUND'
+            }), 404
+        
+        # Otherwise it's a validation error
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': error_message,
             'code': 'VALIDATION_ERROR'
         }), 400
         

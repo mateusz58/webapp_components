@@ -2,6 +2,7 @@
 Component form page object
 """
 import os
+import sys
 import time
 import logging
 from selenium.webdriver.common.by import By
@@ -10,7 +11,12 @@ from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 from pages.base_page import BasePage
 from utils.image_generator import ImageGenerator
-from config.test_config import TestConfig
+
+# Add config path for direct import
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(os.path.dirname(current_dir), 'config')
+sys.path.insert(0, config_path)
+from test_config import TestConfig
 
 logger = logging.getLogger(__name__)
 

@@ -1243,10 +1243,28 @@ def update_pps_status(id):
 def validate_product_number():
     """Validate product number uniqueness"""
     try:
-        data = request.get_json()
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+        
         product_number = data.get('product_number', '').strip()
         supplier_id = data.get('supplier_id')
         component_id = data.get('component_id')
+        
+        # Convert string IDs to integers if they exist and are valid
+        if supplier_id:
+            if str(supplier_id).isdigit():
+                supplier_id = int(supplier_id)
+            else:
+                return jsonify({'available': False, 'message': 'Invalid supplier ID format'})
+        
+        if component_id:
+            if str(component_id).isdigit():
+                component_id = int(component_id)
+            else:
+                return jsonify({'available': False, 'message': 'Invalid component ID format'})
         
         if not product_number:
             return jsonify({'available': False, 'message': 'Product number is required'})
@@ -1259,9 +1277,13 @@ def validate_product_number():
         
         # If supplier is selected, check uniqueness within that supplier
         if supplier_id:
-            query = query.filter_by(supplier_id=supplier_id)
+            # Validate supplier exists before using it in query
             supplier = Supplier.query.get(supplier_id)
-            supplier_name = supplier.supplier_code if supplier else f"Supplier {supplier_id}"
+            if not supplier:
+                return jsonify({'available': False, 'message': f'Supplier {supplier_id} not found'})
+            
+            query = query.filter_by(supplier_id=supplier_id)
+            supplier_name = supplier.supplier_code
         else:
             # If no supplier, check global uniqueness (supplier_id is NULL)
             query = query.filter(Component.supplier_id.is_(None))
