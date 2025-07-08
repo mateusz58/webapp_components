@@ -1,211 +1,190 @@
-<!-- Information Tabs -->
-<div class="info-tabs">
-    <ul class="nav nav-tabs nav-tabs-modern" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" 
+<!-- Compact Information Tabs -->
+<div class="info-tabs-compact">
+    <ul class="nav nav-tabs-compact" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link-compact" 
                     :class="{ 'active': activeTab === 'basic-info' }"
                     @click="selectTab('basic-info')"
                     type="button">
-                <i data-lucide="info" class="me-2" style="width: 16px; height: 16px;"></i>
-                Basic Info
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                <span class="d-none d-sm-inline">Info</span>
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link"
+        <li class="nav-item">
+            <button class="nav-link-compact"
                     :class="{ 'active': activeTab === 'properties' }"
                     @click="selectTab('properties')"
                     type="button">
-                <i data-lucide="settings" class="me-2" style="width: 16px; height: 16px;"></i>
-                Properties
+                <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
+                <span class="d-none d-sm-inline">Props</span>
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link"
+        <li class="nav-item">
+            <button class="nav-link-compact"
+                    :class="{ 'active': activeTab === 'brands' }"
+                    @click="selectTab('brands')"
+                    type="button">
+                <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                <span class="d-none d-sm-inline">Brands</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link-compact"
                     :class="{ 'active': activeTab === 'keywords' }"
                     @click="selectTab('keywords')"
                     type="button">
-                <i data-lucide="tag" class="me-2" style="width: 16px; height: 16px;"></i>
-                Keywords
+                <i data-lucide="tag" style="width: 14px; height: 14px;"></i>
+                <span class="d-none d-sm-inline">Tags</span>
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link"
+        <li class="nav-item">
+            <button class="nav-link-compact"
                     :class="{ 'active': activeTab === 'variants' }"
                     @click="selectTab('variants')"
                     type="button">
-                <i data-lucide="palette" class="me-2" style="width: 16px; height: 16px;"></i>
-                Variants ({{ component.variants|length }})
+                <i data-lucide="palette" style="width: 14px; height: 14px;"></i>
+                <span>Var({{ component.variants|length }})</span>
             </button>
         </li>
     </ul>
 
-    <div class="tab-content tab-content-modern">
-        <!-- Basic Info Tab -->
-        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'basic-info' }" id="basic-info" role="tabpanel">
-            <div class="basic-info-grid">
-                <div class="info-field">
-                    <div class="info-label">Product Number</div>
-                    <div class="info-value">{{ component.product_number }}</div>
+    <div class="tab-content-compact">
+        <!-- Basic Info Tab - Compact Grid -->
+        <div class="tab-pane-compact" :class="{ 'active': activeTab === 'basic-info' }" id="basic-info">
+            <div class="info-grid-compact">
+                <div class="info-row">
+                    <span class="info-label-compact">Product:</span>
+                    <span class="info-value-compact">{{ component.product_number }}</span>
                 </div>
-                
-                <div class="info-field">
-                    <div class="info-label">Component Type</div>
-                    <div class="info-value">{{ component.component_type.name }}</div>
+                <div class="info-row">
+                    <span class="info-label-compact">Type:</span>
+                    <span class="info-value-compact">{{ component.component_type.name }}</span>
                 </div>
-                
-                <div class="info-field">
-                    <div class="info-label">Supplier</div>
-                    <div class="info-value">
-                        {% if component.supplier %}
-                            {{ component.supplier.supplier_code }}
-                        {% else %}
-                            <span class="text-muted">No supplier assigned</span>
-                        {% endif %}
-                    </div>
+                <div class="info-row">
+                    <span class="info-label-compact">Supplier:</span>
+                    <span class="info-value-compact">{{ component.supplier.supplier_code if component.supplier else '-' }}</span>
                 </div>
-                
-                <div class="info-field">
-                    <div class="info-label">Categories</div>
-                    <div class="info-value">
+                <div class="info-row">
+                    <span class="info-label-compact">Category:</span>
+                    <span class="info-value-compact">
                         {% if component.categories %}
-                            <div class="info-badges">
-                                {% for category in component.categories %}
-                                    <span class="info-badge">{{ category.name }}</span>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <span class="text-muted">No categories assigned</span>
-                        {% endif %}
-                    </div>
+                            {% for cat in component.categories %}{{ cat.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% else %}-{% endif %}
+                    </span>
                 </div>
-                
                 {% if component.description %}
-                <div class="info-field" style="grid-column: 1 / -1;">
-                    <div class="info-label">Description</div>
-                    <div class="info-value">{{ component.description }}</div>
+                <div class="info-row full-width">
+                    <span class="info-label-compact">Desc:</span>
+                    <span class="info-value-compact">{{ component.description|truncate(60) }}</span>
                 </div>
                 {% endif %}
-                
-                <div class="info-field">
-                    <div class="info-label">Created</div>
-                    <div class="info-value">{{ component.created_at.strftime('%Y-%m-%d %H:%M') if component.created_at }}</div>
+                <div class="info-row">
+                    <span class="info-label-compact">Created:</span>
+                    <span class="info-value-compact">{{ component.created_at.strftime('%m/%d/%y') if component.created_at }}</span>
                 </div>
-                
-                <div class="info-field">
-                    <div class="info-label">Last Updated</div>
-                    <div class="info-value">{{ component.updated_at.strftime('%Y-%m-%d %H:%M') if component.updated_at }}</div>
+                <div class="info-row">
+                    <span class="info-label-compact">Updated:</span>
+                    <span class="info-value-compact">{{ component.updated_at.strftime('%m/%d/%y') if component.updated_at }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Properties Tab -->
-        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'properties' }" id="properties" role="tabpanel">
+        <!-- Properties Tab - Compact List -->
+        <div class="tab-pane-compact" :class="{ 'active': activeTab === 'properties' }" id="properties">
             {% if component.properties %}
-            <div class="properties-grid">
+            <div class="properties-compact">
                 {% for key, value in component.properties.items() %}
-                <div class="property-card">
-                    <div class="property-label">{{ key|title }}</div>
-                    <div class="property-value">
+                <div class="prop-row">
+                    <span class="prop-key">{{ key|title }}:</span>
+                    <span class="prop-value">
                         {% if value is iterable and value is not string %}
-                            <div class="d-flex flex-wrap gap-1">
-                                {% for item in value %}
-                                <span class="keyword-tag">{{ item }}</span>
-                                {% endfor %}
-                            </div>
+                            {{ value|join(', ') }}
                         {% else %}
                             {{ value }}
                         {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-compact">
+                <i data-lucide="settings" style="width: 24px; height: 24px;"></i>
+                <span>No properties defined</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Brands Tab - Inline Display -->
+        <div class="tab-pane-compact" :class="{ 'active': activeTab === 'brands' }" id="brands">
+            {% if component.brand_associations %}
+            <div class="brands-compact">
+                {% for brand_assoc in component.brand_associations %}
+                <div class="brand-item-compact">
+                    <div class="brand-main">
+                        <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                        <strong>{{ brand_assoc.brand.name }}</strong>
+                        <small class="text-muted">(ID: {{ brand_assoc.brand.id }})</small>
                     </div>
+                    {% if brand_assoc.brand.subbrands %}
+                    <div class="subbrands-inline">
+                        {% for sub in brand_assoc.brand.subbrands %}
+                        <span class="subbrand-chip">{{ sub.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i data-lucide="settings" style="width: 64px; height: 64px;"></i>
-                </div>
-                <div class="empty-state-title">No Properties Defined</div>
-                <div class="empty-state-description">Component properties will appear here when they are configured.</div>
+            <div class="empty-compact">
+                <i data-lucide="package" style="width: 24px; height: 24px;"></i>
+                <span>No brands associated</span>
             </div>
             {% endif %}
         </div>
 
-        <!-- Keywords Tab -->
-        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'keywords' }" id="keywords" role="tabpanel">
+        <!-- Keywords Tab - Inline Tags -->
+        <div class="tab-pane-compact" :class="{ 'active': activeTab === 'keywords' }" id="keywords">
             {% if component.keywords %}
-            <div class="keywords-container">
+            <div class="keywords-compact">
                 {% for keyword in component.keywords %}
-                <span class="keyword-tag">{{ keyword.name }}</span>
+                <span class="keyword-chip">{{ keyword.name }}</span>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i data-lucide="tag" style="width: 64px; height: 64px;"></i>
-                </div>
-                <div class="empty-state-title">No Keywords Assigned</div>
-                <div class="empty-state-description">Keywords help categorize and search for this component.</div>
+            <div class="empty-compact">
+                <i data-lucide="tag" style="width: 24px; height: 24px;"></i>
+                <span>No keywords assigned</span>
             </div>
             {% endif %}
         </div>
 
-        <!-- Variants Tab -->
-        <div class="tab-pane fade" :class="{ 'show active': activeTab === 'variants' }" id="variants" role="tabpanel">
+        <!-- Variants Tab - Compact Cards -->
+        <div class="tab-pane-compact" :class="{ 'active': activeTab === 'variants' }" id="variants">
             {% if component.variants %}
-            <div class="variants-grid">
+            <div class="variants-compact">
                 {% for variant in component.variants %}
-                <div class="variant-card" style="--variant-color: {{ variant.color.hex_code or '#ccc' }}; --variant-color-dark: {{ variant.color.hex_code or '#aaa' }}">
-                    <div class="variant-header">
-                        <div class="variant-color-swatch" style="background: {{ variant.color.hex_code or '#ccc' }}"></div>
-                        <div class="variant-info">
-                            <h6>{{ variant.get_color_display_name() }}</h6>
-                            {% if variant.variant_sku %}
-                            <div class="variant-sku">{{ variant.variant_sku }}</div>
+                <div class="variant-item-compact {{ 'active' if variant.is_active else 'inactive' }}">
+                    <div class="variant-swatch" style="background: {{ variant.color.hex_code or '#ccc' }}"></div>
+                    <div class="variant-details-compact">
+                        <div class="variant-name">{{ variant.get_color_display_name() }}</div>
+                        <div class="variant-meta">
+                            <span class="variant-images">{{ variant.variant_pictures|length }} img</span>
+                            <span class="variant-date">{{ variant.created_at.strftime('%m/%d') if variant.created_at }}</span>
+                            {% if variant.is_active %}
+                            <i data-lucide="check-circle" style="width: 12px; height: 12px; color: #22c55e;"></i>
+                            {% else %}
+                            <i data-lucide="x-circle" style="width: 12px; height: 12px; color: #ef4444;"></i>
                             {% endif %}
                         </div>
                     </div>
-
-                    <div class="variant-details">
-                        <div class="variant-detail">
-                            <div class="variant-detail-value">{{ variant.variant_pictures|length }}</div>
-                            <div class="variant-detail-label">Images</div>
-                        </div>
-                        
-                        <div class="variant-detail">
-                            <div class="variant-detail-value">
-                                {% if variant.is_active %}
-                                    <i data-lucide="check" style="width: 20px; height: 20px; color: #22c55e;"></i>
-                                {% else %}
-                                    <i data-lucide="x" style="width: 20px; height: 20px; color: #ef4444;"></i>
-                                {% endif %}
-                            </div>
-                            <div class="variant-detail-label">Status</div>
-                        </div>
-                        
-                        <div class="variant-detail">
-                            <div class="variant-detail-value">{{ variant.created_at.strftime('%m/%d') if variant.created_at }}</div>
-                            <div class="variant-detail-label">Created</div>
-                        </div>
-                    </div>
-
-                    <div class="variant-status">
-                        <span class="variant-status-badge {{ 'active' if variant.is_active else 'inactive' }}">
-                            {{ 'Active' if variant.is_active else 'Inactive' }}
-                        </span>
-                        {% if variant.updated_at %}
-                        <small class="text-muted">Updated {{ variant.updated_at.strftime('%m/%d/%Y') }}</small>
-                        {% endif %}
-                    </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i data-lucide="palette" style="width: 64px; height: 64px;"></i>
-                </div>
-                <div class="empty-state-title">No Color Variants</div>
-                <div class="empty-state-description">Color variants allow you to showcase different color options for this component.</div>
+            <div class="empty-compact">
+                <i data-lucide="palette" style="width: 24px; height: 24px;"></i>
+                <span>No color variants</span>
             </div>
             {% endif %}
         </div>

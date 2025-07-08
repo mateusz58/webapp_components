@@ -919,18 +919,9 @@ def new_component():
             db.session.add(component)
             db.session.flush()  # Get component ID before handling associations
             
-            # Handle all associations using shared utility functions
-            from app.utils.association_handlers import (
-                handle_component_properties, 
-                handle_brand_associations, 
-                handle_categories, 
-                handle_keywords
-            )
-            
-            handle_component_properties(component, form_data['component_type_id'])
-            handle_brand_associations(component, is_edit=False)
-            handle_categories(component, is_edit=False)
-            handle_keywords(component, is_edit=False)
+            # Handle all associations using service layer (proper MVC)
+            from app.services.component_service import ComponentService
+            ComponentService._handle_component_associations(component, form_data, is_edit=False)
             _handle_picture_uploads(component, is_edit=False)
             # Note: Variants are now handled via API endpoints, not form processing
             

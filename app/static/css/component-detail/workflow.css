@@ -4,7 +4,7 @@
  * Built from scratch following TDD methodology
  */
 
-/* === APPROVAL WORKFLOW === */
+/* === COMPACT APPROVAL WORKFLOW === */
 .status-workflow {
   background: white;
   border-radius: var(--cd-radius-lg);
@@ -14,20 +14,21 @@
 }
 
 .status-workflow h3 {
-  padding: var(--cd-space-lg);
+  padding: var(--cd-space-sm) var(--cd-space-md); /* Reduced padding */
   margin: 0;
   background: var(--cd-gray-50);
   border-bottom: 1px solid var(--cd-gray-200);
   color: var(--cd-gray-900);
   font-weight: 600;
+  font-size: var(--cd-text-base); /* Smaller header */
 }
 
-/* Workflow Steps */
+/* Compact Workflow Steps */
 .workflow-step {
   display: flex;
   align-items: flex-start;
-  gap: var(--cd-space-md);
-  padding: var(--cd-space-lg);
+  gap: var(--cd-space-sm); /* Reduced gap */
+  padding: var(--cd-space-sm) var(--cd-space-md); /* Much smaller padding */
   border-bottom: 1px solid var(--cd-gray-100);
   cursor: pointer;
   transition: all var(--cd-transition);
@@ -47,10 +48,10 @@
   border-left: 4px solid var(--cd-primary);
 }
 
-/* Workflow Icons */
+/* Compact Workflow Icons */
 .workflow-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px; /* Smaller icon */
+  height: 32px; /* Smaller icon */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -198,21 +199,33 @@
   background: linear-gradient(to bottom, #f59e0b, #d97706);
 }
 
-/* Workflow step content */
+/* Compact workflow step content */
 .workflow-step h6 {
   color: var(--cd-gray-900);
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px; /* Reduced margin */
+  font-size: var(--cd-text-sm); /* Smaller font */
 }
 
 .workflow-step .text-muted {
   color: var(--cd-gray-600) !important;
-  font-size: var(--cd-text-sm);
+  font-size: var(--cd-text-xs); /* Smaller text */
 }
 
 .workflow-step .text-end .text-muted {
   font-size: var(--cd-text-xs);
-  margin-top: 4px;
+  margin-top: 2px; /* Reduced margin */
+}
+
+/* Hide verbose elements for manufacturing efficiency */
+.workflow-step .mt-1,
+.workflow-step .mt-2 {
+  display: none; /* Hide verbose status messages */
+}
+
+/* Hide status update forms by default for clean look */
+.status-update-form {
+  display: none;
 }
 
 /* Responsive design */
@@ -287,3 +300,94 @@
 .workflow-step:focus .workflow-icon {
   box-shadow: 0 0 0 3px var(--cd-primary-light);
 }
+
+/* === ULTRA-COMPACT WORKFLOW STYLES === */
+.status-workflow-compact-content {
+  padding: var(--cd-space-sm);
+}
+
+.status-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--cd-space-xs);
+  margin-bottom: var(--cd-space-sm);
+}
+
+.status-item-compact {
+  background: var(--cd-gray-50);
+  border: 1px solid var(--cd-gray-200);
+  border-radius: var(--cd-radius);
+  padding: var(--cd-space-xs);
+  cursor: pointer;
+  transition: all var(--cd-transition);
+}
+
+.status-item-compact:hover {
+  background: var(--cd-gray-100);
+  border-color: var(--cd-gray-300);
+}
+
+.status-item-compact.active {
+  border-color: var(--cd-primary);
+  background: var(--cd-primary-light);
+}
+
+.status-item-compact.ok {
+  border-left: 3px solid var(--cd-success);
+}
+
+.status-item-compact.not_ok {
+  border-left: 3px solid var(--cd-error);
+}
+
+.status-item-compact.pending {
+  border-left: 3px solid var(--cd-warning);
+}
+
+.status-header-compact {
+  display: flex;
+  align-items: center;
+  gap: var(--cd-space-xs);
+  font-size: var(--cd-text-sm);
+}
+
+.status-header-compact .fw-medium {
+  font-weight: 500;
+}
+
+.status-comment-compact {
+  font-size: var(--cd-text-xs);
+  color: var(--cd-gray-600);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-forms-compact {
+  margin-top: var(--cd-space-sm);
+}
+
+.status-update-form-compact {
+  padding: var(--cd-space-sm);
+  background: var(--cd-gray-50);
+  border-radius: var(--cd-radius);
+  margin-bottom: var(--cd-space-sm);
+}
+
+/* Bootstrap utilities for compact forms */
+.form-select-sm {
+  min-width: 100px;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: var(--cd-text-sm);
+}
+
+.text-success { color: var(--cd-success) !important; }
+.text-danger { color: var(--cd-error) !important; }
+.text-warning { color: var(--cd-warning) !important; }
+.ms-auto { margin-left: auto !important; }
+.fw-medium { font-weight: 500 !important; }
+.fw-normal { font-weight: 400 !important; }

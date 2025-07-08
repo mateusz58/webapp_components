@@ -76,14 +76,15 @@
   background: var(--cd-gray-50);
   font-family: var(--cd-font-sans);
   line-height: 1.6;
+  padding-top: 0; /* Ensure no extra top padding */
 }
 
-/* Header Section */
+/* Header Section - Compact for Manufacturing */
 .component-header {
   background: white;
   border-bottom: 1px solid var(--cd-gray-200);
-  padding: var(--cd-space-lg) var(--cd-space-md);
-  margin-bottom: var(--cd-space-xl);
+  padding: var(--cd-space-xs) var(--cd-space-md); /* Ultra-compact padding */
+  margin-bottom: 0; /* Remove bottom margin to eliminate gap */
   box-shadow: var(--cd-shadow-sm);
 }
 
@@ -148,22 +149,178 @@
   margin-bottom: 0;
 }
 
+/* === OPTIMIZED TWO-COLUMN LAYOUT FOR DAILY USE === */
+.component-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 480px;
+  gap: var(--cd-space-lg);
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: var(--cd-space-md); /* Add consistent padding including top */
+  align-items: start;
+  /* Removed min-height constraint - let content determine height */
+}
+
+/* Left Column - Image Gallery */
+.component-content__gallery {
+  background: white;
+  border-radius: var(--cd-radius-lg);
+  border: 1px solid var(--cd-gray-200);
+  box-shadow: var(--cd-shadow-sm);
+  transition: box-shadow var(--cd-transition);
+  overflow: hidden;
+  position: sticky;
+  top: var(--cd-space-lg);
+}
+
+.component-content__gallery:hover {
+  box-shadow: var(--cd-shadow-md);
+}
+
+.component-content__gallery .image-gallery {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Right Column - Information & Workflow - Tabs Priority */
+.component-content__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cd-space-md);
+  height: calc(100vh - 200px);
+}
+
+/* Compact Status Workflow - Minimal space below tabs */
+.status-workflow-compact {
+  background: white;
+  border-radius: var(--cd-radius-lg);
+  border: 1px solid var(--cd-gray-200);
+  box-shadow: var(--cd-shadow-sm);
+  transition: box-shadow var(--cd-transition);
+  overflow: hidden;
+  flex-shrink: 0; /* Don't shrink this section */
+  max-height: 200px; /* Limit height to keep it compact */
+}
+
+.status-workflow-compact:hover {
+  box-shadow: var(--cd-shadow-md);
+}
+
+.status-workflow-compact .status-workflow {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: var(--cd-space-md);
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Main Component Info - Tabs MUST be visible */
+.component-info-main {
+  background: white;
+  border-radius: var(--cd-radius-lg);
+  border: 1px solid var(--cd-gray-200);
+  box-shadow: var(--cd-shadow-sm);
+  transition: box-shadow var(--cd-transition);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Take most space */
+  min-height: 400px; /* Ensure tabs are visible */
+}
+
+.component-info-main:hover {
+  box-shadow: var(--cd-shadow-md);
+}
+
+.component-info-main .component-info {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* === RESPONSIVE DESIGN FOR DAILY USE === */
+@media (max-width: 1400px) {
+  .component-content-grid {
+    grid-template-columns: 1fr 420px;
+    gap: var(--cd-space-md);
+  }
+}
+
+@media (max-width: 1200px) {
+  .component-content-grid {
+    grid-template-columns: 1fr;
+    gap: var(--cd-space-lg);
+    max-width: 900px;
+  }
+  
+  .component-content__gallery {
+    position: relative;
+    top: auto;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  .component-content__info {
+    min-height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+  
+  .component-info-main {
+    min-height: 400px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .component-content-grid {
+    padding: 0 var(--cd-space-sm);
+    gap: var(--cd-space-md);
+  }
+  
+  .component-info-main {
+    min-height: 400px;
+  }
+}
+
+/* === ENHANCED VISUAL HIERARCHY === */
+.component-content__gallery {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.status-workflow-compact {
+  background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+  border-color: #f59e0b;
+}
+
+.component-info-main {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+
 /* === COMPATIBILITY WITH ORIGINAL VARIANT GALLERY === */
 /* These styles ensure compatibility with the original variant_gallery.html */
 .variant-gallery {
   background: white;
   border-radius: var(--cd-radius-lg);
-  padding: var(--cd-space-xl);
-  margin-bottom: var(--cd-space-lg);
+  padding: var(--cd-space-sm); /* Further reduced for professional compact layout */
+  margin-bottom: var(--cd-space-sm); /* Reduced for tighter spacing */
   box-shadow: var(--cd-shadow-sm);
 }
 
 .variant-chips {
   display: flex;
-  gap: var(--cd-space-md);
+  gap: var(--cd-space-sm); /* Reduced gap for compact layout */
   flex-wrap: wrap;
-  margin-top: var(--cd-space-md);
-  padding: var(--cd-space-md);
+  margin-top: var(--cd-space-sm); /* Reduced margin */
+  padding: var(--cd-space-sm); /* Reduced padding */
   background: var(--cd-gray-50);
   border-radius: var(--cd-radius-lg);
   border: 1px solid var(--cd-gray-200);
@@ -172,8 +329,8 @@
 .variant-chip {
   display: flex;
   align-items: center;
-  gap: var(--cd-space-md);
-  padding: var(--cd-space-md) var(--cd-space-lg);
+  gap: var(--cd-space-sm); /* Reduced gap */
+  padding: var(--cd-space-sm) var(--cd-space-md); /* Reduced padding */
   background: white;
   border: 2px solid var(--cd-gray-200);
   border-radius: var(--cd-radius-md);
@@ -182,7 +339,7 @@
   font-size: var(--cd-text-sm);
   font-weight: 500;
   box-shadow: var(--cd-shadow-sm);
-  min-height: 44px;
+  min-height: 36px; /* Reduced from 44px for more compact appearance */
 }
 
 .variant-chip:hover {
@@ -209,12 +366,12 @@
 
 .main-image-container {
   position: relative;
-  margin-bottom: var(--cd-space-lg);
+  margin-bottom: var(--cd-space-xs); /* Further reduced for compact layout */
   border-radius: var(--cd-radius-lg);
   overflow: hidden;
   background: var(--cd-gray-50);
   aspect-ratio: 1 / 1;
-  max-width: 450px;
+  max-width: 280px; /* Further reduced for professional manufacturing look */
   margin-left: auto;
   margin-right: auto;
   border: 2px solid var(--cd-gray-200);
@@ -243,16 +400,16 @@
   display: flex;
   gap: var(--cd-space-sm);
   overflow-x: auto;
-  padding: var(--cd-space-sm);
+  padding: var(--cd-space-xs); /* Reduced from sm to xs */
   background: var(--cd-gray-50);
   border-radius: var(--cd-radius);
-  margin-top: var(--cd-space-md);
+  margin-top: var(--cd-space-sm); /* Reduced from md to sm */
 }
 
 .thumbnail {
   flex-shrink: 0;
-  width: 80px;
-  height: 80px;
+  width: 60px; /* Reduced from 80px for compact layout */
+  height: 60px; /* Reduced from 80px for compact layout */
   border-radius: var(--cd-radius);
   overflow: hidden;
   border: 2px solid transparent;
@@ -587,16 +744,23 @@
 .gap-2 { gap: 0.5rem !important; }
 
 /* Typography utilities */
+.h2 { font-size: var(--cd-text-2xl); font-weight: 600; }
+.h3 { font-size: var(--cd-text-xl); font-weight: 600; }
 .h5 { font-size: var(--cd-text-lg); font-weight: 600; }
 .mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 0.25rem !important; }
 .mb-2 { margin-bottom: 0.5rem !important; }
 .mb-3 { margin-bottom: 1rem !important; }
 .mt-3 { margin-top: 1rem !important; }
+.me-1 { margin-right: 0.25rem !important; }
 .me-2 { margin-right: 0.5rem !important; }
+.me-3 { margin-right: 1rem !important; }
 .fw-bold { font-weight: 700 !important; }
 .text-muted { color: var(--cd-gray-500) !important; }
 .text-center { text-align: center !important; }
 .text-primary { color: var(--cd-primary) !important; }
+.small { font-size: var(--cd-text-sm); }
+.opacity-90 { opacity: 0.9; }
 .visually-hidden { 
   position: absolute !important;
   width: 1px !important;

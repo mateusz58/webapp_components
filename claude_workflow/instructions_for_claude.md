@@ -165,6 +165,7 @@ Read these for deeper details when needed:
 - `claude_workflow/database_schema_guide.md` - Complete PostgreSQL schema documentation
 - `claude_workflow/selenium_testing_guidelines.md` - Selenium E2E testing framework
 - `claude_workflow/architecture_overview.md` - Full system architecture
+- `claude_workflow/ux_design_guidelines.md` - **Daily user perspective UX design standards and testing methodology**
 
 ## When to Update Workflow Files (IMPORTANT)
 **REGULARLY UPDATE** these markdown files throughout development:
@@ -207,6 +208,14 @@ Read these for deeper details when needed:
   - Adding new error codes or status codes
   - Updating authentication or security requirements
   - API architecture improvements or fixes
+
+- **Update `ux_design_guidelines.md`** when:
+  - Making layout or design changes to component pages
+  - Implementing new responsive design patterns
+  - Running UX testing and discovering new optimization opportunities
+  - Establishing new design standards or components
+  - Changing CSS architecture or design systems
+  - User feedback reveals new daily-use requirements
 
 **ALWAYS use TodoWrite tool** for complex multi-step tasks
 

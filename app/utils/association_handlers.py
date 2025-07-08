@@ -56,6 +56,25 @@ def handle_brand_associations(component, is_edit=False, data_override=None):
     
     current_app.logger.info(f"Final brand_ids to process: {brand_ids}")
     
+    # Handle new brand creation first
+    new_brand_name = data_source.get('new_brand_name', '').strip()
+    if new_brand_name:
+        current_app.logger.info(f"Creating new brand: {new_brand_name}")
+        
+        # Check if brand already exists
+        existing_brand = Brand.query.filter_by(name=new_brand_name).first()
+        if existing_brand:
+            current_app.logger.info(f"Brand '{new_brand_name}' already exists with ID {existing_brand.id}")
+            brand_ids.append(str(existing_brand.id))
+        else:
+            # Create new brand
+            new_brand = Brand(name=new_brand_name)
+            db.session.add(new_brand)
+            db.session.flush()  # Get the ID
+            current_app.logger.info(f"Created new brand '{new_brand_name}' with ID {new_brand.id}")
+            brand_ids.append(str(new_brand.id))
+    
+    # Handle existing brand IDs
     for brand_id in brand_ids:
         if str(brand_id).isdigit():
             brand_id_int = int(brand_id)

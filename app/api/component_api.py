@@ -72,19 +72,33 @@ def create_component():
         db.session.add(component)
         db.session.flush()  # Get component ID
         
-        # Handle all associations using shared utility functions
-        from app.utils.association_handlers import (
-            handle_component_properties, 
-            handle_brand_associations, 
-            handle_categories, 
-            handle_keywords,
-            get_association_counts
-        )
+        # Handle all associations using service layer (proper MVC)
+        from app.services.component_service import ComponentService
         
-        handle_component_properties(component, component_type_id)
-        handle_brand_associations(component, is_edit=False)
-        handle_categories(component, is_edit=False)
-        handle_keywords(component, is_edit=False)
+        # Create data dict for associations
+        component_data = {
+            'product_number': product_number,
+            'description': description,
+            'component_type_id': component_type_id,
+            'supplier_id': supplier_id
+        }
+        
+        # Add brand data from form/json
+        if request.is_json:
+            json_data = request.get_json()
+            component_data.update(json_data)
+        else:
+            # Handle form data for brands
+            brand_ids = request.form.getlist('brand_ids[]') or [request.form.get('brand_id')] if request.form.get('brand_id') else []
+            if brand_ids:
+                component_data['brand_ids'] = [id for id in brand_ids if id]
+            
+            new_brand_name = request.form.get('new_brand_name', '').strip()
+            if new_brand_name:
+                component_data['new_brand_name'] = new_brand_name
+        
+        # Use service layer for associations
+        ComponentService._handle_component_associations(component, component_data, is_edit=False)
         
         # Process variants
         created_variants = []
@@ -334,6 +348,7 @@ def create_component():
         loading_url = url_for('component_web.component_creation_loading', component_id=component_id)
         
         # Build summary of what was created
+        from app.utils.association_handlers import get_association_counts
         association_counts = get_association_counts(component)
         
         current_app.logger.info(f"Component {component.id} created with: {len(created_variants)} variants, {association_counts['brands_count']} brands, {association_counts['categories_count']} categories, {association_counts['keywords_count']} keywords, {association_counts['properties_count']} properties")
@@ -835,7 +850,6 @@ def get_component_edit_data(component_id):
 
 
 @component_api.route('/component/<int:component_id>', methods=['PUT'])
-@csrf.exempt  # Temporary exemption for testing - TODO: implement proper CSRF handling
 def update_component(component_id):
     """
     Update an existing component via API using service layer
