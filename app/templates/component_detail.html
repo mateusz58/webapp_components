@@ -33,26 +33,29 @@
         {% include 'sections/component_header.html' %}
     </section>
 
-    <!-- Main Content -->
-    <div class="component-content" style="grid-template-columns: 1fr;">
+    <!-- Main Content - Improved Two-Column Layout -->
+    <div class="component-content-grid">
         
-        <!-- Primary Content Area -->
-        <div class="component-content__main">
-            
-            <!-- Image Gallery Section - Using Original Working Gallery -->
+        <!-- Left Column: Image Gallery -->
+        <div class="component-content__gallery">
             <section class="image-gallery">
                 {% include 'sections/variant_gallery.html' %}
             </section>
+        </div>
 
-            <!-- Status Workflow Section -->
-            <section class="status-workflow">
+        <!-- Right Column: Information & Workflow -->
+        <div class="component-content__info">
+            
+            <!-- Component Information Tabs - Main content (Priority) -->
+            <section class="component-info-main">
+                {% include 'sections/component_info_tabs.html' %}
+            </section>
+
+            <!-- Status Workflow Section - Optional feature below -->
+            <section class="status-workflow-compact">
                 {% include 'sections/status_workflow.html' %}
             </section>
 
-            <!-- Component Information Tabs -->
-            <section class="component-info">
-                {% include 'sections/component_info_tabs.html' %}
-            </section>
         </div>
 
     </div>
