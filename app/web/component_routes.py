@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify, session
 from werkzeug.utils import secure_filename
-from app import db
+from app import db, csrf
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, ComponentTypeProperty, Color
 from app.utils.file_handling import save_uploaded_file, allowed_file, delete_file, generate_picture_name
 from sqlalchemy import or_, and_, func, desc, asc
@@ -1239,6 +1239,7 @@ def update_pps_status(id):
 
 
 @component_web.route('/api/component/validate-product-number', methods=['POST'])
+@csrf.exempt  # Allow AJAX calls without CSRF token for validation
 def validate_product_number():
     """Validate product number uniqueness"""
     try:

@@ -115,13 +115,30 @@
     padding: var(--spacing-xs);
 }
 
-.picture-alt-input {
+.picture-name {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-xs);
+    word-break: break-word;
+}
+
+.picture-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.picture-alt-input, .picture-order-input {
     width: 100%;
     padding: var(--spacing-xs);
     border: 1px solid var(--gray-300);
     border-radius: var(--radius-sm);
     font-size: 0.75rem;
-    margin-bottom: var(--spacing-xs);
+}
+
+.picture-order-input {
+    max-width: 80px;
 }
 
 .primary-badge {

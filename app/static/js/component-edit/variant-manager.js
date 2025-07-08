@@ -59,11 +59,54 @@ class VariantManager {
         
         // Set up drag and drop handlers for existing variants
         this.setupDragAndDrop();
+        
+        // Monitor component-level field changes that affect SKUs and picture names
+        this.setupComponentFieldMonitoring();
     }
     
     setupDragAndDrop() {
         document.addEventListener('dragover', this.handleDragOver.bind(this));
         document.addEventListener('dragleave', this.handleDragLeave.bind(this));
+    }
+    
+    setupComponentFieldMonitoring() {
+        console.log('🔧 DEBUG: Setting up component field monitoring for SKU and picture name updates');
+        
+        // Monitor product number changes
+        const productNumberInput = document.getElementById('product_number') || document.querySelector('input[name="product_number"]');
+        if (productNumberInput) {
+            console.log('🔧 DEBUG: Product number input found, adding listener');
+            productNumberInput.addEventListener('input', (event) => {
+                const oldValue = event.target.defaultValue || '';
+                const newValue = event.target.value || '';
+                console.log(`🔧 DEBUG: Product number changed from "${oldValue}" to "${newValue}"`);
+                console.log('🔧 DEBUG: Triggering SKU and picture name updates for all variants');
+                this.updateAllVariantSKUs();
+                this.updateAllVariantPictureNames('product_number');
+            });
+        } else {
+            console.warn('🔧 DEBUG: Product number input not found');
+        }
+        
+        // Monitor supplier changes
+        const supplierSelect = document.getElementById('supplier_id') || document.querySelector('select[name="supplier_id"]');
+        if (supplierSelect) {
+            console.log('🔧 DEBUG: Supplier select found, adding listener');
+            supplierSelect.addEventListener('change', (event) => {
+                const oldValue = event.target.defaultValue || '';
+                const newValue = event.target.value || '';
+                const selectedOption = event.target.selectedOptions[0];
+                const supplierText = selectedOption ? selectedOption.textContent : 'None';
+                console.log(`🔧 DEBUG: Supplier changed from "${oldValue}" to "${newValue}" (${supplierText})`);
+                console.log('🔧 DEBUG: Triggering SKU and picture name updates for all variants');
+                this.updateAllVariantSKUs();
+                this.updateAllVariantPictureNames('supplier');
+            });
+        } else {
+            console.warn('🔧 DEBUG: Supplier select not found');
+        }
+        
+        console.log('🔧 DEBUG: Component field monitoring setup complete');
     }
     
     addNewVariant() {
@@ -364,6 +407,9 @@ class VariantManager {
         this.updateVariantValidationStatus(variantId);
         this.updateOverallValidationStatus();
         
+        // Update picture names for color change
+        this.updatePictureNamesForVariantChange(variantId, 'color');
+        
         // Update submit button state if function exists
         if (typeof updateSubmitButtonState === 'function') {
             updateSubmitButtonState();
@@ -421,27 +467,51 @@ class VariantManager {
         if (colorSelect.value === 'custom' && customColorInput) {
             colorName = customColorInput.value || 'custom';
         } else if (colorSelect.value) {
-            colorName = colorSelect.selectedOptions[0]?.textContent || 'unknown';
+            // Get clean color name from the option text
+            const selectedOption = colorSelect.selectedOptions[0];
+            if (selectedOption) {
+                colorName = selectedOption.textContent.trim();
+                // Clean up any extra formatting from the color name
+                colorName = colorName.replace(/\s*\(.*\)/, '').trim(); // Remove "(Current)" or similar
+            }
         }
         
         if (colorName) {
             // Get product number for SKU generation
             const productNumber = document.getElementById('product_number')?.value || 'PRODUCT';
-            const supplierCode = document.getElementById('supplier_id')?.selectedOptions[0]?.textContent || '';
             
-            // Generate preview SKU
+            // Get supplier code properly - first try to get from data attribute, then from API call if needed
+            let supplierCode = '';
+            const supplierSelect = document.getElementById('supplier_id');
+            if (supplierSelect && supplierSelect.value) {
+                // Look for the supplier code in the option's data attribute or text
+                const selectedOption = supplierSelect.selectedOptions[0];
+                if (selectedOption) {
+                    // Try to extract supplier code from the option text (format: "CODE - Name" or just "CODE")
+                    const optionText = selectedOption.textContent.trim();
+                    if (optionText && optionText !== 'Select supplier...') {
+                        // Extract code part before any " - " separator
+                        supplierCode = optionText.split(' - ')[0].trim();
+                    }
+                }
+            }
+            
+            // Generate preview SKU with proper formatting
             const normalizedProduct = productNumber.toLowerCase().replace(/\s+/g, '_');
             const normalizedColor = colorName.toLowerCase().replace(/\s+/g, '_');
+            const normalizedSupplier = supplierCode.toUpperCase().replace(/\s+/g, '');
             
             let previewSKU;
-            if (supplierCode && supplierCode !== 'Select supplier...') {
-                previewSKU = `${supplierCode}_${normalizedProduct}_${normalizedColor}`;
+            if (normalizedSupplier && normalizedSupplier !== 'SELECT') {
+                previewSKU = `${normalizedSupplier}_${normalizedProduct}_${normalizedColor}`.replace(/_+/g, '_');
             } else {
                 previewSKU = `${normalizedProduct}_${normalizedColor}`;
             }
             
             skuInput.value = previewSKU;
             skuHelp.textContent = 'Preview SKU (will be finalized when saved)';
+            
+            console.log('🔧 Generated SKU:', previewSKU, 'from supplier:', normalizedSupplier, 'product:', normalizedProduct, 'color:', normalizedColor);
         } else {
             skuInput.value = '';
             skuHelp.textContent = 'SKU will be generated after color selection';
@@ -476,8 +546,6 @@ class VariantManager {
     }
     
     async handleVariantImages(variantId, files) {
-        console.log(`Processing ${files.length} images for variant ${variantId}`);
-        
         if (files.length === 0) return;
         
         // Show immediate feedback
@@ -493,7 +561,14 @@ class VariantManager {
     
     addPictureToGrid(variantId, picture) {
         const grid = document.getElementById(`pictures_grid_${variantId}`);
-        if (!grid) return;
+        if (!grid) {
+            console.error(`Pictures grid not found: pictures_grid_${variantId}`);
+            return;
+        }
+        
+        // Calculate max allowed order based on total pictures for this variant
+        const allPictures = this.getAllVariantPictures(variantId);
+        const maxOrder = allPictures.length;
         
         const pictureDiv = document.createElement('div');
         pictureDiv.className = 'picture-item';
@@ -529,16 +604,586 @@ class VariantManager {
                 ${overlayContent}
             </div>
             <div class="picture-info">
-                <input type="text" 
-                       name="picture_alt_${picture.id}" 
-                       value="${picture.alt_text || ''}" 
-                       placeholder="Alt text..." 
-                       class="picture-alt-input">
-                <small>${picture.isPending ? 'Will be uploaded' : (picture.picture_order ? `Order: ${picture.picture_order}` : 'New')}</small>
+                <div class="picture-name">${picture.picture_name || picture.name || 'New Picture'}</div>
+                <div class="picture-inputs">
+                    <input type="text" 
+                           name="picture_alt_${picture.id}" 
+                           value="${picture.alt_text || ''}" 
+                           placeholder="Alt text..." 
+                           class="picture-alt-input">
+                    <input type="number" 
+                           name="picture_order_${picture.id}" 
+                           value="${picture.picture_order || 1}" 
+                           min="1" 
+                           max="${maxOrder}"
+                           placeholder="Order..." 
+                           class="picture-order-input"
+                           onchange="variantManager.updatePictureOrder('${variantId}', '${picture.id}', this.value)"
+                           title="Order range: 1 to ${maxOrder}">
+                </div>
             </div>
         `;
         
         grid.appendChild(pictureDiv);
+    }
+    
+    updatePictureOrder(variantId, pictureId, newOrder) {
+        const targetOrder = parseInt(newOrder);
+        
+        // Get all pictures for this variant (existing, staged, and pending)
+        const allPictures = this.getAllVariantPictures(variantId);
+        
+        // Validate order value
+        const maxAllowedOrder = allPictures.length;
+        if (isNaN(targetOrder) || targetOrder < 1) {
+            this.showErrorMessage('Order must be a positive number starting from 1');
+            
+            // Reset the input to the current order
+            const orderInput = document.querySelector(`[data-picture-id="${pictureId}"] .picture-order-input`);
+            if (orderInput) {
+                const currentPicture = allPictures.find(p => p.id === pictureId);
+                orderInput.value = currentPicture ? currentPicture.order : 1;
+            }
+            return;
+        }
+        
+        if (targetOrder > maxAllowedOrder) {
+            this.showErrorMessage(`Order cannot be higher than ${maxAllowedOrder} (total number of pictures for this variant)`);
+            
+            // Reset the input to the current order
+            const orderInput = document.querySelector(`[data-picture-id="${pictureId}"] .picture-order-input`);
+            if (orderInput) {
+                const currentPicture = allPictures.find(p => p.id === pictureId);
+                orderInput.value = currentPicture ? currentPicture.order : 1;
+            }
+            return;
+        }
+        
+        // Check for conflicts and resolve them
+        const conflictResolution = this.resolveOrderConflicts(allPictures, pictureId, targetOrder);
+        
+        // Apply the resolved orders
+        this.applyOrderChanges(variantId, conflictResolution);
+        
+        // Update picture names based on new orders
+        const nameChanges = this.updatePictureNamesAfterOrderChange(variantId, conflictResolution.changes);
+        
+        // Update the UI inputs to reflect the resolved orders
+        this.updateOrderInputsDisplay(variantId, conflictResolution);
+        
+        // Show appropriate feedback message
+        if (conflictResolution.hasConflicts) {
+            this.showSuccessMessage(`Order updated to ${conflictResolution.finalOrder}. Other pictures automatically reordered to prevent conflicts.`);
+        } else {
+            this.showSuccessMessage('Picture order updated (will be saved on form submission)');
+        }
+        
+        // Mark component as having pending changes
+        if (typeof updateSubmitButtonState === 'function') {
+            updateSubmitButtonState();
+        }
+    }
+    
+    getAllVariantPictures(variantId) {
+        const pictures = [];
+        
+        // Get existing pictures from the grid
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        if (grid) {
+            const pictureElements = grid.querySelectorAll('.picture-item:not(.marked-for-deletion)');
+            pictureElements.forEach(element => {
+                const pictureId = element.dataset.pictureId;
+                const orderInput = element.querySelector('.picture-order-input');
+                const currentOrder = orderInput ? parseInt(orderInput.value) || 1 : 1;
+                
+                pictures.push({
+                    id: pictureId,
+                    order: currentOrder,
+                    element: element,
+                    isExisting: !pictureId.startsWith('new_') && !pictureId.startsWith('staged_')
+                });
+            });
+        }
+        
+        return pictures;
+    }
+    
+    resolveOrderConflicts(allPictures, changingPictureId, newOrder) {
+        const result = {
+            changes: new Map(),
+            hasConflicts: false,
+            finalOrder: newOrder
+        };
+        
+        // Find the picture being changed
+        const changingPicture = allPictures.find(p => p.id === changingPictureId);
+        if (!changingPicture) return result;
+        
+        // Check if the new order conflicts with existing pictures
+        const conflictingPicture = allPictures.find(p => p.id !== changingPictureId && p.order === newOrder);
+        
+        if (conflictingPicture) {
+            result.hasConflicts = true;
+            
+            // Strategy: Shift conflicting pictures up by 1
+            const picturesToShift = allPictures
+                .filter(p => p.id !== changingPictureId && p.order >= newOrder)
+                .sort((a, b) => b.order - a.order); // Sort descending to avoid cascading conflicts
+            
+            // Shift each conflicting picture up by 1
+            picturesToShift.forEach(picture => {
+                const newShiftedOrder = picture.order + 1;
+                result.changes.set(picture.id, newShiftedOrder);
+            });
+        }
+        
+        // Set the new order for the changing picture
+        result.changes.set(changingPictureId, newOrder);
+        
+        return result;
+    }
+    
+    applyOrderChanges(variantId, conflictResolution) {
+        conflictResolution.changes.forEach((newOrder, pictureId) => {
+            // Update in staged changes
+            if (this.stagedChanges.has(variantId)) {
+                const staged = this.stagedChanges.get(variantId);
+                const stagedPicture = staged.picturesToAdd.find(p => p.id === pictureId);
+                if (stagedPicture) {
+                    stagedPicture.picture_order = newOrder;
+                }
+            }
+            
+            // Update in pending variants
+            if (this.pendingVariants.has(variantId)) {
+                const variant = this.pendingVariants.get(variantId);
+                const pendingPicture = variant.pictures.find(p => p.id === pictureId);
+                if (pendingPicture) {
+                    pendingPicture.picture_order = newOrder;
+                }
+            }
+            
+            // For existing pictures, we'll track the changes for form submission
+            // This will be handled by the form submission process
+        });
+    }
+    
+    updateOrderInputMaxValues(variantId) {
+        const allPictures = this.getAllVariantPictures(variantId);
+        const maxOrder = allPictures.length;
+        
+        // Update all order inputs for this variant
+        const grid = document.getElementById(`pictures_grid_${variantId}`);
+        if (grid) {
+            const orderInputs = grid.querySelectorAll('.picture-order-input');
+            orderInputs.forEach(input => {
+                input.setAttribute('max', maxOrder);
+                input.setAttribute('title', `Order range: 1 to ${maxOrder}`);
+            });
+        }
+    }
+    
+    updateOrderInputsDisplay(variantId, conflictResolution) {
+        conflictResolution.changes.forEach((newOrder, pictureId) => {
+            const grid = document.getElementById(`pictures_grid_${variantId}`);
+            if (grid) {
+                const pictureElement = grid.querySelector(`[data-picture-id="${pictureId}"]`);
+                if (pictureElement) {
+                    const orderInput = pictureElement.querySelector('.picture-order-input');
+                    if (orderInput) {
+                        orderInput.value = newOrder;
+                        
+                        // Add visual feedback for changed orders
+                        if (conflictResolution.hasConflicts && pictureId !== Array.from(conflictResolution.changes.keys())[0]) {
+                            orderInput.style.backgroundColor = '#fff3cd'; // Light yellow
+                            orderInput.style.borderColor = '#ffc107'; // Warning color
+                            
+                            // Remove highlight after 2 seconds
+                            setTimeout(() => {
+                                orderInput.style.backgroundColor = '';
+                                orderInput.style.borderColor = '';
+                            }, 2000);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    getNextAvailableOrder(variantId) {
+        const allPictures = this.getAllVariantPictures(variantId);
+        if (allPictures.length === 0) return 1;
+        
+        const maxOrder = Math.max(...allPictures.map(p => p.order));
+        return maxOrder + 1;
+    }
+    
+    generatePictureName(variantId, pictureOrder) {
+        // Get variant information to generate picture name
+        const variantElement = document.querySelector(`[data-variant-id="${variantId}"]`);
+        if (!variantElement) return null;
+        
+        // Get color name
+        const colorSelect = variantElement.querySelector(`[name*="variant_color_"]`);
+        const customColorInput = variantElement.querySelector(`[name*="variant_custom_color_"]`);
+        
+        let colorName = '';
+        if (colorSelect && colorSelect.value) {
+            const selectedOption = colorSelect.querySelector(`option[value="${colorSelect.value}"]`);
+            if (selectedOption && selectedOption.textContent) {
+                colorName = selectedOption.textContent.trim().toLowerCase();
+                // Remove "(Current)" suffix if present
+                colorName = colorName.replace(/\s*\(current\)$/i, '');
+            }
+        } else if (customColorInput && customColorInput.value.trim()) {
+            colorName = customColorInput.value.trim().toLowerCase();
+        }
+        
+        if (!colorName) return null;
+        
+        // Get current component product number from form
+        const productNumberInput = document.getElementById('product_number');
+        let productNumber = productNumberInput ? productNumberInput.value.trim() : 'component';
+        
+        // Get supplier code from form
+        let supplierCode = '';
+        const supplierSelect = document.getElementById('supplier_id');
+        if (supplierSelect && supplierSelect.value) {
+            const selectedOption = supplierSelect.selectedOptions[0];
+            if (selectedOption) {
+                const optionText = selectedOption.textContent.trim();
+                if (optionText && optionText !== 'Select supplier...') {
+                    supplierCode = optionText.split(' - ')[0].trim();
+                }
+            }
+        }
+        
+        // Normalize strings: replace spaces with underscores, make lowercase
+        colorName = colorName.replace(/\s+/g, '_').toLowerCase();
+        productNumber = productNumber.replace(/\s+/g, '_').toLowerCase();
+        const normalizedSupplier = supplierCode.replace(/\s+/g, '').toLowerCase();
+        
+        // Generate picture name following the same pattern as SKU but lowercase
+        if (normalizedSupplier) {
+            return `${normalizedSupplier}_${productNumber}_${colorName}_${pictureOrder}`;
+        } else {
+            return `${productNumber}_${colorName}_${pictureOrder}`;
+        }
+    }
+    
+    updatePictureNamesAfterOrderChange(variantId, orderChanges) {
+        // Track picture name changes for WebDAV file renaming
+        const nameChanges = new Map(); // oldName -> newName
+        
+        console.log('🔧 Processing order changes for variant', variantId, orderChanges);
+        
+        orderChanges.forEach((newOrder, pictureId) => {
+            const newPictureName = this.generatePictureName(variantId, newOrder);
+            if (!newPictureName) return;
+            
+            console.log('🔧 Picture', pictureId, 'new order:', newOrder, 'new name:', newPictureName);
+            
+            // For existing pictures (real database pictures), we need to get the current name
+            if (!pictureId.startsWith('new_') && !pictureId.startsWith('staged_')) {
+                // Get current picture name from DOM element
+                const grid = document.getElementById(`pictures_grid_${variantId}`);
+                if (grid) {
+                    const pictureElement = grid.querySelector(`[data-picture-id="${pictureId}"]`);
+                    if (pictureElement) {
+                        const nameElement = pictureElement.querySelector('.picture-name');
+                        if (nameElement) {
+                            const currentDisplayedName = nameElement.textContent.trim();
+                            console.log('🔧 Current displayed name:', currentDisplayedName, 'New name:', newPictureName);
+                            
+                            // Only add to rename map if names are actually different
+                            if (currentDisplayedName && currentDisplayedName !== newPictureName) {
+                                nameChanges.set(currentDisplayedName, newPictureName);
+                                console.log('🔧 Added rename mapping:', currentDisplayedName, '→', newPictureName);
+                            }
+                            
+                            // Update the display
+                            nameElement.textContent = newPictureName;
+                        }
+                    }
+                }
+            }
+            
+            // Update staged pictures
+            if (this.stagedChanges.has(variantId)) {
+                const staged = this.stagedChanges.get(variantId);
+                const stagedPicture = staged.picturesToAdd.find(p => p.id === pictureId);
+                if (stagedPicture) {
+                    const oldName = stagedPicture.picture_name || stagedPicture.name;
+                    stagedPicture.picture_name = newPictureName;
+                    stagedPicture.name = newPictureName;
+                    if (oldName && oldName !== newPictureName) {
+                        nameChanges.set(oldName, newPictureName);
+                        console.log('🔧 Staged picture rename:', oldName, '→', newPictureName);
+                    }
+                }
+            }
+            
+            // Update pending variants
+            if (this.pendingVariants.has(variantId)) {
+                const variant = this.pendingVariants.get(variantId);
+                const pendingPicture = variant.pictures.find(p => p.id === pictureId);
+                if (pendingPicture) {
+                    const oldName = pendingPicture.picture_name || pendingPicture.name;
+                    pendingPicture.picture_name = newPictureName;
+                    pendingPicture.name = newPictureName;
+                    if (oldName && oldName !== newPictureName) {
+                        nameChanges.set(oldName, newPictureName);
+                        console.log('🔧 Pending picture rename:', oldName, '→', newPictureName);
+                    }
+                }
+            }
+        });
+        
+        // Store file rename operations for form submission
+        if (nameChanges.size > 0) {
+            if (!this.stagedChanges.has(variantId)) {
+                this.stagedChanges.set(variantId, {
+                    variantToDelete: false,
+                    picturesToAdd: [],
+                    picturesToDelete: []
+                });
+            }
+            
+            const staged = this.stagedChanges.get(variantId);
+            if (!staged.pictureRenames) {
+                staged.pictureRenames = new Map();
+            }
+            
+            // Merge rename operations
+            nameChanges.forEach((newName, oldName) => {
+                staged.pictureRenames.set(oldName, newName);
+            });
+        }
+        
+        return nameChanges;
+    }
+    
+    updatePictureNamesForVariantChange(variantId, changeType) {
+        /**
+         * Update picture names when variant properties change (color, supplier, product number)
+         * This handles the comprehensive picture renaming scenarios you mentioned
+         */
+        console.log(`🔧 Updating picture names for variant ${variantId} due to ${changeType} change`);
+        
+        // Get all pictures for this variant
+        const allPictures = this.getAllVariantPictures(variantId);
+        if (allPictures.length === 0) {
+            console.log('🔧 No pictures found for this variant');
+            return;
+        }
+        
+        const nameChanges = new Map(); // oldName -> newName
+        
+        // Process each picture
+        allPictures.forEach(picture => {
+            const currentOrder = picture.order;
+            const newPictureName = this.generatePictureName(variantId, currentOrder);
+            
+            if (!newPictureName) {
+                console.log(`🔧 Could not generate new name for picture ${picture.id}`);
+                return;
+            }
+            
+            // Get current name - for existing pictures, get from DOM or database
+            let currentName = null;
+            
+            if (!picture.id.startsWith('new_') && !picture.id.startsWith('staged_')) {
+                // Existing picture - get current name from DOM
+                const grid = document.getElementById(`pictures_grid_${variantId}`);
+                if (grid) {
+                    const pictureElement = grid.querySelector(`[data-picture-id="${picture.id}"]`);
+                    if (pictureElement) {
+                        const nameElement = pictureElement.querySelector('.picture-name');
+                        if (nameElement) {
+                            currentName = nameElement.textContent.trim();
+                        }
+                    }
+                }
+            } else {
+                // Staged or pending picture
+                if (this.stagedChanges.has(variantId)) {
+                    const staged = this.stagedChanges.get(variantId);
+                    const stagedPicture = staged.picturesToAdd.find(p => p.id === picture.id);
+                    if (stagedPicture) {
+                        currentName = stagedPicture.picture_name || stagedPicture.name;
+                    }
+                }
+                
+                if (!currentName && this.pendingVariants.has(variantId)) {
+                    const variant = this.pendingVariants.get(variantId);
+                    const pendingPicture = variant.pictures.find(p => p.id === picture.id);
+                    if (pendingPicture) {
+                        currentName = pendingPicture.picture_name || pendingPicture.name;
+                    }
+                }
+            }
+            
+            if (currentName && currentName !== newPictureName) {
+                console.log(`🔧 Picture ${picture.id}: ${currentName} → ${newPictureName}`);
+                nameChanges.set(currentName, newPictureName);
+                
+                // Update the displayed name
+                const grid = document.getElementById(`pictures_grid_${variantId}`);
+                if (grid) {
+                    const pictureElement = grid.querySelector(`[data-picture-id="${picture.id}"]`);
+                    if (pictureElement) {
+                        const nameElement = pictureElement.querySelector('.picture-name');
+                        if (nameElement) {
+                            nameElement.textContent = newPictureName;
+                        }
+                    }
+                }
+                
+                // Update staged/pending data
+                if (picture.id.startsWith('staged_') && this.stagedChanges.has(variantId)) {
+                    const staged = this.stagedChanges.get(variantId);
+                    const stagedPicture = staged.picturesToAdd.find(p => p.id === picture.id);
+                    if (stagedPicture) {
+                        stagedPicture.picture_name = newPictureName;
+                        stagedPicture.name = newPictureName;
+                    }
+                }
+                
+                if (picture.id.startsWith('new_') && this.pendingVariants.has(variantId)) {
+                    const variant = this.pendingVariants.get(variantId);
+                    const pendingPicture = variant.pictures.find(p => p.id === picture.id);
+                    if (pendingPicture) {
+                        pendingPicture.picture_name = newPictureName;
+                        pendingPicture.name = newPictureName;
+                    }
+                }
+            }
+        });
+        
+        // Store rename operations for form submission if there are any changes
+        if (nameChanges.size > 0) {
+            if (!this.stagedChanges.has(variantId)) {
+                this.stagedChanges.set(variantId, {
+                    variantToDelete: false,
+                    picturesToAdd: [],
+                    picturesToDelete: []
+                });
+            }
+            
+            const staged = this.stagedChanges.get(variantId);
+            if (!staged.pictureRenames) {
+                staged.pictureRenames = new Map();
+            }
+            
+            // Merge rename operations
+            nameChanges.forEach((newName, oldName) => {
+                staged.pictureRenames.set(oldName, newName);
+            });
+            
+            console.log(`🔧 Added ${nameChanges.size} picture rename operations for ${changeType} change`);
+            
+            // Update max values for order inputs since names changed
+            this.updateOrderInputMaxValues(variantId);
+            
+            // Show user feedback
+            this.showSuccessMessage(`Picture names updated for ${changeType} change (will be saved on form submission)`);
+        }
+    }
+    
+    // Function to update SKUs for all variants when component-level fields change
+    updateAllVariantSKUs() {
+        console.log('🔧 DEBUG: Starting updateAllVariantSKUs() - updating SKUs for all variants');
+        
+        // Update existing variants
+        const allVariants = document.querySelectorAll('[data-variant-id]:not([data-variant-id^="new_"])');
+        console.log(`🔧 DEBUG: Found ${allVariants.length} existing variants to update`);
+        
+        allVariants.forEach((variantElement, index) => {
+            const variantId = variantElement.dataset.variantId;
+            if (variantId) {
+                console.log(`🔧 DEBUG: Updating SKU for existing variant ${index + 1}/${allVariants.length}: ${variantId}`);
+                this.updateVariantSKU(variantId);
+            } else {
+                console.warn(`🔧 DEBUG: Variant element missing ID at index ${index}`);
+            }
+        });
+        
+        // Update pending variants
+        console.log(`🔧 DEBUG: Found ${this.pendingVariants.size} pending variants to update`);
+        this.pendingVariants.forEach((variant, variantId) => {
+            console.log(`🔧 DEBUG: Updating SKU for pending variant: ${variantId}`);
+            this.updateVariantSKU(variantId);
+        });
+        
+        console.log('🔧 DEBUG: Completed updateAllVariantSKUs()');
+    }
+    
+    // Function to call when component-level changes affect all variants
+    updateAllVariantPictureNames(changeType) {
+        console.log(`🔧 DEBUG: Starting updateAllVariantPictureNames() with changeType: ${changeType}`);
+        
+        // Update pictures for all existing variants
+        const allVariants = document.querySelectorAll('[data-variant-id]:not([data-variant-id^="new_"])');
+        console.log(`🔧 DEBUG: Found ${allVariants.length} existing variants for picture name updates`);
+        
+        allVariants.forEach((variantElement, index) => {
+            const variantId = variantElement.dataset.variantId;
+            if (variantId) {
+                console.log(`🔧 DEBUG: Updating pictures for existing variant ${index + 1}/${allVariants.length}: ${variantId}`);
+                this.updatePictureNamesForVariantChange(variantId, changeType);
+            } else {
+                console.warn(`🔧 DEBUG: Variant element missing ID at index ${index}`);
+            }
+        });
+        
+        // Update pictures for all pending variants
+        console.log(`🔧 DEBUG: Found ${this.pendingVariants.size} pending variants for picture updates`);
+        this.pendingVariants.forEach((variant, variantId) => {
+            console.log(`🔧 DEBUG: Updating pictures for pending variant: ${variantId}`);
+            this.updatePictureNamesForVariantChange(variantId, changeType);
+        });
+        
+        // Update pictures for all staged variants
+        console.log(`🔧 DEBUG: Found ${this.stagedChanges.size} staged variants for picture updates`);
+        this.stagedChanges.forEach((changes, variantId) => {
+            console.log(`🔧 DEBUG: Updating pictures for staged variant: ${variantId}`);
+            this.updatePictureNamesForVariantChange(variantId, changeType);
+        });
+        
+        console.log(`🔧 DEBUG: Completed updateAllVariantPictureNames() for changeType: ${changeType}`);
+    }
+    
+    getPictureOrderChanges() {
+        // Collect all picture order changes for form submission
+        const orderChanges = {};
+        const renames = {};
+        
+        // Get all picture order inputs from all variants
+        const allPictureInputs = document.querySelectorAll('.picture-order-input');
+        allPictureInputs.forEach(input => {
+            const pictureId = input.name.split('picture_order_')[1];
+            if (pictureId) {
+                orderChanges[`picture_order_${pictureId}`] = input.value;
+            }
+        });
+        
+        // Collect rename operations from staged changes
+        this.stagedChanges.forEach((changes, variantId) => {
+            if (changes.pictureRenames) {
+                changes.pictureRenames.forEach((newName, oldName) => {
+                    renames[oldName] = newName;
+                });
+            }
+        });
+        
+        console.log('🔧 Picture order changes collected:');
+        console.log('🔧 Order changes:', orderChanges);
+        console.log('🔧 Rename mapping:', renames);
+        
+        return {
+            orders: orderChanges,
+            renames: renames
+        };
     }
     
     updateVariantMiniatures(variantId) {
@@ -616,6 +1261,7 @@ class VariantManager {
             // Update UI
             this.updateVariantMiniatures(variantId);
             this.updateVariantValidationStatus(variantId);
+            this.updateOrderInputMaxValues(variantId);
             this.updateOverallValidationStatus();
             
             if (typeof updateSubmitButtonState === 'function') {
@@ -645,6 +1291,7 @@ class VariantManager {
         
         this.updateVariantMiniatures(variantId);
         this.updateVariantValidationStatus(variantId);
+        this.updateOrderInputMaxValues(variantId);
         this.updateOverallValidationStatus();
         
         if (typeof updateSubmitButtonState === 'function') {
@@ -953,6 +1600,7 @@ class VariantManager {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const imageId = `new_${Date.now()}_${index}`;
+                    const nextOrder = this.getNextAvailableOrder(variantId);
                     const imageData = {
                         id: imageId,
                         file: file,
@@ -960,13 +1608,15 @@ class VariantManager {
                         url: e.target.result,
                         variantId: variantId,
                         isNew: true,
-                        isPending: true
+                        isPending: true,
+                        picture_order: nextOrder
                     };
                     
                     variant.pictures.push(imageData);
                     this.addPictureToGrid(variantId, imageData);
                     this.updateVariantMiniatures(variantId);
                     this.updateVariantValidationStatus(variantId);
+                    this.updateOrderInputMaxValues(variantId);
                     this.updateOverallValidationStatus();
                     
                     if (typeof updateSubmitButtonState === 'function') {
@@ -995,6 +1645,7 @@ class VariantManager {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const tempId = `staged_${variantId}_${Date.now()}_${index}`;
+                    const nextOrder = this.getNextAvailableOrder(variantId);
                     const imageData = {
                         id: tempId,
                         name: file.name,
@@ -1002,7 +1653,8 @@ class VariantManager {
                         file: file, // Actual file for later upload
                         isStaged: true,
                         isPending: true,
-                        variantId: variantId
+                        variantId: variantId,
+                        picture_order: nextOrder
                     };
                     
                     // Add to staged changes
@@ -1014,6 +1666,7 @@ class VariantManager {
                     // Update UI
                     this.updateVariantMiniatures(variantId);
                     this.updateVariantValidationStatus(variantId);
+                    this.updateOrderInputMaxValues(variantId);
                     this.updateOverallValidationStatus();
                     
                     if (typeof updateSubmitButtonState === 'function') {
@@ -1207,39 +1860,6 @@ class VariantManager {
         }, 5000);
     }
     
-    // Method to be called by form handler before form submission
-    async processStagedChanges() {
-        const promises = [];
-        
-        for (let [variantId, changes] of this.stagedChanges) {
-            // Process picture deletions first
-            for (let pictureId of changes.picturesToDelete) {
-                promises.push(this.deleteExistingPicture(variantId, pictureId));
-            }
-            
-            // Then process picture additions
-            if (changes.picturesToAdd.length > 0) {
-                promises.push(this.uploadStagedPictures(variantId, changes.picturesToAdd));
-            }
-        }
-        
-        if (promises.length > 0) {
-            try {
-                await Promise.all(promises);
-                this.showSuccessMessage('All picture changes processed successfully');
-                
-                // Clear staged changes
-                this.stagedChanges.clear();
-                
-                return true;
-            } catch (error) {
-                this.showErrorMessage(`Failed to process some picture changes: ${error.message}`);
-                return false;
-            }
-        }
-        
-        return true; // No changes to process
-    }
     
     async deleteExistingPicture(variantId, pictureId) {
         const response = await fetch(`/api/variant/${variantId}/pictures/${pictureId}`, {
@@ -1542,8 +2162,9 @@ class VariantManager {
                     });
                 });
                 
-                // Update miniatures
+                // Update miniatures and max values
                 this.updateVariantMiniatures(variantData.id);
+                this.updateOrderInputMaxValues(variantData.id);
             }
         });
         
