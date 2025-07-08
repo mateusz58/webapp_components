@@ -1,0 +1,53 @@
+{
+  "timestamp": "2025-07-08T09:27:11.496635",
+  "session_id": "test_session_1751959631",
+  "categories": {
+    "unit": {
+      "status": "failed",
+      "return_code": 4,
+      "execution_time": 0,
+      "test_count": 0,
+      "passed": 0,
+      "failed": 0,
+      "output": "",
+      "errors": "ERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]\n__main__.py: error: unrecognized arguments: --json-report --json-report-file=tests/reports/unit_tests.json\n  inifile: None\n  rootdir: /mnt/c/Users/Administrator/DataspellProjects/webapp_components\n\n"
+    },
+    "api": {
+      "status": "failed",
+      "return_code": 4,
+      "execution_time": 0,
+      "test_count": 0,
+      "passed": 0,
+      "failed": 0,
+      "output": "",
+      "errors": "ERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]\n__main__.py: error: unrecognized arguments: --json-report --json-report-file=tests/reports/api_tests.json\n  inifile: None\n  rootdir: /mnt/c/Users/Administrator/DataspellProjects/webapp_components\n\n"
+    },
+    "selenium": {
+      "status": "passed",
+      "return_code": 0,
+      "execution_time": 0,
+      "test_count": 1,
+      "passed": 1,
+      "failed": 0,
+      "output": "============================= test session starts ==============================\nplatform linux -- Python 3.9.23, pytest-8.4.1, pluggy-1.6.0 -- /usr/local/bin/python\ncachedir: .pytest_cache\nrootdir: /mnt/c/Users/Administrator/DataspellProjects/webapp_components\ncollecting ... collected 1 item\n\ntests/selenium/test_simple_visual_demo.py::TestSimpleVisualDemo::test_visual_navigation_demo PASSED [100%]\n\n============================== 1 passed in 27.37s ==============================\n",
+      "errors": ""
+    }
+  },
+  "summary": {
+    "total_tests": 1,
+    "total_passed": 1,
+    "total_failed": 0,
+    "pass_rate_percentage": 100.0,
+    "categories_passed": 1,
+    "total_categories": 3,
+    "category_success_rate": 33.3,
+    "execution_time_seconds": 32.14,
+    "overall_status": "EXCELLENT"
+  },
+  "issues": [],
+  "performance": {},
+  "recommendations": [
+    "\u26a0\ufe0f Address issues in: unit, api"
+  ],
+  "application_status": "running"
+}

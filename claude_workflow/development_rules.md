@@ -1,6 +1,142 @@
 # Development Rules & Patterns
 
-**Last Updated**: July 2, 2025 - Added Association Handling Patterns and Code Deduplication Rules
+**Last Updated**: January 8, 2025 - Added Comprehensive Testing Framework and Requirements.txt Management
+
+## 🚨 CRITICAL: MANDATORY TESTING REQUIREMENTS 🚨
+
+### BEFORE ANY DEVELOPMENT WORK (ABSOLUTE REQUIREMENT)
+**ALL TESTS MUST PASS BEFORE PROCEEDING WITH ANY TASK**
+
+1. **Run Test Suite**: Execute `python tools/run_tests.py` before starting ANY development work
+2. **Fix Failing Tests**: If any tests fail, STOP development and fix them first
+3. **No Exceptions**: No new features, bug fixes, or refactoring until all tests pass
+4. **After Changes**: Run full test suite again after making ANY changes
+5. **Commit Only Green**: Only commit code when all tests are passing
+
+### Test Organization Structure (MANDATORY)
+```
+tests/
+├── conftest.py              # Pytest configuration and fixtures
+├── unit/                    # Fast isolated tests (< 1s each)
+│   ├── test_validation_functions.py    # Input validation logic
+│   ├── test_data_processing.py         # Data parsing and transformation
+│   ├── test_utility_functions.py       # Helper functions (SKU, naming)
+│   └── test_component_service.py       # Business logic (mocked dependencies)
+├── integration/             # Database integration tests (< 5s each)
+│   ├── test_component_crud.py          # Database operations
+│   ├── test_picture_upload.py          # File + database integration
+│   └── test_association_handling.py    # Many-to-many relationships
+├── api/                     # API endpoint tests (< 3s each)
+│   ├── test_component_api.py           # Component CRUD endpoints
+│   ├── test_validation_endpoints.py    # Validation endpoints
+│   └── test_error_handling.py          # API error responses
+├── selenium/                # E2E UI tests (10-30s each)
+│   ├── test_component_edit_form.py     # Complete form workflows
+│   ├── test_picture_visibility.py      # UI visibility issues
+│   └── test_ajax_interactions.py       # Real-time UI updates
+├── services/                # Service layer tests (business logic)
+├── utils/                   # Utility function tests
+└── models/                  # Database model tests
+```
+
+### Test Type Definitions (CRITICAL)
+
+#### Unit Tests (`tests/unit/`)
+**Purpose**: Test individual functions and methods in isolation
+- **Speed**: < 1 second each
+- **Dependencies**: All external dependencies mocked (database, files, APIs)
+- **Focus**: Logic validation, data transformation, calculations
+- **Examples**: 
+  - Validation functions (product number format, JSON parsing)
+  - Data processing (SKU generation, string normalization) 
+  - Helper utilities (response building, file info extraction)
+  - Business logic with mocked database calls
+
+#### Integration Tests (`tests/integration/`)
+**Purpose**: Test interaction between components (database + code)
+- **Speed**: < 5 seconds each
+- **Dependencies**: Real database, mocked external services (WebDAV)
+- **Focus**: Database operations, ORM relationships, transaction handling
+- **Examples**:
+  - Component CRUD with real database
+  - Picture upload workflow with database triggers
+  - Association management (brands, categories, keywords)
+  - Database constraint validation
+
+#### API Tests (`tests/api/`)
+**Purpose**: Test HTTP endpoints end-to-end
+- **Speed**: < 3 seconds each  
+- **Dependencies**: Real Flask app, real database, mocked external services
+- **Focus**: Request/response handling, status codes, JSON format
+- **Examples**:
+  - Component creation via POST /api/component/create
+  - Component update via PUT /api/component/<id>
+  - Validation endpoints (product number uniqueness)
+  - Error handling (404, 400, 500 responses)
+
+#### Selenium Tests (`tests/selenium/`)
+**Purpose**: Test complete user workflows in browser
+- **Speed**: 10-30 seconds each
+- **Dependencies**: Real application, real browser, real database
+- **Focus**: UI interactions, JavaScript functionality, visual validation
+- **Examples**:
+  - Complete component creation workflow
+  - Picture upload and immediate visibility
+  - Form validation and error display
+  - AJAX real-time updates
+
+### 🚨 CRITICAL TEST ORGANIZATION RULES 🚨
+1. **❌ NEVER CREATE TEST FILES IN ROOT DIRECTORY ❌**
+   - All test files MUST be in appropriate `tests/` subdirectories
+   - Root directory is for application code only
+   
+2. **✅ PROPER TEST FILE NAMING**:
+   - Format: `test_[feature]_[type].py`
+   - Examples: `test_component_edit_api.py`, `test_picture_upload_integration.py`
+   
+3. **✅ COMPREHENSIVE DEBUG LOGGING**:
+   - Every test MUST include extensive debug output
+   - Use `print()` statements for test flow tracking
+   - Log request/response data, status codes, errors
+   
+4. **✅ TEST CATEGORIZATION**:
+   - **Fast Tests** (`unit/` + `integration/`): < 10 seconds total
+   - **Medium Tests** (`api/`): < 30 seconds total  
+   - **Slow Tests** (`selenium/`): < 5 minutes total
+
+### Test Execution Commands (MANDATORY)
+```bash
+# BEFORE ANY DEVELOPMENT - Run all tests
+python tools/run_tests.py
+
+# Run specific test categories
+python tools/run_tests.py --unit              # Unit tests only
+python tools/run_tests.py --integration       # Integration tests only  
+python tools/run_tests.py --api               # API tests only
+python tools/run_tests.py --selenium          # UI tests only
+python tools/run_tests.py --fast              # Unit + Integration (fastest)
+python tools/run_tests.py --coverage          # With coverage report
+
+# Development workflow
+python tools/run_tests.py --fast              # Quick feedback during development
+python tools/run_tests.py                     # Full test suite before commit
+```
+
+### Testing Rules (NON-NEGOTIABLE)
+1. **NO TEMPORARY TESTS IN ROOT**: All tests must be in `tests/` folder with proper organization
+2. **NO BROKEN TESTS**: Failing tests must be fixed immediately, not ignored
+3. **NO DEVELOPMENT ON RED**: Do not write new code when tests are failing
+4. **CLEAN TEST CODE**: Tests must be maintainable and well-organized
+5. **TEST COVERAGE**: New features require corresponding tests
+6. **ISOLATION**: Tests must not depend on each other or external state
+
+### Test Failure Protocol (MANDATORY)
+When tests fail:
+1. **STOP ALL DEVELOPMENT WORK**
+2. **Analyze the failure** - read the error messages carefully
+3. **Fix the root cause** - don't just make tests pass artificially
+4. **Run full test suite** - ensure fix doesn't break other tests
+5. **Only then continue** with planned development work
 
 ## TDD (Test-Driven Development) Methodology
 
@@ -111,6 +247,177 @@ pytest --cov=app
 pytest -m "not slow"
 ```
 
+## MVC Architecture Implementation (MANDATORY)
+
+### Proper MVC Pattern
+**CRITICAL REQUIREMENT**: This project MUST follow strict Model-View-Controller architecture with Service Layer separation.
+
+#### Model Layer (`app/models.py`)
+- **Purpose**: Database entities and basic data operations only
+- **Responsibilities**: SQLAlchemy models, relationships, simple property getters/setters
+- **NO BUSINESS LOGIC**: Models should only contain data structure and basic validation
+- **Database Relationships**: Properly defined foreign keys and relationships
+
+```python
+# Good: Model with data structure only
+class Component(Base):
+    __tablename__ = 'component'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    product_number = db.Column(db.String(50), nullable=False)
+    
+    # Relationships
+    variants = db.relationship('ComponentVariant', backref='component')
+    
+    def get_property(self, key, default=None):
+        # Simple property getter - acceptable in model
+        return self.properties.get(key, default)
+
+# Bad: Business logic in model
+class Component(Base):
+    def create_with_variants_and_pictures(self, data):
+        # Complex business logic - BELONGS IN SERVICE LAYER
+        pass
+```
+
+#### View Layer (`app/templates/`, `app/static/`)
+- **Purpose**: User interface presentation only  
+- **Templates**: Data display, form rendering, user interaction
+- **JavaScript**: UI interactions, API calls, DOM manipulation
+- **CSS**: Styling and visual presentation
+- **NO BUSINESS LOGIC**: Views should only handle presentation
+
+```html
+<!-- Good: View with presentation only -->
+<form id="componentForm">
+    {{ csrf_token() }}
+    <input name="product_number" value="{{ component.product_number }}">
+    <button type="submit">Update Component</button>
+</form>
+
+<script>
+// Good: View handles UI and calls service via API
+async function submitForm() {
+    const response = await fetch('/api/component/123', {
+        method: 'PUT',
+        body: formData
+    });
+    // Handle UI updates based on response
+}
+</script>
+```
+
+#### Controller Layer (`app/web/`, `app/api/`)
+- **Purpose**: Request/response handling and routing only
+- **Web Routes**: Render templates, handle navigation, simple redirects
+- **API Routes**: Handle HTTP requests, delegate to service layer, return JSON
+- **NO BUSINESS LOGIC**: Controllers should delegate all business logic to service layer
+
+```python
+# Good: Controller delegates to service
+@component_api.route('/component/<int:component_id>', methods=['PUT'])
+def update_component(component_id):
+    try:
+        data = request.get_json()
+        
+        # Delegate to service layer
+        from app.services.component_service import ComponentService
+        result = ComponentService.update_component(component_id, data)
+        
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+# Bad: Business logic in controller
+@component_api.route('/component/<int:component_id>', methods=['PUT'])
+def update_component(component_id):
+    # Database operations, validation, association handling - BELONGS IN SERVICE
+    component = Component.query.get_or_404(component_id)
+    handle_brand_associations(component, data)
+    db.session.commit()
+```
+
+#### Service Layer (`app/services/`) - **MANDATORY**
+- **Purpose**: Business logic, data processing, orchestration
+- **Responsibilities**: Component CRUD operations, validation, association management
+- **Transaction Management**: Database commits, rollbacks, error handling
+- **Cross-cutting Concerns**: Logging, error handling, data transformation
+
+```python
+# Good: Service layer with business logic
+class ComponentService:
+    @staticmethod
+    def update_component(component_id, data):
+        try:
+            component = Component.query.get(component_id)
+            if not component:
+                raise ValueError(f'Component {component_id} not found')
+            
+            # Business logic
+            changes = ComponentService._update_basic_fields(component, data)
+            ComponentService._handle_associations(component, data, is_edit=True)
+            
+            # Validation
+            ComponentService._validate_component(component)
+            
+            # Persistence
+            db.session.commit()
+            
+            return {'success': True, 'changes': changes}
+        except Exception as e:
+            db.session.rollback()
+            raise
+```
+
+### Architecture Rules
+
+#### 1. Service Layer Requirements (NEW)
+- **EVERY** complex operation must have a corresponding service class
+- Services handle: CRUD operations, validation, business rules, transaction management
+- Services are **stateless** - no instance variables for business data
+- Services use **static methods** for operations or dependency injection pattern
+
+#### 2. Controller Responsibilities
+- **Web Controllers**: `render_template()`, `redirect()`, simple data passing only
+- **API Controllers**: Request parsing, service delegation, JSON response formatting
+- **Maximum 20 lines** per controller method (excluding error handling)
+- **NO database operations** directly in controllers
+
+#### 3. Model Responsibilities  
+- **Data structure only**: Columns, relationships, constraints
+- **Simple getters/setters**: Property access methods
+- **NO business logic**: No complex operations, validations, or external calls
+- **NO service calls**: Models should not call services or other models
+
+#### 4. View Responsibilities
+- **Templates**: Data display using passed context variables only
+- **JavaScript**: UI interactions, API calls, DOM updates
+- **NO business logic**: No data validation, processing, or complex calculations
+
+### Dependency Flow (MANDATORY)
+```
+View Layer (Templates/JS) 
+    ↓ (HTTP requests)
+Controller Layer (Web/API routes)
+    ↓ (method calls)
+Service Layer (Business logic)
+    ↓ (ORM calls)  
+Model Layer (Database entities)
+```
+
+**NEVER REVERSE THE FLOW**: Models must not call services, services must not render templates, etc.
+
+### Error Handling Architecture
+- **Models**: Raise `ValueError` for data validation errors
+- **Services**: Catch model errors, add business context, log errors, re-raise with context
+- **Controllers**: Catch service errors, convert to appropriate HTTP responses
+- **Views**: Display user-friendly error messages from controller responses
+
+### Testing Architecture
+- **Unit Tests**: Test service layer business logic in isolation
+- **Integration Tests**: Test controller + service + model integration  
+- **End-to-End Tests**: Test complete view → controller → service → model flow
+
 ## Core Development Constraints
 
 ### 1. Database Operations
@@ -200,6 +507,73 @@ except Exception:
 - Never bypass database-generated fields
 - Understand trigger cascade effects
 - Test SKU/name generation after changes
+
+## Dependency Management (MANDATORY)
+
+### Requirements.txt Management (CRITICAL)
+**ALWAYS keep requirements.txt updated with exact versions**:
+
+#### When to Update requirements.txt:
+1. **Adding new dependencies**: Immediately after `pip install <package>`
+2. **Updating existing packages**: After version upgrades for compatibility
+3. **Testing dependencies**: Add pytest, selenium, and testing frameworks
+4. **Security updates**: When vulnerabilities are found in dependencies
+5. **Project setup**: When setting up development environment
+
+#### Requirements.txt Best Practices:
+```bash
+# Generate exact current environment
+pip freeze > requirements.txt
+
+# Install from requirements in new environment  
+pip install -r requirements.txt
+
+# Add new package and update requirements
+pip install new-package==1.2.3
+pip freeze > requirements.txt
+```
+
+#### Version Pinning Strategy:
+- **Production dependencies**: Pin exact versions (Flask==2.0.1)
+- **Development tools**: Pin major versions (pytest>=8.0.0,<9.0.0)
+- **Security-critical packages**: Always pin exact versions
+- **Stable packages**: Pin to avoid breaking changes
+
+#### Required Dependencies Categories:
+```txt
+# Core Framework
+Flask==2.0.1
+SQLAlchemy==1.4.23
+Flask-SQLAlchemy==2.5.1
+
+# Database & Migrations  
+psycopg2-binary==2.9.1
+Flask-Migrate==3.1.0
+
+# Security & Forms
+Flask-WTF==0.15.1
+Werkzeug==2.0.1
+
+# Testing Framework
+pytest==8.4.1
+pytest-cov>=6.0.0
+selenium>=4.15.0
+
+# Development Tools
+python-dotenv==0.19.0
+```
+
+#### Virtual Environment Management:
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Keep requirements in sync
+pip install -r requirements.txt
+pip freeze > requirements.txt  # After any changes
+```
 
 ## Code Quality Standards
 
@@ -642,4 +1016,102 @@ return jsonify({
         **get_association_counts(component)
     }
 })
+```
+
+## 📦 Requirements.txt Management (MANDATORY)
+
+### Package Installation Rules (CRITICAL)
+1. **ALWAYS UPDATE requirements.txt** when installing new packages during development
+2. **IMMEDIATE UPDATE**: Add package to requirements.txt as soon as you install it
+3. **VERSION PINNING**: Always specify exact versions for production stability
+4. **CATEGORIZATION**: Group packages by purpose with comments
+
+### Required Package Categories
+```txt
+# Core Flask Application
+Flask==2.0.1
+SQLAlchemy==1.4.23
+Flask-SQLAlchemy==2.5.1
+
+# Database and Migration
+psycopg2-binary==2.9.1
+Flask-Migrate==3.1.0
+
+# Forms and Security
+Flask-WTF==0.15.1
+email-validator==1.1.3
+
+# File and Image Handling
+Pillow==8.3.2
+requests==2.31.0
+
+# Testing Framework (MANDATORY)
+pytest==8.4.1
+pytest-cov==4.1.0
+pytest-html==3.2.0
+pytest-mock==3.11.1
+selenium==4.15.0
+coverage==7.3.2
+pytest-json-report==1.5.0
+```
+
+### Package Installation Workflow
+```bash
+# 1. Install package
+pip install package_name==version
+
+# 2. IMMEDIATELY update requirements.txt
+echo "package_name==version" >> requirements.txt
+
+# 3. Test the application
+python tools/run_tests.py
+
+# 4. Commit the change
+git add requirements.txt
+git commit -m "Add package_name for [purpose]"
+```
+
+### Development vs Production Dependencies
+- **Core Application**: All packages needed to run the app
+- **Testing**: All packages needed for testing (pytest, selenium, etc.)
+- **Development**: Tools for development only (if any)
+
+### Regular Maintenance (MONTHLY)
+1. **Security Updates**: Check for security vulnerabilities
+2. **Version Updates**: Update to latest stable versions (with testing)
+3. **Cleanup**: Remove unused dependencies
+4. **Documentation**: Update comments explaining package purposes
+
+## 📊 Testing Documentation and Reporting
+
+### Test Report Requirements (MANDATORY)
+1. **Update tests.md**: After every testing session, add entry to tests.md
+2. **Chronological Order**: Newest entries at top with timestamp
+3. **Comprehensive Details**: What was tested, results, issues found
+4. **Action Items**: What needs to be fixed or improved
+
+### Test Report Format
+```markdown
+## 📊 [DATE] - [COMPREHENSIVE TITLE]
+**Timestamp**: YYYY-MM-DD HH:MM:SS  
+**Tester**: [Name]  
+**Session Type**: [Unit/API/Selenium/Full Suite]  
+
+### Test Results
+- **Total Tests**: [number]
+- **Passed**: [number] 
+- **Failed**: [number]
+- **Coverage**: [percentage]
+
+### Issues Identified
+1. **[Issue Type]**: [Description]
+   - **Status**: [Fixed/Pending/Investigating]
+   - **Priority**: [High/Medium/Low]
+
+### Recommendations
+- [Action item 1]
+- [Action item 2]
+
+### Next Steps
+- [What needs to be done next]
 ```

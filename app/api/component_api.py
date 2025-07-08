@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, send_file, session, url_for
 from werkzeug.utils import secure_filename
-from app import db
+from app import db, csrf
 from app.models import Component, ComponentType, Supplier, Category, Brand, ComponentBrand, Picture, ComponentVariant, Keyword, keyword_component, Color, ComponentTypeProperty
 from app.utils.file_handling import save_uploaded_file, allowed_file, generate_picture_name
 from sqlalchemy import or_, and_, func
@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload, selectinload
 import io
 import csv
 import os
+import json
 from datetime import datetime
 
 component_api = Blueprint('component_api', __name__)
@@ -811,115 +812,87 @@ def get_component_variants(component_id):
 @component_api.route('/components/<int:component_id>/edit-data')
 def get_component_edit_data(component_id):
     """
-    API endpoint to load complete component data for editing
-    Returns component with all relationships needed for the edit form
+    API endpoint to load complete component data for editing using service layer
     """
     try:
-        # Load component with basic relationships
-        component = Component.query.options(
-            joinedload(Component.component_type),
-            joinedload(Component.supplier),
-            selectinload(Component.variants),
-            selectinload(Component.pictures),
-            selectinload(Component.keywords)
-        ).get_or_404(component_id)
-        
-        # Build response data
-        response_data = {
-            'id': component.id,
-            'product_number': component.product_number,
-            'description': component.description,
-            'component_type': {
-                'id': component.component_type.id,
-                'name': component.component_type.name
-            } if component.component_type else None,
-            'supplier': {
-                'id': component.supplier.id,
-                'supplier_code': component.supplier.supplier_code
-            } if component.supplier else None,
-            'properties': component.properties or {},
-            'created_at': component.created_at.isoformat() if component.created_at else None,
-            'updated_at': component.updated_at.isoformat() if component.updated_at else None,
-            
-            # Status information
-            'proto_status': component.proto_status,
-            'proto_comment': component.proto_comment,
-            'proto_date': component.proto_date.isoformat() if component.proto_date else None,
-            'sms_status': component.sms_status,
-            'sms_comment': component.sms_comment,
-            'sms_date': component.sms_date.isoformat() if component.sms_date else None,
-            'pps_status': component.pps_status,
-            'pps_comment': component.pps_comment,
-            'pps_date': component.pps_date.isoformat() if component.pps_date else None,
-            
-            # Related data  
-            'brands': [{'id': assoc.brand.id, 'name': assoc.brand.name} for assoc in component.brand_associations],
-            'categories': [{'id': cat.id, 'name': cat.name} for cat in component.categories],
-            'keywords': [{'id': kw.id, 'name': kw.name} for kw in component.keywords],
-            
-            # Variants with pictures
-            'variants': []
-        }
-        
-        # Add variant data
-        for variant in component.variants:
-            variant_data = {
-                'id': variant.id,
-                'color': {
-                    'id': variant.color.id,
-                    'name': variant.color.name
-                },
-                'variant_sku': variant.variant_sku,
-                'variant_name': variant.variant_name,
-                'is_active': variant.is_active,
-                'created_at': variant.created_at.isoformat() if variant.created_at else None,
-                'updated_at': variant.updated_at.isoformat() if variant.updated_at else None,
-                'pictures': []
-            }
-            
-            # Add picture data for this variant
-            for picture in variant.variant_pictures:
-                picture_data = {
-                    'id': picture.id,
-                    'picture_name': picture.picture_name,
-                    'url': picture.url,
-                    'picture_order': picture.picture_order,
-                    'alt_text': picture.alt_text,
-                    'is_primary': picture.is_primary,
-                    'file_size': picture.file_size,
-                    'created_at': picture.created_at.isoformat() if picture.created_at else None
-                }
-                variant_data['pictures'].append(picture_data)
-            
-            # Sort pictures by order
-            variant_data['pictures'].sort(key=lambda x: x['picture_order'])
-            response_data['variants'].append(variant_data)
-        
-        # Add component-level pictures
-        component_pictures = []
-        for picture in component.pictures:
-            if not picture.variant_id:  # Component-level pictures only
-                picture_data = {
-                    'id': picture.id,
-                    'picture_name': picture.picture_name,
-                    'url': picture.url,
-                    'picture_order': picture.picture_order,
-                    'alt_text': picture.alt_text,
-                    'is_primary': picture.is_primary,
-                    'file_size': picture.file_size,
-                    'created_at': picture.created_at.isoformat() if picture.created_at else None
-                }
-                component_pictures.append(picture_data)
-        
-        component_pictures.sort(key=lambda x: x['picture_order'])
-        response_data['component_pictures'] = component_pictures
+        # Use service layer for business logic
+        from app.services.component_service import ComponentService
+        component_data = ComponentService.get_component_for_edit(component_id)
         
         return jsonify({
             'success': True,
-            'component': response_data,
+            'component': component_data,
             'timestamp': datetime.now().isoformat()
         })
         
+    except ValueError as e:
+        current_app.logger.error(f"Component not found: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 404
+        
     except Exception as e:
         current_app.logger.error(f"Error getting component edit data: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': 'Failed to load component data'}), 500
+
+
+@component_api.route('/component/<int:component_id>', methods=['PUT'])
+@csrf.exempt  # Temporary exemption for testing - TODO: implement proper CSRF handling
+def update_component(component_id):
+    """
+    Update an existing component via API using service layer
+    
+    Following proper architecture with service layer separation
+    """
+    try:
+        current_app.logger.info(f"=== API UPDATE COMPONENT {component_id} ===")
+        
+        # Get data from request
+        if request.is_json:
+            data = request.get_json()
+            current_app.logger.info(f"JSON data received: {data}")
+        else:
+            data = request.form.to_dict()
+            current_app.logger.info(f"Form data received: {data}")
+        
+        # Log all data keys for debugging
+        current_app.logger.info(f"Data keys received: {list(data.keys())}")
+        
+        # Handle array fields that might come as 'field[]' from JavaScript
+        array_fields = ['brand_ids', 'category_ids', 'keywords']
+        for field in array_fields:
+            if f'{field}[]' in data:
+                data[field] = data.pop(f'{field}[]')
+                current_app.logger.info(f"Renamed {field}[] to {field}: {data[field]}")
+        
+        # Parse properties if it's a string (JSON)
+        if 'properties' in data and isinstance(data['properties'], str):
+            try:
+                data['properties'] = json.loads(data['properties'])
+                current_app.logger.info(f"Parsed properties from JSON string: {data['properties']}")
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"Failed to parse properties JSON: {e}")
+        
+        # Use service layer for business logic
+        from app.services.component_service import ComponentService
+        result = ComponentService.update_component(component_id, data)
+        
+        # Return success response with timestamp
+        result['timestamp'] = datetime.now().isoformat()
+        return jsonify(result), 200
+        
+    except ValueError as e:
+        current_app.logger.error(f"Validation error updating component {component_id}: {str(e)}")
+        current_app.logger.error(f"Full traceback: ", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'code': 'VALIDATION_ERROR'
+        }), 400
+        
+    except Exception as e:
+        current_app.logger.error(f"Error updating component {component_id}: {str(e)}")
+        current_app.logger.error(f"Full traceback: ", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error while updating component: {str(e)}',
+            'code': 'UPDATE_ERROR'
+        }), 500

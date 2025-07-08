@@ -1,13 +1,30 @@
 # Instructions for Claude
 
-## 🚨 FIRST STEP - READ PROJECT STATUS
-**Before doing any work, ALWAYS read `claude_workflow/project_status.md`** to understand:
-- Current critical issues requiring immediate attention
-- Active development priorities and tasks
-- Recent completions and system status
+## 🚨 FIRST STEP - READ PROJECT STATUS DASHBOARD
+**Before doing any work, ALWAYS read `claude_workflow/project_status.md`** - our **Kibana-like project management dashboard** that tracks:
+- **📊 Active Tasks**: Current task breakdown with status, priority, and progress metrics
+- **🎯 Milestones**: Development phases and completion goals
+- **🔍 Next Actions**: Immediate next steps and TODO items
+- **📈 Progress Metrics**: Overall project progress and completion estimates
+- **🔄 Status Updates**: Real-time development status and issue tracking
+- **✅ Completed Work**: Historical record of resolved issues and achievements
+
+**📋 PROJECT PLAN FORMAT**: This file serves as our centralized task tracking system where all development activities, progress updates, and completion statuses are logged in chronological order for full project visibility.
 
 ## Project Overview - START HERE
 **Flask-based Component Management System** for manufacturing components with variants, suppliers, brands, and pictures. PostgreSQL database with `component_app` schema. Docker containerized.
+
+## 📋 ESSENTIAL WORKFLOW DOCUMENTATION
+**MUST READ**: `app_workflow.md` - Complete application workflow documentation covering:
+- **🎯 Main HTML Templates**: index.html, component_edit_form.html, component_detail.html
+- **🛣️ User Journey Flows**: Component creation, editing, approval workflow
+- **🔧 Route Structure**: Web routes (app/web) and API routes (app/api)
+- **🎨 Frontend Architecture**: JavaScript and CSS organization
+- **🗄️ Database Workflow**: Table relationships and auto-generated fields
+- **🔄 Business Rules**: Component lifecycle, approval stages, data integrity
+- **🧪 Testing Strategy**: Unit, integration, API, and Selenium test organization
+
+This documentation provides complete understanding of how users interact with the system and how development should be approached.
 
 ## ✅ CRITICAL ISSUES RESOLVED
 
@@ -42,6 +59,31 @@
 - **Port**: Application runs on `6002`
 
 ## Core Development Rules (MANDATORY)
+
+### 🧪 TESTING FRAMEWORK (CRITICAL)
+**MANDATORY**: Read `claude_workflow/tests.md` for complete testing strategy
+
+**Testing Organization**:
+```
+tests/
+├── unit/           # Fast isolated tests (< 1s each)
+├── integration/    # Database integration tests (< 5s each)  
+├── api/           # API endpoint tests (< 3s each)
+├── selenium/      # E2E UI tests (10-30s each)
+├── services/      # Service layer tests
+├── utils/         # Utility function tests
+└── models/        # Database model tests
+```
+
+**CRITICAL RULE**: ❌ **NEVER CREATE TEST FILES IN ROOT DIRECTORY** ❌
+- ✅ Organize tests in proper `tests/` subdirectories
+- ✅ Follow naming convention: `test_[feature]_[type].py`
+- ✅ Include comprehensive debug logging in all tests
+
+**Test Execution Sequence**:
+1. **Before ANY work**: `python run_tests.py fast` (MUST be 100% passing)
+2. **During development**: Run relevant test category after each change
+3. **Before committing**: `python run_tests.py fast` + `python run_tests.py api`
 
 ### TDD Methodology (REQUIRED)
 **ALL development must follow Test-Driven Development**:
@@ -118,6 +160,7 @@ Read these for deeper details when needed:
 - `CLAUDE.md` - Complete architecture documentation  
 - `claude_workflow/project_status.md` - Current issues and priorities
 - `claude_workflow/development_rules.md` - Detailed patterns and constraints
+- `claude_workflow/api_documentation.md` - **Comprehensive API endpoint documentation and specifications**
 - `claude_workflow/endpoint_separation_guide.md` - API/Web separation patterns and security fixes
 - `claude_workflow/database_schema_guide.md` - Complete PostgreSQL schema documentation
 - `claude_workflow/selenium_testing_guidelines.md` - Selenium E2E testing framework
@@ -126,10 +169,15 @@ Read these for deeper details when needed:
 ## When to Update Workflow Files (IMPORTANT)
 **REGULARLY UPDATE** these markdown files throughout development:
 
-- **Update `project_status.md`** when:
-  - Resolving critical issues or finding new ones
-  - Changing project priorities
-  - Completing major milestones
+- **Update `project_status.md`** (Kibana-like Dashboard) when:
+  - **Starting new tasks**: Add to task dashboard with status and priority
+  - **Task progress updates**: Update progress percentages and status
+  - **Task completion**: Mark as COMPLETED and update metrics
+  - **New issues discovered**: Log as new tasks with appropriate priority
+  - **Milestone achievements**: Update milestone completion status
+  - **Priority changes**: Adjust task priorities and next actions
+  - **Daily progress**: Update overall progress metrics and estimates
+  - **Status changes**: Modify active development status and focus areas
 
 - **Update `development_rules.md`** when:
   - Establishing new coding patterns
@@ -152,6 +200,14 @@ Read these for deeper details when needed:
   - Triggers or functions modified
   - Performance issues with queries identified
 
+- **Update `api_documentation.md`** when:
+  - Adding new API endpoints
+  - Modifying existing endpoint behavior
+  - Changing request/response formats
+  - Adding new error codes or status codes
+  - Updating authentication or security requirements
+  - API architecture improvements or fixes
+
 **ALWAYS use TodoWrite tool** for complex multi-step tasks
 
 ## Database Documentation Responsibilities (MANDATORY)
@@ -173,9 +229,19 @@ Read these for deeper details when needed:
 - **Unique constraints**: Respect `product_number + supplier_id` and `component_id + color_id` uniqueness
 - **Status workflow**: Components have three-tier approval (Proto → SMS → PPS)
 
-## 🎯 CURRENT WORK PRIORITIES
+## 🎯 CURRENT WORK PRIORITIES & TASK TRACKING
 
-**ALWAYS check `claude_workflow/project_status.md` for current issues and priorities.**
+**MANDATORY**: Always check `claude_workflow/project_status.md` for current task dashboard and priorities.
+
+### 📊 Project Dashboard Maintenance (CRITICAL)
+**ALWAYS update the project_status.md dashboard**:
+1. **Before starting work**: Check current task status and next actions
+2. **During development**: Update task progress and status regularly
+3. **After completing tasks**: Mark as COMPLETED and update metrics
+4. **When blocked**: Log issues and adjust priorities
+5. **Daily updates**: Maintain progress metrics and completion estimates
+
+**Dashboard Format**: Kibana-style tracking with task IDs, status, priority, progress percentages, and milestone tracking for complete project visibility.
 
 The project status file contains:
 - 🔴 Active critical issues requiring immediate attention
@@ -207,6 +273,8 @@ The project status file contains:
 
 ## API-First Development Rules (NEW - JULY 2025)
 **MANDATORY for all new features**: Follow the established separation of concerns:
+
+**📋 REFERENCE**: See `claude_workflow/api_documentation.md` for complete API specifications, endpoints, and architectural guidelines.
 
 ### Web Routes (`/app/web/`)
 - **Purpose**: Page rendering and navigation only

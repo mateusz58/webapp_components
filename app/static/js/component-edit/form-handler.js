@@ -76,8 +76,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update loading state
             submitBtn.innerHTML = '<div class="spinner"></div> Saving...';
             
-            // Submit form
-            form.submit();
+            // Submit via API endpoint instead of form submission
+            if (window.isEditMode) {
+                await submitViaAPI();
+            } else {
+                // For new components, still use form submit (different workflow)
+                form.submit();
+            }
         } catch (error) {
             console.error('Error during form submission:', error);
             
@@ -91,6 +96,214 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert(`Failed to submit form: ${error.message}`);
             }
+        }
+    }
+
+    // Submit component update via API endpoint (SOLID principle - single responsibility)
+    async function submitViaAPI() {
+        try {
+            console.log('🚀 DEBUG: Starting submitViaAPI() - API component update submission');
+            
+            const componentId = window.componentId || getComponentIdFromURL();
+            console.log(`🚀 DEBUG: Component ID resolved to: ${componentId}`);
+            if (!componentId) {
+                throw new Error('Component ID not found');
+            }
+
+            // Gather form data for API submission
+            console.log('🚀 DEBUG: Gathering form data for API submission');
+            const formData = gatherFormDataForAPI();
+            console.log('🚀 DEBUG: Form data gathered, keys:', Object.keys(formData));
+            console.log('🚀 DEBUG: Full form data payload:', JSON.stringify(formData, null, 2));
+            
+            // Get CSRF token
+            const csrfToken = getCSRFToken();
+            console.log(`🚀 DEBUG: CSRF token obtained: ${csrfToken ? 'Present' : 'Missing'}`);
+            
+            // Submit to PUT /api/component/<id> endpoint
+            const apiUrl = `/api/component/${componentId}`;
+            console.log(`🚀 DEBUG: Submitting PUT request to: ${apiUrl}`);
+            console.log('🚀 DEBUG: Request headers:', {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken ? '[Present]' : '[Missing]'
+            });
+            
+            const response = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(formData)
+            });
+
+            console.log(`🚀 DEBUG: API response received - Status: ${response.status} ${response.statusText}`);
+            console.log('🚀 DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ DEBUG: Component updated successfully via API');
+                console.log('✅ DEBUG: API result:', JSON.stringify(result, null, 2));
+                
+                // Show success message
+                const changesCount = Object.keys(result.changes || {}).length;
+                console.log(`✅ DEBUG: ${changesCount} changes detected in API response`);
+                showSuccessMessage(`Component updated successfully! ${changesCount} changes made.`);
+                
+                // Redirect to component detail page
+                console.log(`✅ DEBUG: Redirecting to component detail page in 1.5 seconds: /component/${componentId}`);
+                setTimeout(() => {
+                    window.location.href = `/component/${componentId}`;
+                }, 1500);
+                
+            } else {
+                console.error(`❌ DEBUG: API request failed with status ${response.status}`);
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('❌ DEBUG: Error response data:', errorData);
+                throw new Error(errorData.error || `API request failed with status ${response.status}`);
+            }
+
+        } catch (error) {
+            console.error('❌ DEBUG: Exception in submitViaAPI():', error);
+            console.error('❌ DEBUG: Error stack:', error.stack);
+            throw error; // Re-throw to be handled by submitFormDirectly
+        }
+    }
+
+    // Helper function to gather form data for API submission
+    function gatherFormDataForAPI() {
+        const formData = new FormData(form);
+        const apiData = {};
+
+        // Basic fields
+        apiData.product_number = formData.get('product_number');
+        apiData.description = formData.get('description');
+        apiData.component_type_id = parseInt(formData.get('component_type_id'));
+        
+        const supplierId = formData.get('supplier_id');
+        if (supplierId) {
+            apiData.supplier_id = parseInt(supplierId);
+        }
+
+        // Handle brand associations
+        const brandId = formData.get('brand_id');
+        const newBrandName = formData.get('new_brand_name');
+        if (brandId && brandId !== '' && brandId !== 'new') {
+            apiData.brand_ids = [parseInt(brandId)];
+        } else if (newBrandName && newBrandName.trim()) {
+            apiData.new_brand_name = newBrandName.trim();
+            // Also handle subbrand if creating new brand
+            const newSubbrandName = formData.get('new_subbrand_name');
+            if (newSubbrandName && newSubbrandName.trim()) {
+                apiData.new_subbrand_name = newSubbrandName.trim();
+            }
+        }
+
+        // Handle category associations  
+        const categoryIds = formData.getAll('category_ids');
+        if (categoryIds.length > 0) {
+            apiData.category_ids = categoryIds.map(id => parseInt(id));
+        }
+
+        // Handle keywords - parse comma-separated string into array
+        const keywordsValue = formData.get('keywords');
+        if (keywordsValue && keywordsValue.trim()) {
+            apiData.keywords = keywordsValue.split(',').map(k => k.trim()).filter(k => k);
+        }
+
+        // Handle dynamic properties
+        const properties = {};
+        for (const [key, value] of formData.entries()) {
+            if (key.startsWith('properties[') && key.endsWith(']')) {
+                const propertyName = key.slice(11, -1); // Remove 'properties[' and ']'
+                properties[propertyName] = value;
+            }
+        }
+        if (Object.keys(properties).length > 0) {
+            apiData.properties = properties;
+        }
+
+        // Handle picture order changes (for edit mode)
+        if (window.isEditMode && window.variantManager && typeof window.variantManager.getPictureOrderChanges === 'function') {
+            console.log('📊 DEBUG: Processing picture order changes for edit mode');
+            const pictureChanges = window.variantManager.getPictureOrderChanges();
+            console.log('📊 DEBUG: Picture changes obtained:', pictureChanges);
+            
+            // Add picture order data
+            if (pictureChanges.orders && Object.keys(pictureChanges.orders).length > 0) {
+                console.log('📊 DEBUG: Adding picture order changes:', pictureChanges.orders);
+                Object.assign(apiData, pictureChanges.orders);
+            }
+            
+            // Add picture rename data
+            if (pictureChanges.renames && Object.keys(pictureChanges.renames).length > 0) {
+                console.log('📊 DEBUG: Adding picture rename data:', pictureChanges.renames);
+                apiData.picture_renames = pictureChanges.renames;
+            }
+        } else {
+            if (!window.isEditMode) {
+                console.log('📊 DEBUG: Not in edit mode, skipping picture order changes');
+            } else if (!window.variantManager) {
+                console.warn('📊 DEBUG: variantManager not available');
+            } else {
+                console.warn('📊 DEBUG: getPictureOrderChanges function not available');
+            }
+        }
+
+        console.log('📊 DEBUG: Final API data gathered:', JSON.stringify(apiData, null, 2));
+        return apiData;
+    }
+
+    // Helper function to get CSRF token
+    function getCSRFToken() {
+        // Try multiple methods to get CSRF token
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+            return tokenMeta.getAttribute('content');
+        }
+        
+        const tokenInput = document.querySelector('input[name="csrf_token"]');
+        if (tokenInput) {
+            return tokenInput.value;
+        }
+        
+        // Fallback - get from cookie if available
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrf_token') {
+                return value;
+            }
+        }
+        
+        console.warn('⚠️ CSRF token not found');
+        return '';
+    }
+
+    // Helper function to get component ID from URL
+    function getComponentIdFromURL() {
+        const pathParts = window.location.pathname.split('/');
+        const editIndex = pathParts.indexOf('edit');
+        if (editIndex > 0 && pathParts[editIndex - 1]) {
+            return parseInt(pathParts[editIndex - 1]);
+        }
+        return null;
+    }
+
+    // Helper function to show success message
+    function showSuccessMessage(message) {
+        // Try to use existing success message system
+        if (window.variantManager && typeof window.variantManager.showSuccessMessage === 'function') {
+            window.variantManager.showSuccessMessage(message);
+        } else {
+            // Fallback: create simple success notification
+            const successDiv = document.createElement('div');
+            successDiv.className = 'alert alert-success alert-dismissible fade show';
+            successDiv.innerHTML = `
+                <strong>Success!</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container')?.prepend(successDiv);
         }
     }
     

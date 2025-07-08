@@ -169,6 +169,7 @@
     window.isEditMode = {% if component %}true{% else %}false{% endif %};
     {% if component %}
     window.componentId = {{ component.id }};
+    window.componentProductNumber = "{{ component.product_number|e }}";
     {% endif %}
 
     // Set existing component properties for editing
