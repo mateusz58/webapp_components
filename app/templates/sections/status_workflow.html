@@ -1,210 +1,131 @@
-<!-- Status Workflow -->
-<div class="status-workflow">
-    <h3 class="h5 mb-0 fw-bold">
-        <i data-lucide="workflow" class="me-2" style="width: 20px; height: 20px;"></i>
-        Approval Workflow
+<!-- Status Workflow - Compact for Manufacturing -->
+<div class="status-workflow-compact-content">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 d-flex align-items-center">
+            <i data-lucide="workflow" class="me-1" style="width: 16px; height: 16px;"></i>
+            <span class="fw-normal">Approval Status</span>
+        </h6>
         {% set total_approved = [component.proto_status, component.sms_status, component.pps_status].count('ok') %}
         {% set total_steps = 3 %}
-        <span class="badge bg-{{ 'success' if total_approved == total_steps else ('warning' if total_approved > 0 else 'secondary') }} ms-2">
-            {{ total_approved }}/{{ total_steps }} Approved
+        <span class="badge bg-{{ 'success' if total_approved == total_steps else ('warning' if total_approved > 0 else 'secondary') }} small">
+            {{ total_approved }}/{{ total_steps }}
         </span>
-    </h3>
+    </div>
 
-    <!-- Proto Status -->
-    <div class="workflow-step {{ component.proto_status }}"
-         @click="toggleStatusForm('proto')"
-         :class="{ 'border-primary': activeStatusForm === 'proto' }">
-        <div class="workflow-icon">
-            {% if component.proto_status == 'ok' %}
-            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
-            {% elif component.proto_status == 'not_ok' %}
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-            {% else %}
-            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
-            {% endif %}
-        </div>
-        <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0">Proto Review</h6>
-                    <small class="text-muted">Initial prototype assessment and design validation</small>
-                    {% if component.proto_status == 'ok' %}
-                    <div class="mt-1"><small class="text-success fw-bold">✓ Prototype approved for production</small></div>
-                    {% elif component.proto_status == 'not_ok' %}
-                    <div class="mt-1"><small class="text-danger fw-bold">✗ Prototype requires modifications</small></div>
-                    {% else %}
-                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting prototype review</small></div>
-                    {% endif %}
-                </div>
-                <div class="text-end">
-                    <span class="badge bg-{{ 'success' if component.proto_status == 'ok' else ('danger' if component.proto_status == 'not_ok' else 'warning') }}">
-                        {{ component.proto_status|title }}
-                    </span>
-                    {% if component.proto_date %}
-                    <div class="small text-muted">{{ component.proto_date.strftime('%Y-%m-%d') }}</div>
-                    {% endif %}
-                </div>
+    <!-- Compact Status Grid -->
+    <div class="status-grid-compact">
+        <!-- Proto Status -->
+        <div class="status-item-compact {{ component.proto_status }}" 
+             @click="toggleStatusForm('proto')"
+             :class="{ 'active': activeStatusForm === 'proto' }">
+            <div class="status-header-compact">
+                {% if component.proto_status == 'ok' %}
+                <i data-lucide="check-circle" style="width: 14px; height: 14px;" class="text-success"></i>
+                {% elif component.proto_status == 'not_ok' %}
+                <i data-lucide="x-circle" style="width: 14px; height: 14px;" class="text-danger"></i>
+                {% else %}
+                <i data-lucide="clock" style="width: 14px; height: 14px;" class="text-warning"></i>
+                {% endif %}
+                <span class="fw-medium">Proto</span>
+                {% if component.proto_date %}
+                <small class="text-muted ms-auto">{{ component.proto_date.strftime('%m/%d') }}</small>
+                {% endif %}
             </div>
             {% if component.proto_comment %}
-            <div class="mt-2 p-2 bg-light rounded">
-                <small>{{ component.proto_comment }}</small>
-            </div>
+            <div class="status-comment-compact">{{ component.proto_comment|truncate(30) }}</div>
             {% endif %}
         </div>
-    </div>
 
-    <!-- Status Update Form -->
-    <div class="status-update-form" :class="{ 'show': activeStatusForm === 'proto' }">
-        <form method="POST" action="{{ url_for('component_web.update_proto_status', id=component.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="row">
-                <div class="col-md-4">
-                    <select name="status" class="form-select form-control-modern" required>
-                        <option value="pending" {% if component.proto_status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="ok" {% if component.proto_status == 'ok' %}selected{% endif %}>Approved</option>
-                        <option value="not_ok" {% if component.proto_status == 'not_ok' %}selected{% endif %}>Rejected</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <input type="text" name="comment" class="form-control form-control-modern"
-                           placeholder="Add a comment..." value="{{ component.proto_comment or '' }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- SMS Status -->
-    <div class="workflow-step {{ component.sms_status }}"
-         @click="toggleStatusForm('sms')"
-         :class="{ 'border-primary': activeStatusForm === 'sms' }">
-        <div class="workflow-icon">
-            {% if component.sms_status == 'ok' %}
-            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
-            {% elif component.sms_status == 'not_ok' %}
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-            {% else %}
-            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
-            {% endif %}
-        </div>
-        <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0">SMS Review</h6>
-                    <small class="text-muted">Safety and material standards compliance</small>
-                    {% if component.sms_status == 'ok' %}
-                    <div class="mt-1"><small class="text-success fw-bold">✓ Safety standards approved</small></div>
-                    {% elif component.sms_status == 'not_ok' %}
-                    <div class="mt-1"><small class="text-danger fw-bold">✗ Safety issues require resolution</small></div>
-                    {% else %}
-                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting safety review</small></div>
-                    {% endif %}
-                </div>
-                <div class="text-end">
-                    <span class="badge bg-{{ 'success' if component.sms_status == 'ok' else ('danger' if component.sms_status == 'not_ok' else 'warning') }}">
-                        {{ component.sms_status|title }}
-                    </span>
-                    {% if component.sms_date %}
-                    <div class="small text-muted">{{ component.sms_date.strftime('%Y-%m-%d') }}</div>
-                    {% endif %}
-                </div>
+        <!-- SMS Status -->
+        <div class="status-item-compact {{ component.sms_status }}"
+             @click="toggleStatusForm('sms')"
+             :class="{ 'active': activeStatusForm === 'sms' }">
+            <div class="status-header-compact">
+                {% if component.sms_status == 'ok' %}
+                <i data-lucide="check-circle" style="width: 14px; height: 14px;" class="text-success"></i>
+                {% elif component.sms_status == 'not_ok' %}
+                <i data-lucide="x-circle" style="width: 14px; height: 14px;" class="text-danger"></i>
+                {% else %}
+                <i data-lucide="clock" style="width: 14px; height: 14px;" class="text-warning"></i>
+                {% endif %}
+                <span class="fw-medium">SMS</span>
+                {% if component.sms_date %}
+                <small class="text-muted ms-auto">{{ component.sms_date.strftime('%m/%d') }}</small>
+                {% endif %}
             </div>
             {% if component.sms_comment %}
-            <div class="mt-2 p-2 bg-light rounded">
-                <small>{{ component.sms_comment }}</small>
-            </div>
+            <div class="status-comment-compact">{{ component.sms_comment|truncate(30) }}</div>
             {% endif %}
         </div>
-    </div>
 
-    <!-- SMS Status Update Form -->
-    <div class="status-update-form" :class="{ 'show': activeStatusForm === 'sms' }">
-        <form method="POST" action="{{ url_for('component_web.update_sms_status', id=component.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="row">
-                <div class="col-md-4">
-                    <select name="status" class="form-select form-control-modern" required>
-                        <option value="pending" {% if component.sms_status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="ok" {% if component.sms_status == 'ok' %}selected{% endif %}>Approved</option>
-                        <option value="not_ok" {% if component.sms_status == 'not_ok' %}selected{% endif %}>Rejected</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <input type="text" name="comment" class="form-control form-control-modern"
-                           placeholder="Add a comment..." value="{{ component.sms_comment or '' }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- PPS Status -->
-    <div class="workflow-step {{ component.pps_status }}"
-         @click="toggleStatusForm('pps')"
-         :class="{ 'border-primary': activeStatusForm === 'pps' }">
-        <div class="workflow-icon">
-            {% if component.pps_status == 'ok' %}
-            <i data-lucide="check" style="width: 20px; height: 20px;"></i>
-            {% elif component.pps_status == 'not_ok' %}
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-            {% else %}
-            <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
-            {% endif %}
-        </div>
-        <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0">PPS Review</h6>
-                    <small class="text-muted">Production and packaging standards verification</small>
-                    {% if component.pps_status == 'ok' %}
-                    <div class="mt-1"><small class="text-success fw-bold">✓ Production ready for release</small></div>
-                    {% elif component.pps_status == 'not_ok' %}
-                    <div class="mt-1"><small class="text-danger fw-bold">✗ Production issues need addressing</small></div>
-                    {% else %}
-                    <div class="mt-1"><small class="text-warning fw-bold">⏳ Awaiting production review</small></div>
-                    {% endif %}
-                </div>
-                <div class="text-end">
-                    <span class="badge bg-{{ 'success' if component.pps_status == 'ok' else ('danger' if component.pps_status == 'not_ok' else 'warning') }}">
-                        {{ component.pps_status|title }}
-                    </span>
-                    {% if component.pps_date %}
-                    <div class="small text-muted">{{ component.pps_date.strftime('%Y-%m-%d') }}</div>
-                    {% endif %}
-                </div>
+        <!-- PPS Status -->
+        <div class="status-item-compact {{ component.pps_status }}"
+             @click="toggleStatusForm('pps')"
+             :class="{ 'active': activeStatusForm === 'pps' }">
+            <div class="status-header-compact">
+                {% if component.pps_status == 'ok' %}
+                <i data-lucide="check-circle" style="width: 14px; height: 14px;" class="text-success"></i>
+                {% elif component.pps_status == 'not_ok' %}
+                <i data-lucide="x-circle" style="width: 14px; height: 14px;" class="text-danger"></i>
+                {% else %}
+                <i data-lucide="clock" style="width: 14px; height: 14px;" class="text-warning"></i>
+                {% endif %}
+                <span class="fw-medium">PPS</span>
+                {% if component.pps_date %}
+                <small class="text-muted ms-auto">{{ component.pps_date.strftime('%m/%d') }}</small>
+                {% endif %}
             </div>
             {% if component.pps_comment %}
-            <div class="mt-2 p-2 bg-light rounded">
-                <small>{{ component.pps_comment }}</small>
-            </div>
+            <div class="status-comment-compact">{{ component.pps_comment|truncate(30) }}</div>
             {% endif %}
         </div>
     </div>
 
-    <!-- PPS Status Update Form -->
-    <div class="status-update-form" :class="{ 'show': activeStatusForm === 'pps' }">
-        <form method="POST" action="{{ url_for('component_web.update_pps_status', id=component.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="row">
-                <div class="col-md-4">
-                    <select name="status" class="form-select form-control-modern" required>
-                        <option value="pending" {% if component.pps_status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="ok" {% if component.pps_status == 'ok' %}selected{% endif %}>Approved</option>
-                        <option value="not_ok" {% if component.pps_status == 'not_ok' %}selected{% endif %}>Rejected</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <input type="text" name="comment" class="form-control form-control-modern"
-                           placeholder="Add a comment..." value="{{ component.pps_comment or '' }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary-modern btn-modern w-100">Update</button>
-                </div>
-            </div>
-        </form>
+    <!-- Compact Update Forms (Hidden by default) -->
+    <div class="status-forms-compact">
+        <!-- Proto Update Form -->
+        <div class="status-update-form-compact" x-show="activeStatusForm === 'proto'" x-transition>
+            <form method="POST" action="{{ url_for('component_web.update_proto_status', id=component.id) }}" class="d-flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <select name="status" class="form-select form-select-sm" required>
+                    <option value="pending" {% if component.proto_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="ok" {% if component.proto_status == 'ok' %}selected{% endif %}>Approved</option>
+                    <option value="not_ok" {% if component.proto_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                </select>
+                <input type="text" name="comment" class="form-control form-control-sm flex-grow-1"
+                       placeholder="Comment..." value="{{ component.proto_comment or '' }}">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+        </div>
+
+        <!-- SMS Update Form -->
+        <div class="status-update-form-compact" x-show="activeStatusForm === 'sms'" x-transition>
+            <form method="POST" action="{{ url_for('component_web.update_sms_status', id=component.id) }}" class="d-flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <select name="status" class="form-select form-select-sm" required>
+                    <option value="pending" {% if component.sms_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="ok" {% if component.sms_status == 'ok' %}selected{% endif %}>Approved</option>
+                    <option value="not_ok" {% if component.sms_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                </select>
+                <input type="text" name="comment" class="form-control form-control-sm flex-grow-1"
+                       placeholder="Comment..." value="{{ component.sms_comment or '' }}">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+        </div>
+
+        <!-- PPS Update Form -->
+        <div class="status-update-form-compact" x-show="activeStatusForm === 'pps'" x-transition>
+            <form method="POST" action="{{ url_for('component_web.update_pps_status', id=component.id) }}" class="d-flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <select name="status" class="form-select form-select-sm" required>
+                    <option value="pending" {% if component.pps_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="ok" {% if component.pps_status == 'ok' %}selected{% endif %}>Approved</option>
+                    <option value="not_ok" {% if component.pps_status == 'not_ok' %}selected{% endif %}>Rejected</option>
+                </select>
+                <input type="text" name="comment" class="form-control form-control-sm flex-grow-1"
+                       placeholder="Comment..." value="{{ component.pps_comment or '' }}">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+        </div>
     </div>
 </div>
