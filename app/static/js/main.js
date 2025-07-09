@@ -65,6 +65,56 @@ window.APP_INFO = {
     environment: 'development'
 };
 
+// Delete component function for handling DELETE requests
+window.deleteComponent = function deleteComponent(componentId, csrfToken) {
+    console.log('deleteComponent called with:', componentId, csrfToken);
+    
+    // Show loading state
+    const deleteButtons = document.querySelectorAll(`[onclick*="deleteComponent(${componentId}"]`);
+    deleteButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = 'Deleting...';
+    });
+    
+    // Send DELETE request to API endpoint
+    console.log('Sending DELETE request to:', `/api/component/${componentId}`);
+    fetch(`/api/component/${componentId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Success - redirect to components list
+            window.location.href = '/components';
+        } else {
+            // Handle error response
+            return response.text().then(text => {
+                throw new Error(`Delete failed: ${response.status} ${text}`);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Delete component error:', error);
+        alert('Failed to delete component: ' + error.message);
+        
+        // Restore button state
+        deleteButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.innerHTML = btn.innerHTML.includes('trash-2') ? 
+                '<i data-lucide="trash-2" class="me-1" style="width: 12px; height: 12px;"></i>Delete' : 
+                'Delete';
+        });
+        
+        // Reinitialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+};
+
 // Variant image preview on hover
 window.enableVariantImagePreview = function enableVariantImagePreview() {
     // Helper function to validate image URL

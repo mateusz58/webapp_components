@@ -65,14 +65,37 @@ def test_get_components():
         print(f"❌ Error: {e}")
         return False, None
 
-def test_edit_data_endpoint(component_id):
+def test_edit_data_endpoint():
     """Test the edit-data endpoint"""
-    print(f"📊 Testing edit-data endpoint for component {component_id}...")
+    print("📊 Testing edit-data endpoint...")
+    
+    # Get a component from the database first
     try:
+        response = requests.get(f"{BASE_URL}/")
+        if response.status_code != 200:
+            print("❌ App not available")
+            return False
+            
+        # Use a known component ID - get from components endpoint
+        components_response = requests.get(f"{BASE_URL}/api/components/search?q=test&limit=1")
+        if components_response.status_code == 200:
+            components_data = components_response.json()
+            if components_data.get('results'):
+                component_id = components_data['results'][0]['id']
+                print(f"📊 Using component ID: {component_id}")
+            else:
+                print("❌ No components found for testing")
+                return False
+        else:
+            # Fallback to a likely existing component ID
+            component_id = 1
+            print(f"📊 Using fallback component ID: {component_id}")
+            
         response = requests.get(f"{BASE_URL}/api/components/{component_id}/edit-data")
         if response.status_code == 200:
             data = response.json()
-            print(f"✅ Edit data loaded: {data.get('product_number', 'unknown')}")
+            component_data = data.get('component', {})
+            print(f"✅ Edit data loaded: {component_data.get('product_number', 'unknown')}")
             return True
         else:
             print(f"❌ Edit data failed: {response.status_code}")
@@ -81,15 +104,29 @@ def test_edit_data_endpoint(component_id):
         print(f"❌ Error: {e}")
         return False
 
-def test_put_with_json(component_id):
+def test_put_with_json():
     """Test PUT with JSON data"""
-    print(f"⚙️ Testing PUT with JSON for component {component_id}...")
+    print("⚙️ Testing PUT with JSON...")
     
-    test_data = {
-        "description": "Test update via API"
-    }
-    
+    # Get a component ID first
     try:
+        components_response = requests.get(f"{BASE_URL}/api/components/search?q=test&limit=1")
+        if components_response.status_code == 200:
+            components_data = components_response.json()
+            if components_data.get('results'):
+                component_id = components_data['results'][0]['id']
+                print(f"📊 Using component ID: {component_id}")
+            else:
+                component_id = 1  # Fallback
+                print(f"📊 Using fallback component ID: {component_id}")
+        else:
+            component_id = 1  # Fallback
+            print(f"📊 Using fallback component ID: {component_id}")
+    
+        test_data = {
+            "description": "Test update via API"
+        }
+        
         response = requests.put(
             f"{BASE_URL}/api/component/{component_id}",
             json=test_data,
@@ -115,7 +152,6 @@ def test_put_with_json(component_id):
             print(f"❌ Unexpected status: {status}")
             print(f"Response: {response.text[:100]}")
             return False
-            
     except Exception as e:
         print(f"❌ Error: {e}")
         return False

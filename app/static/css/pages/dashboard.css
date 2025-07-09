@@ -176,10 +176,7 @@
     height: 100%;
 }
 
-.component-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
+/* Component card hover effects are now handled in cards.css */
 
 /* Component Meta */
 .component-meta {
@@ -276,7 +273,7 @@
     position: absolute;
     top: 0.5rem;
     left: 0.5rem;
-    z-index: 10;
+    z-index: 5;
     transform: scale(0.9);
 }
 
@@ -285,7 +282,19 @@
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    z-index: 10;
+    z-index: 5;
+}
+
+/* Ensure action buttons have higher z-index than overlapping elements */
+.btn-group .btn {
+    position: relative;
+    z-index: 15;
+}
+
+/* Prevent hover effects from interfering with button clicks */
+.component-card .btn-group {
+    position: relative;
+    z-index: 20;
 }
 
 /* Properties Count */
