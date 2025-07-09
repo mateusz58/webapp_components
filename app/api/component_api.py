@@ -849,6 +849,53 @@ def get_component_edit_data(component_id):
         return jsonify({'success': False, 'error': 'Failed to load component data'}), 500
 
 
+@component_api.route('/component/<int:component_id>', methods=['DELETE'])
+def delete_component_api(component_id):
+    """
+    Delete a component via API using service layer
+    
+    Following proper architecture with service layer separation
+    """
+    try:
+        current_app.logger.info(f"=== API DELETE COMPONENT {component_id} ===")
+        
+        # Use service layer for business logic
+        from app.services.component_service import ComponentService
+        result = ComponentService.delete_component(component_id)
+        
+        # Return success response with timestamp
+        result['timestamp'] = datetime.now().isoformat()
+        return jsonify(result), 200
+        
+    except ValueError as e:
+        error_message = str(e)
+        current_app.logger.error(f"Validation error deleting component {component_id}: {error_message}")
+        
+        # Check if it's a "not found" error
+        if 'not found' in error_message.lower():
+            return jsonify({
+                'success': False,
+                'error': error_message,
+                'code': 'NOT_FOUND'
+            }), 404
+        
+        # Otherwise it's a validation error
+        return jsonify({
+            'success': False,
+            'error': error_message,
+            'code': 'VALIDATION_ERROR'
+        }), 400
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting component {component_id}: {str(e)}")
+        current_app.logger.error(f"Full traceback: ", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error while deleting component: {str(e)}',
+            'code': 'DELETE_ERROR'
+        }), 500
+
+
 @component_api.route('/component/<int:component_id>', methods=['PUT'])
 def update_component(component_id):
     """

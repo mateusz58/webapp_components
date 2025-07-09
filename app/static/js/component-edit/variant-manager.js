@@ -305,9 +305,6 @@ class VariantManager {
         const variantCard = document.querySelector(`[data-variant-id="${variantId}"]`);
         if (!variantCard) return;
         
-        if (!confirm('Are you sure you want to remove this variant?')) {
-            return;
-        }
         
         try {
             // Check if it's a new variant (not yet saved) or existing variant
@@ -315,7 +312,6 @@ class VariantManager {
                 // Remove from pending variants
                 this.pendingVariants.delete(variantId);
                 variantCard.remove();
-                this.showSuccessMessage('Variant removed (will be saved on form submission)');
             } else {
                 // For existing variants, just mark for deletion instead of immediate API call
                 this.stageVariantForDeletion(variantId);
@@ -332,8 +328,6 @@ class VariantManager {
                     undoBtn.onclick = () => this.undoVariantDeletion(variantId);
                     variantHeader.appendChild(undoBtn);
                 }
-                
-                this.showSuccessMessage('Variant marked for deletion (will be saved on form submission)');
             }
             
             // Show empty state if no variants left
@@ -1086,7 +1080,6 @@ class VariantManager {
             this.updateOrderInputMaxValues(variantId);
             
             // Show user feedback
-            this.showSuccessMessage(`Picture names updated for ${changeType} change (will be saved on form submission)`);
         }
     }
     

@@ -318,18 +318,29 @@ function componentDashboard() {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value
+                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || document.querySelector('[name=csrf-token]')?.content
                             },
-                            body: JSON.stringify({ ids: this.selectedComponents })
-                        }).then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                window.location.reload();
-                            } else {
-                                alert('Error: ' + data.error);
+                            body: JSON.stringify({ component_ids: this.selectedComponents })
+                        }).then(response => {
+                            console.log('Response status:', response.status);
+                            console.log('Response headers:', response.headers);
+                            return response.text(); // Get raw text first
+                        })
+                        .then(text => {
+                            console.log('Raw response:', text);
+                            try {
+                                const data = JSON.parse(text);
+                                if (data.success) {
+                                    window.location.reload();
+                                } else {
+                                    alert('Error: ' + data.error);
+                                }
+                            } catch (e) {
+                                alert('Server error: ' + text.substring(0, 200));
                             }
                         }).catch(error => {
-                            alert('Error deleting components: ' + error);
+                            console.error('Network error:', error);
+                            alert('Network error: ' + error);
                         });
                     }
                     break;

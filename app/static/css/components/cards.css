@@ -41,9 +41,21 @@
     height: 100%;
 }
 
+.component-card {
+    transition: all 0.2s ease;
+    will-change: transform, box-shadow;
+}
+
 .component-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
+}
+
+/* Ensure buttons remain clickable during hover animations */
+.component-card .btn-group {
+    position: relative;
+    z-index: 20;
+    transition: none; /* Prevent button animations during card hover */
 }
 
 /* Grid and List Layout Containers */

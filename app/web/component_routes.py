@@ -1113,34 +1113,83 @@ def edit_component(id):
     return render_template('component_edit_form.html', **context)
 
 
-@component_web.route('/component/delete/<int:id>', methods=['POST'])
+@component_web.route('/component/delete/<int:id>', methods=['DELETE'])
 def delete_component(id):
     """
-    Delete a component
+    Delete a component using the API endpoint for proper handling
+    
+    This route now delegates to the API for comprehensive deletion
+    including all associations and WebDAV cleanup.
     """
     try:
+        # CSRF token validation is handled automatically by Flask-WTF for DELETE requests
+        # No need to manually validate it here
+        
+        # Get component for logging
         component = Component.query.get_or_404(id)
+        product_number = component.product_number
         
-        # Delete associated pictures from filesystem
-        for picture in component.pictures:
-            if picture.url:
-                file_path = os.path.join(current_app.static_folder, picture.url.lstrip('/'))
-                if os.path.exists(file_path):
-                    try:
-                        os.remove(file_path)
-                    except OSError as e:
-                        current_app.logger.error(f"Error deleting file {file_path}: {str(e)}")
+        current_app.logger.info(f"Web route: Deleting component {id} ({product_number})")
         
-        # Delete component (cascades will handle related records)
-        db.session.delete(component)
-        db.session.commit()
+        # Use the API endpoint for proper deletion
+        from app.api.component_api import delete_component_api
         
-        flash('Component deleted successfully!', 'success')
-        return redirect(url_for('component_web.index'))
+        try:
+            # Call the API endpoint directly
+            api_response, status_code = delete_component_api(id)
+            
+            if status_code != 200:
+                error_data = api_response.get_json()
+                raise Exception(f"API deletion failed: {error_data.get('error', 'Unknown error')}")
+            
+            result = api_response.get_json()
+            
+            # Success
+            summary = result.get('summary', {})
+            associations = summary.get('associations_deleted', {})
+            files = summary.get('files_deleted', {})
+            
+            success_message = f'Component "{product_number}" deleted successfully!'
+            if associations:
+                details = []
+                if associations.get('variants', 0) > 0:
+                    details.append(f"{associations['variants']} variants")
+                if associations.get('pictures', 0) > 0:
+                    details.append(f"{associations['pictures']} pictures")
+                if associations.get('brands', 0) > 0:
+                    details.append(f"{associations['brands']} brand associations")
+                if associations.get('keywords', 0) > 0:
+                    details.append(f"{associations['keywords']} keyword associations")
+                if associations.get('categories', 0) > 0:
+                    details.append(f"{associations['categories']} category associations")
+                
+                if details:
+                    success_message += f" ({', '.join(details)})"
+            
+            flash(success_message, 'success')
+            
+            # Warn about any file deletion failures
+            if files.get('failed', 0) > 0:
+                flash(f"Warning: {files['failed']} picture files could not be deleted from storage.", 'warning')
+            
+            current_app.logger.info(f"Component {id} deleted successfully")
+            return redirect(url_for('component_web.index'))
+            
+        except ValueError as e:
+            # Component not found
+            flash(f'Component not found: {str(e)}', 'error')
+            current_app.logger.error(f"Component not found for deletion: {str(e)}")
+            return redirect(url_for('component_web.index'))
+            
+        except Exception as e:
+            # Service layer error
+            flash(f'Error deleting component: {str(e)}', 'error')
+            current_app.logger.error(f"Service deletion failed for component {id}: {str(e)}")
+            return redirect(url_for('component_web.component_detail', id=id))
     
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Component deletion error: {str(e)}")
+        current_app.logger.error(f"Full traceback: ", exc_info=True)
         flash(f'Error deleting component: {str(e)}', 'error')
         return redirect(url_for('component_web.component_detail', id=id))
 

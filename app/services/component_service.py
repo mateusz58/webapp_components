@@ -16,6 +16,7 @@ from app.utils.association_handlers import (
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import and_
 import time
+import os
 
 
 class ComponentService:
@@ -225,40 +226,6 @@ class ComponentService:
             current_app.logger.error(f"Error in ComponentService.get_component_for_edit: {str(e)}")
             raise
     
-    @staticmethod
-    def delete_component(component_id):
-        """
-        Delete a component and all associated data
-        
-        Args:
-            component_id: ID of component to delete
-            
-        Returns:
-            dict: Result with deletion status
-        """
-        try:
-            component = Component.query.get(component_id)
-            if not component:
-                raise ValueError(f'Component {component_id} not found')
-            
-            # Delete associated pictures from filesystem
-            ComponentService._cleanup_component_files(component)
-            
-            # Delete component (cascades will handle related records)
-            db.session.delete(component)
-            db.session.commit()
-            
-            current_app.logger.info(f"Component {component_id} deleted successfully")
-            
-            return {
-                'success': True,
-                'message': 'Component deleted successfully'
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error in ComponentService.delete_component: {str(e)}")
-            raise
     
     # Private helper methods
     
@@ -428,7 +395,6 @@ class ComponentService:
     @staticmethod
     def _handle_picture_order_changes(component, data):
         """Handle picture order changes and file renaming"""
-        import os
         import requests
         import json
         
@@ -753,7 +719,6 @@ class ComponentService:
     @staticmethod
     def _cleanup_component_files(component):
         """Clean up files associated with component deletion"""
-        import os
         
         # Delete component pictures
         for picture in component.pictures:
@@ -775,3 +740,153 @@ class ComponentService:
                             os.remove(file_path)
                         except OSError as e:
                             current_app.logger.error(f"Error deleting file {file_path}: {str(e)}")
+
+    @staticmethod
+    def delete_component(component_id):
+        """
+        Delete a component and all its associations
+        
+        Handles:
+        - Component variants (auto-deleted via CASCADE)
+        - Pictures (component and variant) with WebDAV cleanup
+        - Brand associations (auto-deleted via CASCADE)
+        - Keyword associations (many-to-many cleanup)
+        - Category associations (many-to-many cleanup)
+        
+        Args:
+            component_id: ID of component to delete
+            
+        Returns:
+            dict: Result with deletion summary and status
+        """
+        try:
+            current_app.logger.info(f"ComponentService.delete_component called for component {component_id}")
+            
+            # Get component with all associations loaded
+            component = Component.query.options(
+                selectinload(Component.variants).selectinload(ComponentVariant.variant_pictures),
+                selectinload(Component.pictures),
+                selectinload(Component.brand_associations),
+                selectinload(Component.keywords),
+                selectinload(Component.categories)
+            ).filter_by(id=component_id).first()
+            
+            if not component:
+                raise ValueError(f'Component {component_id} not found')
+            
+            current_app.logger.info(f"Found component: {component.product_number}")
+            
+            # Collect all picture files for WebDAV deletion
+            picture_files_to_delete = []
+            webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
+            
+            # Component pictures (only those without variant_id - main component pictures)
+            component_only_pictures = [p for p in component.pictures if p.variant_id is None]
+            for picture in component_only_pictures:
+                if picture.url:
+                    filename = picture.url.split('/')[-1]
+                    file_path = os.path.join(upload_folder, filename)
+                    picture_files_to_delete.append({
+                        'id': picture.id,
+                        'filename': filename,
+                        'file_path': file_path,
+                        'url': picture.url,
+                        'type': 'component'
+                    })
+                    current_app.logger.info(f"Scheduled component picture for deletion: {filename}")
+            
+            # Variant pictures (only those with variant_id)
+            variant_pictures = [p for p in component.pictures if p.variant_id is not None]
+            for picture in variant_pictures:
+                if picture.url:
+                    filename = picture.url.split('/')[-1]
+                    file_path = os.path.join(upload_folder, filename)
+                    picture_files_to_delete.append({
+                        'id': picture.id,
+                        'filename': filename,
+                        'file_path': file_path,
+                        'url': picture.url,
+                        'type': 'variant',
+                        'variant_id': picture.variant_id
+                    })
+                    current_app.logger.info(f"Scheduled variant picture for deletion: {filename}")
+            
+            current_app.logger.info(f"Total pictures to delete: {len(picture_files_to_delete)}")
+            
+            # Log associations before deletion
+            variants_count = len(component.variants)
+            brands_count = len(component.brand_associations)
+            keywords_count = len(component.keywords)
+            categories_count = len(component.categories)
+            
+            current_app.logger.info(f"Component associations: {variants_count} variants, {brands_count} brands, {keywords_count} keywords, {categories_count} categories")
+            
+            # Store component info before deletion
+            product_number = component.product_number
+            
+            # Delete the component from database
+            # This will automatically cascade delete:
+            # - ComponentVariant records (variants)
+            # - Picture records (both component and variant pictures)
+            # - ComponentBrand records (brand associations)
+            # The many-to-many relationships (keywords, categories) will also be cleaned up
+            db.session.delete(component)
+            db.session.commit()
+            
+            current_app.logger.info(f"Component {component_id} deleted from database")
+            
+            # Now delete picture files from WebDAV
+            deleted_files = []
+            failed_deletions = []
+            
+            for file_info in picture_files_to_delete:
+                try:
+                    if os.path.exists(file_info['file_path']):
+                        os.remove(file_info['file_path'])
+                        deleted_files.append(file_info['filename'])
+                        current_app.logger.info(f"Deleted file: {file_info['filename']}")
+                    else:
+                        current_app.logger.warning(f"File not found: {file_info['filename']}")
+                except Exception as e:
+                    failed_deletions.append(f"{file_info['filename']}: {str(e)}")
+                    current_app.logger.error(f"Failed to delete file {file_info['filename']}: {str(e)}")
+            
+            # Prepare response summary
+            summary = {
+                'component_id': component_id,
+                'product_number': product_number,
+                'associations_deleted': {
+                    'variants': variants_count,
+                    'brands': brands_count,
+                    'keywords': keywords_count,
+                    'categories': categories_count,
+                    'pictures': len(picture_files_to_delete)
+                },
+                'files_deleted': {
+                    'successful': len(deleted_files),
+                    'failed': len(failed_deletions),
+                    'total': len(picture_files_to_delete)
+                }
+            }
+            
+            if failed_deletions:
+                summary['file_deletion_errors'] = failed_deletions
+            
+            current_app.logger.info(f"Component deletion completed: {summary}")
+            
+            return {
+                'success': True,
+                'message': f'Component "{product_number}" deleted successfully',
+                'summary': summary
+            }
+            
+        except ValueError as e:
+            current_app.logger.error(f"Component not found: {str(e)}")
+            raise
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error deleting component {component_id}: {str(e)}")
+            current_app.logger.error(f"Full traceback: ", exc_info=True)
+            raise Exception(f'Failed to delete component: {str(e)}')
