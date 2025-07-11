@@ -49,6 +49,11 @@ def create_app(config_class=Config):
     db.init_app(app)
     csrf.init_app(app)
     
+    # Import models to register them with SQLAlchemy
+    with app.app_context():
+        from app import models  # Main models
+        from app import webdav_config  # WebDAV models
+    
     # Set up migrations without auto migration
     migrate.init_app(
         app, 
@@ -67,9 +72,9 @@ def create_app(config_class=Config):
     # Register context processors
     register_context_processors(app)
 
-    # Create upload directory if it doesn't exist
+    # Create local upload directory for temp files if needed (not the WebDAV mount)
     uploads_dir = app.config.get('UPLOAD_FOLDER')
-    if uploads_dir:
+    if uploads_dir and not uploads_dir.startswith('/components'):
         os.makedirs(uploads_dir, exist_ok=True)
 
     # Register API blueprints with /api prefix

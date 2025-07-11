@@ -15,8 +15,8 @@ NC='\033[0m' # No Color
 
 # Project root directory
 PROJECT_ROOT="/mnt/c/Users/Administrator/DataspellProjects/webapp_components"
-WORKFLOW_DIR="$PROJECT_ROOT/claude_workflow"
-STATUS_FILE="$WORKFLOW_DIR/project_status.md"
+DOCS_DIR="$PROJECT_ROOT/docs"
+STATUS_FILE="$DOCS_DIR/project_status.md"
 
 echo -e "${BOLD}${BLUE}📊 Update Project Status Dashboard${NC}"
 echo -e "${BLUE}====================================${NC}"

@@ -875,3 +875,5 @@ def remove_category_from_component(component_id, category_id):
     except Exception as e:
         db.session.rollback()
         raise e
+
+

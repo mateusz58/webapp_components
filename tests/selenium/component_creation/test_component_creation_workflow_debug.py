@@ -43,10 +43,10 @@ sys.path.append(str(current_dir))
 config_path = current_dir / 'config'
 sys.path.insert(0, str(config_path))
 
-from utils.driver_manager import DriverManager
-from pages.component_form_page import ComponentFormPage
-from pages.component_detail_page import ComponentDetailPage
-from test_config import TestConfig
+from ..utils.driver_manager import DriverManager
+from ..pages.component_form_page import ComponentFormPage
+from ..pages.component_detail_page import ComponentDetailPage
+from ..config.test_config import TestConfig
 
 
 class ComponentCreationWorkflowDebugTest:

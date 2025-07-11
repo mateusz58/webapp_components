@@ -4,7 +4,7 @@ Used by both web routes and API endpoints to avoid code duplication
 """
 from flask import request, current_app
 from app import db
-from app.models import ComponentBrand, Category, Keyword, Brand
+from app.models import ComponentBrand, Category, Keyword, Brand, Subbrand
 
 
 def _get_data_source():
@@ -39,7 +39,11 @@ def handle_brand_associations(component, is_edit=False, data_override=None):
     if source_type == 'json' or source_type == 'override':
         # API/JSON data format
         brand_ids = data_source.get('brand_ids', []) or data_source.get('brand_ids[]', [])
-        current_app.logger.info(f"Found brand data from JSON: {brand_ids}")
+        # Also check for single brand_id
+        single_brand_id = data_source.get('brand_id')
+        if single_brand_id and not brand_ids:
+            brand_ids = [single_brand_id]
+        current_app.logger.info(f"Found brand data from JSON/override: {brand_ids}")
     else:
         # Form data format - check multiple possible field names
         brand_field_names = ['brand_ids[]', 'brand_id', 'brands[]', 'brands', 'selected_brands[]']
@@ -73,6 +77,44 @@ def handle_brand_associations(component, is_edit=False, data_override=None):
             db.session.flush()  # Get the ID
             current_app.logger.info(f"Created new brand '{new_brand_name}' with ID {new_brand.id}")
             brand_ids.append(str(new_brand.id))
+    
+    # Handle new subbrand creation
+    new_subbrand_name = data_source.get('new_subbrand_name', '').strip()
+    subbrand_id = data_source.get('subbrand_id', '').strip()
+    
+    if new_subbrand_name and subbrand_id == 'new':
+        current_app.logger.info(f"Creating new subbrand: {new_subbrand_name}")
+        
+        # Need to get the brand ID - either from existing brand_ids or from the form
+        parent_brand_id = None
+        if brand_ids:
+            # Use the first brand_id from the list
+            first_brand_id = brand_ids[0]
+            if isinstance(first_brand_id, int):
+                parent_brand_id = first_brand_id
+            elif isinstance(first_brand_id, str) and first_brand_id.isdigit():
+                parent_brand_id = int(first_brand_id)
+        
+        if parent_brand_id:
+            # Check if subbrand already exists for this brand
+            existing_subbrand = Subbrand.query.filter_by(
+                name=new_subbrand_name, 
+                brand_id=parent_brand_id
+            ).first()
+            
+            if existing_subbrand:
+                current_app.logger.info(f"Subbrand '{new_subbrand_name}' already exists for brand {parent_brand_id}")
+            else:
+                # Create new subbrand
+                new_subbrand = Subbrand(
+                    name=new_subbrand_name,
+                    brand_id=parent_brand_id
+                )
+                db.session.add(new_subbrand)
+                db.session.flush()  # Get the ID
+                current_app.logger.info(f"Created new subbrand '{new_subbrand_name}' with ID {new_subbrand.id} for brand {parent_brand_id}")
+        else:
+            current_app.logger.warning(f"Cannot create subbrand '{new_subbrand_name}' - no valid brand ID found")
     
     # Handle existing brand IDs
     for brand_id in brand_ids:

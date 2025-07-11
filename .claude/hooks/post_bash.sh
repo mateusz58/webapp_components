@@ -21,9 +21,15 @@ NC='\033[0m'
 
 # Project root directory
 PROJECT_ROOT="/mnt/c/Users/Administrator/DataspellProjects/webapp_components"
-WORKFLOW_DIR="$PROJECT_ROOT/claude_workflow"
+DOCS_DIR="$PROJECT_ROOT/docs"
 
-echo -e "${BLUE}[CLAUDE HOOK]${NC} Post-bash check for: $bash_command (exit: $exit_code)"
+echo ""
+echo -e "${BOLD}${YELLOW}════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BOLD}${YELLOW}⚡ CLAUDE ENFORCEMENT HOOK EXECUTING: POST-BASH AUTOMATION${NC}"
+echo -e "${BOLD}${YELLOW}════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${YELLOW}Command: $bash_command${NC}"
+echo -e "${YELLOW}Exit Code: $exit_code${NC}"
+echo ""
 
 # Function to check if this is a test command
 is_test_command() {
@@ -33,18 +39,36 @@ is_test_command() {
     return 1
 }
 
-# Enforce test report updates after test execution
+# AUTOMATIC TEST REPORT GENERATION after test execution
 if is_test_command; then
-    echo -e "${YELLOW}🧪 TEST EXECUTION COMPLETED${NC}"
+    echo -e "${YELLOW}🧪 TEST EXECUTION COMPLETED - TRIGGERING AUTOMATIC REPORT GENERATION${NC}"
     
-    if [ "$exit_code" -eq "0" ]; then
-        echo -e "${GREEN}✅ Tests passed - remember to update test_reports.md with success details${NC}"
+    # Automatic test report generation
+    echo -e "${BLUE}🤖 AUTO-GENERATING TEST REPORT...${NC}"
+    
+    # Run the automated test report generator
+    cd "$PROJECT_ROOT"
+    if python tools/scripts/generate_test_reports.py --unit-only > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Automated test report generated successfully${NC}"
+        echo -e "${GREEN}   Location: docs/test_reports_generated/test_summary_[timestamp].md${NC}"
     else
-        echo -e "${RED}❌ Tests failed - MUST update test_reports.md with failure analysis${NC}"
-        echo -e "${RED}   Include: failed test details, error messages, resolution steps${NC}"
+        echo -e "${YELLOW}⚠️  Automated report generation failed, manual update required${NC}"
     fi
     
-    echo -e "${BLUE}💡 Consider updating test documentation${NC}"
+    # MANDATORY test report documentation update
+    if [ "$exit_code" -eq "0" ]; then
+        echo -e "${GREEN}✅ Tests passed - automated report generated${NC}"
+        echo -e "${RED}🚨 MANDATORY: Claude must update docs/test_reports_generated/test_reports.md${NC}"
+        echo -e "${RED}   REQUIREMENT: Add chronological entry with test results summary${NC}"
+    else
+        echo -e "${RED}❌ Tests failed - CRITICAL ACTION REQUIRED${NC}"
+        echo -e "${RED}🚨 MANDATORY: Claude must immediately update test documentation${NC}"
+        echo -e "${RED}   REQUIREMENTS:${NC}"
+        echo -e "${RED}   1. Update docs/test_reports_generated/test_reports.md with failure analysis${NC}"
+        echo -e "${RED}   2. Include: failed test details, error messages, resolution steps${NC}"
+        echo -e "${RED}   3. Document debugging approach and next steps${NC}"
+        echo -e "${RED}   This is ENFORCED by testing_rules.md!${NC}"
+    fi
 fi
 
 # Check for deployment commands
@@ -60,7 +84,12 @@ if [[ "$bash_command" == *"migrate"* ]] || [[ "$bash_command" == *"upgrade"* ]];
 fi
 
 # General documentation health reminder
+echo ""
+echo -e "${BOLD}${YELLOW}════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BOLD}${GREEN}✅ POST-BASH HOOK COMPLETED - AUTOMATION EXECUTED${NC}"
+echo -e "${BOLD}${YELLOW}════════════════════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}📊 Documentation Health Reminder:${NC}"
 echo -e "${BLUE}   • Check project_status.md is current${NC}"
 echo -e "${BLUE}   • Ensure test_reports.md reflects latest results${NC}"
 echo -e "${BLUE}   • Update relevant documentation based on work done${NC}"
+echo ""

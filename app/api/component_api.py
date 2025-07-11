@@ -21,66 +21,21 @@ def create_component():
     Handles multipart form data with component details, variants, and file uploads
     """
     try:
+        # Use service layer for all component operations
+        from app.services.component_service import ComponentService
+        service = ComponentService()
+        
         # DEBUG: Log all received form data
         current_app.logger.info("=== API CREATE COMPONENT - RECEIVED FORM DATA ===")
         for key, value in request.form.items():
             current_app.logger.info(f"Form field: {key} = {value}")
         
-        current_app.logger.info("=== API CREATE COMPONENT - RECEIVED FORM LISTS ===")
-        for key in request.form.keys():
-            if key.endswith('[]'):
-                values = request.form.getlist(key)
-                current_app.logger.info(f"Form list: {key} = {values}")
-        
-        # Get basic component data
-        product_number = request.form.get('product_number', '').strip()
-        description = request.form.get('description', '').strip()
-        component_type_id = request.form.get('component_type_id', type=int)
-        supplier_id = request.form.get('supplier_id', type=int) if request.form.get('supplier_id') else None
-        
-        current_app.logger.info(f"Basic data: product_number={product_number}, component_type_id={component_type_id}, supplier_id={supplier_id}")
-        
-        # Validate required fields
-        if not product_number:
-            return jsonify({'success': False, 'error': 'Product number is required'}), 400
-        if not component_type_id:
-            return jsonify({'success': False, 'error': 'Component type is required'}), 400
-        
-        # Check for duplicate product number
-        existing_query = Component.query.filter_by(product_number=product_number)
-        if supplier_id:
-            existing_query = existing_query.filter_by(supplier_id=supplier_id)
-        else:
-            existing_query = existing_query.filter(Component.supplier_id.is_(None))
-        
-        if existing_query.first():
-            supplier_name = f" for supplier {supplier_id}" if supplier_id else " (no supplier)"
-            return jsonify({
-                'success': False, 
-                'error': f'Product number "{product_number}" already exists{supplier_name}'
-            }), 400
-        
-        # Create component
-        component = Component(
-            product_number=product_number,
-            description=description,
-            supplier_id=supplier_id,
-            component_type_id=component_type_id,
-            properties={}
-        )
-        
-        db.session.add(component)
-        db.session.flush()  # Get component ID
-        
-        # Handle all associations using service layer (proper MVC)
-        from app.services.component_service import ComponentService
-        
-        # Create data dict for associations
+        # Create data dict for component creation
         component_data = {
-            'product_number': product_number,
-            'description': description,
-            'component_type_id': component_type_id,
-            'supplier_id': supplier_id
+            'product_number': request.form.get('product_number', '').strip(),
+            'description': request.form.get('description', '').strip(),
+            'component_type_id': request.form.get('component_type_id', type=int),
+            'supplier_id': request.form.get('supplier_id', type=int) if request.form.get('supplier_id') else None
         }
         
         # Add brand data from form/json
@@ -96,14 +51,20 @@ def create_component():
             new_brand_name = request.form.get('new_brand_name', '').strip()
             if new_brand_name:
                 component_data['new_brand_name'] = new_brand_name
+            
+            # Handle form data for categories
+            category_ids = request.form.getlist('category_ids[]') or request.form.getlist('category_ids') or request.form.getlist('categories[]') or request.form.getlist('selected_categories[]')
+            if category_ids:
+                component_data['category_ids'] = [id for id in category_ids if id]
+            
+            # Handle form data for keywords
+            keywords_input = request.form.get('keywords', '').strip()
+            if keywords_input:
+                component_data['keywords'] = keywords_input
         
-        # Use service layer for associations
-        ComponentService._handle_component_associations(component, component_data, is_edit=False)
-        
-        # Process variants
-        created_variants = []
+        # Collect variant data from form
+        variants_data = []
         variant_index = 1
-        all_pending_files = []  # Track ALL files to save after DB commit
         
         # Look for variant data in form (variant_color_1, variant_color_2, etc.)
         while True:
@@ -127,192 +88,27 @@ def create_component():
             if not color_id and not custom_color_name:
                 break
             
-            # Handle custom color creation
-            if custom_color_name:
-                existing_color = Color.query.filter_by(name=custom_color_name).first()
-                if existing_color:
-                    color_id = existing_color.id
-                else:
-                    new_color = Color(name=custom_color_name)
-                    db.session.add(new_color)
-                    db.session.flush()
-                    color_id = new_color.id
-            
-            if not color_id:
-                variant_index += 1
-                continue
-            
-            # Check if variant already exists for this color
-            existing_variant = ComponentVariant.query.filter_by(
-                component_id=component.id,
-                color_id=color_id
-            ).first()
-            
-            if existing_variant:
-                current_app.logger.warning(f"Variant for color {color_id} already exists for component {component.id}")
-                variant_index += 1
-                continue
-            
-            # Create variant
-            variant = ComponentVariant(
-                component_id=component.id,
-                color_id=color_id,
-                is_active=True
-            )
-            
-            db.session.add(variant)
-            db.session.flush()  # Get variant ID
-            
-            # Handle variant pictures - prepare for atomic file operations
-            variant_pictures = []
-            uploaded_files = request.files.getlist(images_key)
-            
-            current_app.logger.info(f"Processing variant {variant_index}, images_key: {images_key}")
-            current_app.logger.info(f"Found {len(uploaded_files)} files: {[f.filename for f in uploaded_files]}")
-            
-            if uploaded_files and any(f.filename for f in uploaded_files):
-                picture_order = 1
-                
-                for picture_file in uploaded_files:
-                    if picture_file and picture_file.filename and allowed_file(picture_file.filename):
-                        try:
-                            # Read file into memory for later processing
-                            file_data = io.BytesIO(picture_file.read())
-                            file_ext = os.path.splitext(picture_file.filename)[1].lower()
-                            
-                            # Create picture record (database trigger will generate picture_name)
-                            current_app.logger.info(f"Creating picture: component_id={component.id}, variant_id={variant.id}, order={picture_order}")
-                            
-                            # Check if variant and color are properly loaded
-                            db.session.refresh(variant)
-                            db.session.refresh(component)
-                            current_app.logger.info(f"Variant color check: variant.color={getattr(variant, 'color', 'NOT_LOADED')}")
-                            current_app.logger.info(f"Component supplier check: component.supplier={getattr(component, 'supplier', 'NOT_LOADED')}")
-                            
-                            # Generate picture name using Python utility function (reliable and maintainable)
-                            generated_name = generate_picture_name(component, variant, picture_order)
-                            current_app.logger.info(f"Generated picture name: '{generated_name}'")
-                            
-                            if not generated_name:
-                                current_app.logger.error(f"Failed to generate picture name for component {component.id}, variant {variant.id}, order {picture_order}")
-                                continue
-                            
-                            picture = Picture(
-                                component_id=component.id,
-                                variant_id=variant.id,
-                                picture_name=generated_name,  # Set directly instead of relying on trigger
-                                url='',  # Will be set after files are saved
-                                picture_order=picture_order,
-                                alt_text=f"{component.product_number} - Image {picture_order}"
-                            )
-                            db.session.add(picture)
-                            db.session.flush()  # Get picture ID
-                            current_app.logger.info(f"Picture created: ID={picture.id}, name='{picture.picture_name}'")
-                            
-                            # Store file data for atomic save after DB commit
-                            current_app.logger.info(f"Picture created with ID {picture.id}, name: '{picture.picture_name}', order: {picture.picture_order}")
-                            if picture.picture_name:
-                                filename = f"{picture.picture_name}{file_ext}"
-                                webdav_prefix = current_app.config.get('UPLOAD_URL_PREFIX', 'http://31.182.67.115/webdav/components')
-                                
-                                current_app.logger.info(f"Preparing file for atomic save: {filename} -> {webdav_prefix}/{filename}")
-                                all_pending_files.append({
-                                    'picture': picture,
-                                    'file_data': file_data,
-                                    'filename': filename,
-                                    'url': f"{webdav_prefix}/{filename}"
-                                })
-                                
-                                # Add to variant pictures list for response
-                                variant_pictures.append({
-                                    'id': picture.id,
-                                    'name': picture.picture_name,
-                                    'url': f"{webdav_prefix}/{filename}",
-                                    'order': picture.picture_order
-                                })
-                            else:
-                                current_app.logger.error(f"Picture name is empty for picture ID {picture.id} - database trigger may have failed")
-                            
-                            picture_order += 1
-                                
-                        except Exception as e:
-                            current_app.logger.error(f"Error preparing picture: {str(e)}")
-                            continue
-            
-            # Add variant to created list
-            color = Color.query.get(color_id)
-            created_variants.append({
-                'id': variant.id,
+            # Collect variant data with images
+            variant_dict = {
                 'color_id': color_id,
-                'color_name': color.name,
-                'sku': variant.variant_sku or '',
-                'pictures': variant_pictures
-            })
-            
+                'custom_color_name': custom_color_name,
+                'images': request.files.getlist(images_key)
+            }
+            variants_data.append(variant_dict)
             variant_index += 1
         
-        # Commit database changes first
-        current_app.logger.info(f"Committing database changes. Pending files to save: {len(all_pending_files)}")
-        db.session.commit()
+        # Add variants to component data if any
+        if variants_data:
+            component_data['variants'] = variants_data
         
-        # Now save all files atomically
-        saved_files = []
-        current_app.logger.info(f"Starting atomic file save for {len(all_pending_files)} files")
-        try:
-            upload_folder = current_app.config.get('UPLOAD_FOLDER', '/components')
-            current_app.logger.info(f"Upload folder: {upload_folder}")
-            
-            # Create upload directory if it doesn't exist
-            os.makedirs(upload_folder, exist_ok=True)
-            
-            if not all_pending_files:
-                current_app.logger.warning("No files to save - all_pending_files is empty!")
-            
-            for file_info in all_pending_files:
-                file_path = os.path.join(upload_folder, file_info['filename'])
-                
-                # Save file to WebDAV
-                file_info['file_data'].seek(0)
-                with open(file_path, 'wb') as f:
-                    f.write(file_info['file_data'].read())
-                
-                # Track saved file for potential cleanup
-                saved_files.append(file_path)
-                
-                # Update picture URL in database - get fresh picture object from database
-                picture_id = file_info['picture'].id
-                picture = Picture.query.get(picture_id)
-                if picture:
-                    current_app.logger.info(f"Setting URL for picture {picture_id}: {file_info['url']}")
-                    picture.url = file_info['url']
-                    db.session.add(picture)
-                else:
-                    current_app.logger.error(f"Could not find picture with ID {picture_id}")
-            
-            # Commit URL updates
-            db.session.commit()
-            
-        except Exception as e:
-            current_app.logger.error(f"Error saving files: {str(e)}")
-            
-            # Cleanup any files that were saved
-            for file_path in saved_files:
-                try:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                except Exception as cleanup_error:
-                    current_app.logger.error(f"Error cleaning up file {file_path}: {cleanup_error}")
-            
-            # Rollback URL updates
-            db.session.rollback()
-            
-            return jsonify({'success': False, 'error': f'Failed to save files: {str(e)}'}), 500
+        # Use service to create component with all associations and variants
+        result = service.create_component(component_data, request.files)
         
-        # Integrate with web workflow: set up loading page session and background verification
+        # Set up loading page session and background verification
         import time
         import threading
         
-        component_id = component.id
+        component_id = result['component']['id']
         
         # Store creation completion in session for loading page status checking
         session[f'component_creation_{component_id}'] = {
@@ -320,54 +116,33 @@ def create_component():
             'created_at': time.time()
         }
         
-        # Start background verification (same as web route)
+        # Start background verification
+        app = current_app._get_current_object()
+        
         def verify_in_background():
-            try:
-                # Import here to avoid circular imports
-                from app.web.component_routes import _verify_images_accessible
-                images_verified = _verify_images_accessible(component_id)
-                session[f'component_creation_{component_id}'] = {
-                    'status': 'ready' if images_verified else 'ready_with_warning',
-                    'created_at': time.time(),
-                    'verified': images_verified
-                }
-                current_app.logger.info(f"API: Background verification completed for component {component_id}: {images_verified}")
-            except Exception as e:
-                current_app.logger.error(f"API: Background verification failed for component {component_id}: {e}")
-                session[f'component_creation_{component_id}'] = {
-                    'status': 'ready_with_warning',
-                    'created_at': time.time(),
-                    'verified': False
-                }
+            with app.app_context():
+                try:
+                    from app.web.component_routes import _verify_images_accessible
+                    images_verified = _verify_images_accessible(component_id)
+                    current_app.logger.info(f"API: Background verification completed for component {component_id}: {images_verified}")
+                except Exception as e:
+                    current_app.logger.error(f"API: Background verification failed for component {component_id}: {e}")
         
         verification_thread = threading.Thread(target=verify_in_background)
         verification_thread.daemon = True
         verification_thread.start()
         
-        # Return redirect URL to integrate with loading page workflow
-        loading_url = url_for('component_web.component_creation_loading', component_id=component_id)
+        # Add redirect URL to result
+        result['redirect_url'] = url_for('component_web.component_creation_loading', component_id=component_id)
         
-        # Build summary of what was created
-        from app.utils.association_handlers import get_association_counts
-        association_counts = get_association_counts(component)
+        return jsonify(result)
         
-        current_app.logger.info(f"Component {component.id} created with: {len(created_variants)} variants, {association_counts['brands_count']} brands, {association_counts['categories_count']} categories, {association_counts['keywords_count']} keywords, {association_counts['properties_count']} properties")
-        
-        return jsonify({
-            'success': True,
-            'redirect_url': loading_url,
-            'message': f'Component created with {len(created_variants)} variants, {association_counts["brands_count"]} brands, {association_counts["categories_count"]} categories, {association_counts["keywords_count"]} keywords',
-            'component': {
-                'id': component.id,
-                'product_number': component.product_number,
-                'variants_count': len(created_variants),
-                **association_counts
-            }
-        })
+    except ValueError as e:
+        current_app.logger.error(f"Validation error creating component: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
         
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error creating component with variants: {str(e)}")
+        current_app.logger.error(f"Error creating component: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -420,56 +195,19 @@ def duplicate_component(component_id):
     API endpoint to duplicate a component
     """
     try:
-        # Find the original component
-        original = Component.query.get_or_404(component_id)
+        # Use service layer for duplication
+        from app.services.component_service import ComponentService
+        service = ComponentService()
         
-        # Create a new component with copied data
-        new_component = Component(
-            product_number=f"{original.product_number}_copy_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            description=f"Copy of {original.description}" if original.description else "Copy",
-            supplier_id=original.supplier_id,
-            component_type_id=original.component_type_id,
-            properties=original.properties.copy() if original.properties else {},
-            proto_status='pending',
-            sms_status='pending',
-            pps_status='pending'
-        )
+        result = service.duplicate_component(component_id)
         
-        db.session.add(new_component)
-        db.session.flush()  # Get the new component ID
+        return jsonify(result)
         
-        # Copy categories
-        for category in original.categories:
-            new_component.categories.append(category)
-        
-        # Copy brand associations
-        for brand_assoc in original.brand_associations:
-            new_brand_assoc = ComponentBrand(
-                component_id=new_component.id,
-                brand_id=brand_assoc.brand_id
-            )
-            db.session.add(new_brand_assoc)
-        
-        # Copy keywords
-        for keyword in original.keywords:
-            db.session.execute(
-                keyword_component.insert().values(
-                    component_id=new_component.id,
-                    keyword_id=keyword.id
-                )
-            )
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Component duplicated successfully',
-            'new_component_id': new_component.id,
-            'new_product_number': new_component.product_number
-        })
+    except ValueError as e:
+        current_app.logger.error(f"Component duplication validation error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
         
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Component duplication error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -531,7 +269,7 @@ def export_component(component_id):
 @component_api.route('/components/bulk-delete', methods=['POST'])
 def bulk_delete_components():
     """
-    Bulk delete components
+    Bulk delete components using service layer
     """
     try:
         data = request.get_json()
@@ -540,39 +278,15 @@ def bulk_delete_components():
         if not component_ids:
             return jsonify({'success': False, 'error': 'No components selected'}), 400
         
-        # Delete components
-        deleted_count = 0
-        errors = []
+        # Use service layer for bulk deletion
+        from app.services.component_service import ComponentService
+        service = ComponentService()
         
-        for comp_id in component_ids:
-            try:
-                component = Component.query.get(comp_id)
-                if component:
-                    # Delete associated pictures
-                    for picture in component.pictures:
-                        if picture.url and os.path.exists(os.path.join(current_app.static_folder, picture.url.lstrip('/'))):
-                            try:
-                                os.remove(os.path.join(current_app.static_folder, picture.url.lstrip('/')))
-                            except OSError:
-                                pass
-                    
-                    db.session.delete(component)
-                    deleted_count += 1
-                
-            except Exception as e:
-                errors.append(f"Error deleting component {comp_id}: {str(e)}")
+        result = service.bulk_delete_components(component_ids)
         
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Deleted {deleted_count} components',
-            'deleted_count': deleted_count,
-            'errors': errors
-        })
+        return jsonify(result)
         
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Bulk delete error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -832,7 +546,8 @@ def get_component_edit_data(component_id):
     try:
         # Use service layer for business logic
         from app.services.component_service import ComponentService
-        component_data = ComponentService.get_component_for_edit(component_id)
+        service = ComponentService()
+        component_data = service.get_component_for_edit(component_id)
         
         return jsonify({
             'success': True,
@@ -861,7 +576,8 @@ def delete_component_api(component_id):
         
         # Use service layer for business logic
         from app.services.component_service import ComponentService
-        result = ComponentService.delete_component(component_id)
+        service = ComponentService()
+        result = service.delete_component(component_id)
         
         # Return success response with timestamp
         result['timestamp'] = datetime.now().isoformat()
@@ -934,7 +650,8 @@ def update_component(component_id):
         
         # Use service layer for business logic
         from app.services.component_service import ComponentService
-        result = ComponentService.update_component(component_id, data)
+        service = ComponentService()
+        result = service.update_component(component_id, data)
         
         # Return success response with timestamp
         result['timestamp'] = datetime.now().isoformat()
