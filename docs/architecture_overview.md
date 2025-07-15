@@ -99,19 +99,22 @@ Component              # Main product entity with JSON properties, status tracki
 └── keyword_component # Many-to-many keyword associations
 
 ComponentType          # Product categories with dynamic property definitions
-├── ComponentTypeProperty  # Flexible property definitions per type
+├── ComponentTypeProperty  # Links component types to available properties
+
+Property              # Master property definitions with dynamic options
+├── Dynamic Options   # Options populated from reference tables based on property_key
 
 Supplier              # Supplier management with unique codes
 Brand                 # Brand hierarchy management
 ├── Subbrand         # Brand subdivisions
 
-Reference Tables:
-├── Color            # Color options for variants
-├── Material         # Material types
-├── Category         # Component categories
+Reference Tables (Dynamic Options Sources):
+├── Color            # Color options for variants and properties
+├── Material         # Material types for property options
+├── Category         # Component categories for property options
 ├── Keyword          # Tagging system
-├── Gender           # Gender classifications
-└── Style            # Style classifications
+├── Gender           # Gender classifications for property options
+└── Style            # Style classifications for property options
 ```
 
 #### **Component-Variant-Picture Relationships**
@@ -133,6 +136,7 @@ Two Component Types:
 #### **Database Features**
 - **Auto-Generated Fields**: SKUs and picture names via PostgreSQL triggers
 - **Status Tracking**: Three-stage approval process (Proto → SMS → PPS)
+- **Dynamic Property System**: Dual property system with predefined + custom properties
 - **JSON Properties**: Flexible component attributes stored as JSONB
 - **Complex Relationships**: Many-to-many with brands, categories, keywords
 - **Cascade Operations**: Automatic cleanup and updates via triggers
@@ -146,6 +150,102 @@ update_variant_skus_on_*_change()         # Cascade SKU updates
 update_picture_names_on_*_change()        # Cascade picture name updates
 ensure_picture_component_id()             # Ensures data consistency
 ```
+
+---
+
+## 🔧 Dynamic Property System Architecture
+
+### Property System Overview
+
+The component management system implements a sophisticated **dual property system** that provides both structured validation and flexible customization:
+
+#### **1. Predefined Properties (Structured)**
+```
+Property Master → Component Type Assignment → Form Generation → Data Storage
+```
+
+**Components**:
+- **Property Table**: Master definitions with data types and validation rules
+- **ComponentTypeProperty**: Links specific properties to component types
+- **Dynamic Options**: Options populated from reference tables (material, color, etc.)
+- **Form Generation**: Automatic UI form generation based on component type
+
+**Flow**:
+1. **Admin defines property**: `property_key="material"`, `data_type="select"`
+2. **System populates options**: From `material` table → `["Cotton", "Polyester", "Silk"]`
+3. **Type assignment**: Link "material" property to "T-Shirt" component type as required
+4. **Form generation**: UI automatically renders select dropdown with material options
+5. **Data storage**: Selected value stored in `component.properties` JSONB field
+
+#### **2. Custom Properties (Flexible)**
+```
+User Input → Direct Storage → component.properties (JSONB)
+```
+
+**Purpose**: Users can add any custom properties not defined in the predefined system:
+```json
+{
+  "material": "Cotton",                    // Predefined property
+  "custom_thread_count": 200,              // Custom property
+  "special_treatment": "waterproof",       // Custom property
+  "internal_notes": "Handle with care"     // Custom property
+}
+```
+
+#### **3. Dynamic Options Population**
+
+The system automatically populates options based on property key naming conventions:
+
+```python
+# PropertyService.populate_options()
+def populate_options(property_key):
+    if property_key == "material":
+        return Material.query.filter(Material.is_active == True).all()
+    elif property_key == "color":
+        return Color.query.all()
+    elif property_key == "category":
+        return Category.query.all()
+    # ... other reference tables
+```
+
+#### **4. Form Generation Architecture**
+
+**Component Type Form Generation**:
+1. **Load component type**: Get component type from context
+2. **Query available properties**: `ComponentTypeProperty.query.filter_by(component_type_id=type_id)`
+3. **Resolve property definitions**: Join with `Property` table for data types and validation
+4. **Populate dynamic options**: Call reference tables based on property_key
+5. **Render form widgets**: Generate appropriate UI based on data_type
+6. **Apply validation**: Required/optional rules per component type
+
+**UI Widget Mapping**:
+- `data_type="select"` → Dropdown with options from reference table
+- `data_type="multiselect"` → Multi-choice widget
+- `data_type="text"` → Text input field
+- `data_type="pdf"` → File upload (PDF only)
+- `data_type="picture"` → Image upload widget
+
+#### **5. Business Logic Integration**
+
+**ComponentService Integration**:
+- **Property validation**: Validate predefined properties against available options
+- **Custom property handling**: Store any custom properties without validation
+- **Form data processing**: Merge predefined and custom properties into JSONB
+- **API response building**: Return both structured and flexible property data
+
+**Data Flow**:
+```
+Form Submission → PropertyService.validate() → ComponentService.create/update() → Database Storage
+```
+
+### Property System Benefits
+
+1. **Flexibility**: Supports both structured and ad-hoc properties
+2. **Validation**: Predefined properties have proper validation and UI hints
+3. **Extensibility**: Easy to add new property types without schema changes
+4. **Performance**: JSONB indexing for efficient property queries
+5. **User Experience**: Automatic form generation with proper UI widgets
+6. **Maintainability**: Centralized property management through admin interface
 
 ---
 
