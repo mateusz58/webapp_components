@@ -13,17 +13,5 @@ services:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://component_user:component_app_123@192.168.100.35:5432/promo_database
       - PORT=6002
-    # Enable privileged mode for WebDAV mounting
-    privileged: true
-    # Mount the host /components directory into container
-    volumes:
-      - /components:/components:rw
-    # Add device access for FUSE
-    devices:
-      - /dev/fuse:/dev/fuse
-    # Add capabilities for mounting
-    cap_add:
-      - SYS_ADMIN
-    # Mount propagation
-    security_opt:
-      - apparmor:unconfined
+    # WebDAV configuration - no local mounting needed
+    # All file operations go directly to WebDAV server via HTTP protocol

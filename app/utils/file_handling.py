@@ -40,23 +40,23 @@ def generate_picture_name(component, variant=None, picture_order=1):
     if component.supplier and component.supplier.supplier_code:
         supplier_code = component.supplier.supplier_code.lower().strip()
     
-    # Get product number (normalized)
+    # Get product number (normalized) - only convert spaces to underscores, preserve hyphens
     product_number = component.product_number.lower().replace(' ', '_').strip()
     
-    # Get color name (normalized)
-    if variant and variant.color:
-        color_name = variant.color.name.lower().replace(' ', '_').strip()
-    else:
-        # For component-level pictures, use 'main'
-        color_name = 'main'
-    
     # Generate name based on pattern
-    if supplier_code:
-        # Pattern: supplier_code_product_number_color_name_order
-        return f"{supplier_code}_{product_number}_{color_name}_{picture_order}"
+    if variant and variant.color:
+        # Variant picture: supplier_product_color_order or product_color_order
+        color_name = variant.color.name.lower().replace(' ', '_').strip()
+        if supplier_code:
+            return f"{supplier_code}_{product_number}_{color_name}_{picture_order}"
+        else:
+            return f"{product_number}_{color_name}_{picture_order}"
     else:
-        # Pattern: product_number_color_name_order
-        return f"{product_number}_{color_name}_{picture_order}"
+        # Component picture: supplier_product_order or product_order (NO color/main)
+        if supplier_code:
+            return f"{supplier_code}_{product_number}_{picture_order}"
+        else:
+            return f"{product_number}_{picture_order}"
 
 
 def generate_unique_filename(filename: str) -> str:

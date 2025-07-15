@@ -1,0 +1,1 @@
+Get familair with instrctons from docs/instructions_for_claude.md

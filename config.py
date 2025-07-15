@@ -7,11 +7,10 @@ class Config:
     SQLALCHEMY_SCHEMA = 'component_app'  # Specify the schema to use
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # File upload configuration
-    UPLOAD_FOLDER = '/components'  # Mount point for WebDAV
-    UPLOAD_URL_PREFIX = 'http://31.182.67.115/webdav/components'  # External WebDAV URL
+    # WebDAV configuration - no local file system mounting needed
+    WEBDAV_BASE_URL = 'http://31.182.67.115/webdav/components'  # Direct WebDAV URL
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload size
     
-    # Create local directories for fallback/testing
+    # Legacy upload folder for backward compatibility (if needed for temp files)
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app/static/uploads')
     LOCAL_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app/static/uploads')
-    os.makedirs('static/uploads', exist_ok=True)

@@ -15,8 +15,8 @@ NC='\033[0m' # No Color
 
 # Project root directory
 PROJECT_ROOT="/mnt/c/Users/Administrator/DataspellProjects/webapp_components"
-WORKFLOW_DIR="$PROJECT_ROOT/claude_workflow"
-TEST_REPORTS_FILE="$WORKFLOW_DIR/test_reports.md"
+DOCS_DIR="$PROJECT_ROOT/docs"
+TEST_REPORTS_FILE="$DOCS_DIR/test_reports.md"
 
 echo -e "${BOLD}${BLUE}🧪 Update Test Reports${NC}"
 echo -e "${BLUE}======================${NC}"

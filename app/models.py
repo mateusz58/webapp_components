@@ -47,22 +47,27 @@ class ComponentTypeProperty(Base):
         """Return a human-readable property name"""
         return self.property_name.replace('_', ' ').title()
     
+    def get_property_definition(self):
+        return Property.query.filter_by(property_key=self.property_name).first()
+    
     def get_options(self):
-        """Get options for this property based on property_name"""
-        # Define options based on property name and type
-        if self.property_type == 'select':
-            if self.property_name == 'material':
-                return ['cotton', 'polyester', 'wool', 'silk', 'linen', 'denim', 'satin', 'velvet', 'leather', 'synthetic', 'plastic', 'metal', 'wood', 'bone', 'mother of pearl', 'acrylic', 'brass', 'steel', 'nylon', 'nickel', 'aluminum', 'cardboard', 'paper', 'vinyl', 'fabric']
-            elif self.property_name == 'color':
-                return ['black', 'white', 'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'brown', 'gray', 'navy', 'beige', 'cream', 'silver', 'gold', 'bronze', 'copper', 'chrome', 'antique brass']
-        elif self.property_type == 'multiselect':
-            if self.property_name == 'gender':
-                return ['ladies', 'men', 'unisex', 'all', 'kids']
-            elif self.property_name == 'style':
-                return ['casual', 'formal', 'sport', 'winter', 'summer', 'vintage', 'modern', 'classic']
-            elif self.property_name == 'subbrand':
-                return ['MAR Sport', 'MAR Classic', 'MMC Pro', 'MMC Casual', 'UBL Premium', 'UBL Basic']
+        property_definition = self.get_property_definition()
+        if property_definition:
+            return property_definition.get_dynamic_options()
         return []
+    
+    def get_widget_config(self):
+        property_definition = self.get_property_definition()
+        if property_definition:
+            config = property_definition.get_widget_config()
+            config['required'] = self.is_required
+            return config
+        return {
+            'type': self.property_type,
+            'required': self.is_required,
+            'options': [],
+            'placeholder': self.get_placeholder()
+        }
     
     def get_placeholder(self):
         """Get placeholder text for this property"""
@@ -76,6 +81,44 @@ class ComponentTypeProperty(Base):
             elif self.property_name == 'subcategory':
                 return 'e.g., jacket, pants, dress, shirt'
         return ''
+
+class Property(Base):
+    __tablename__ = 'property'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    property_key = db.Column(db.String(100), unique=True, nullable=False)
+    display_name = db.Column(db.String(100), nullable=False)
+    data_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    options = db.Column(db.JSON, default=[])
+    
+    def __repr__(self):
+        return f'<Property {self.property_key}>'
+    
+    def get_dynamic_options(self):
+        if self.property_key == 'material':
+            return [{'id': m.id, 'name': m.name} for m in Material.query.all()]
+        elif self.property_key == 'color':
+            return [{'id': c.id, 'name': c.name} for c in Color.query.all()]
+        elif self.property_key == 'category':
+            return [{'id': c.id, 'name': c.name} for c in Category.query.all()]
+        elif self.property_key == 'brand':
+            return [{'id': b.id, 'name': b.name} for b in Brand.query.all()]
+        elif self.property_key == 'supplier':
+            return [{'id': s.id, 'name': s.supplier_code} for s in Supplier.query.all()]
+        return self.options or []
+    
+    def get_widget_config(self):
+        config = {
+            'type': self.data_type,
+            'required': False,
+            'options': self.get_dynamic_options(),
+            'placeholder': self.description
+        }
+        return config
 
 class Supplier(Base):
     __tablename__ = 'supplier'
@@ -875,3 +918,5 @@ def remove_category_from_component(component_id, category_id):
     except Exception as e:
         db.session.rollback()
         raise e
+
+

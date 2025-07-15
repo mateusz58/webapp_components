@@ -89,7 +89,7 @@ class TestComponentCreationWorkflow(unittest.TestCase):
             
             # Try multiple ways to navigate to component creation
             navigation_selectors = [
-                "a[href*='/components/new']",
+                "a[href*='/component/new']",
                 "a[href*='/components/create']", 
                 ".btn-create-component",
                 ".create-component"
@@ -128,8 +128,8 @@ class TestComponentCreationWorkflow(unittest.TestCase):
                 time.sleep(1)
                 nav_link.click()
             else:
-                print(f"🔍 Step 3: Direct navigation to /components/new...")
-                self.driver.get(f"{self.base_url}/components/new")
+                print(f"🔍 Step 3: Direct navigation to /component/new...")
+                self.driver.get(f"{self.base_url}/component/new")
             
             # Wait for form to load
             print(f"🔍 Step 4: Waiting for component creation form...")
@@ -191,7 +191,7 @@ class TestComponentCreationWorkflow(unittest.TestCase):
         try:
             # Navigate to form
             print(f"🔍 Step 1: Navigating to component creation form...")
-            self.driver.get(f"{self.base_url}/components/new")
+            self.driver.get(f"{self.base_url}/component/new")
             self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "form")))
             self._add_visual_indicator("Starting form filling test", "blue")
             time.sleep(2)
@@ -283,9 +283,19 @@ class TestComponentCreationWorkflow(unittest.TestCase):
                 print(f"   - Product Number: {test_product_number}")
                 print(f"   - Description: {test_description}")
                 
-                # Uncomment next line to actually submit the form
-                # submit_button.click()
-                # print(f"🔍 Form submitted!")
+                # Actually submit the form now (was previously commented out)
+                print(f"🚀 SUBMITTING FORM...")
+                self._safe_click(submit_button)
+                print(f"🔍 Form submitted!")
+                
+                # Wait for response
+                time.sleep(5)
+                current_url = self.driver.current_url
+                if "/component/" in current_url and "/component/new" not in current_url:
+                    print(f"✅ SUCCESS: Form submitted and redirected to component detail page")
+                    print(f"🔗 URL: {current_url}")
+                else:
+                    print(f"⚠️ Form submitted but no redirect detected - may need variant")
                 
                 time.sleep(3)
             else:
@@ -306,7 +316,7 @@ class TestComponentCreationWorkflow(unittest.TestCase):
         
         try:
             print(f"🔍 Step 1: Loading form for validation testing...")
-            self.driver.get(f"{self.base_url}/components/new")
+            self.driver.get(f"{self.base_url}/component/new")
             self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "form")))
             self._add_visual_indicator("Testing form validation", "orange")
             time.sleep(2)
@@ -318,7 +328,10 @@ class TestComponentCreationWorkflow(unittest.TestCase):
             if submit_buttons:
                 submit_button = submit_buttons[0]
                 self._highlight_element(submit_button, "Submitting empty form")
-                submit_button.click()
+                # Scroll to button and click using JavaScript to avoid interception
+                self.driver.execute_script("arguments[0].scrollIntoView(true);", submit_button)
+                time.sleep(1)
+                self.driver.execute_script("arguments[0].click();", submit_button)
                 time.sleep(2)
                 
                 # Look for validation messages

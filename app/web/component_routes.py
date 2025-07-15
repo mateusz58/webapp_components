@@ -71,12 +71,23 @@ def _save_pending_files_atomically(all_pending_files):
 
 def _get_form_data():
     """Extract common form data"""
-    return {
+    data = {
         'product_number': request.form.get('product_number', '').strip(),
         'description': request.form.get('description', '').strip(),
         'supplier_id': request.form.get('supplier_id', type=int),
-        'component_type_id': request.form.get('component_type_id', type=int)
+        'component_type_id': request.form.get('component_type_id', type=int),
+        'brand_id': request.form.get('brand_id', type=int),
+        'new_brand_name': request.form.get('new_brand_name', '').strip(),
+        'subbrand_id': request.form.get('subbrand_id', '').strip(),
+        'new_subbrand_name': request.form.get('new_subbrand_name', '').strip()
     }
+    
+    # Also get any brand_ids[] array data
+    brand_ids = request.form.getlist('brand_ids[]')
+    if brand_ids:
+        data['brand_ids[]'] = brand_ids
+    
+    return data
 
 
 def _validate_required_fields(form_data):
@@ -945,22 +956,18 @@ def new_component():
             # Start background verification (async-like using threading)
             import threading
             
+            # Capture the app instance for the background thread
+            app = current_app._get_current_object()
+            
             def verify_in_background():
-                try:
-                    images_verified = _verify_images_accessible(component_id)
-                    session[f'component_creation_{component_id}'] = {
-                        'status': 'ready' if images_verified else 'ready_with_warning',
-                        'created_at': time.time(),
-                        'verified': images_verified
-                    }
-                    current_app.logger.info(f"Background verification completed for component {component_id}: {images_verified}")
-                except Exception as e:
-                    current_app.logger.error(f"Background verification failed for component {component_id}: {e}")
-                    session[f'component_creation_{component_id}'] = {
-                        'status': 'ready_with_warning',
-                        'created_at': time.time(),
-                        'verified': False
-                    }
+                with app.app_context():
+                    try:
+                        images_verified = _verify_images_accessible(component_id)
+                        # Can't access session in background thread during testing
+                        # Just log the completion
+                        current_app.logger.info(f"Background verification completed for component {component_id}: {images_verified}")
+                    except Exception as e:
+                        current_app.logger.error(f"Background verification failed for component {component_id}: {e}")
             
             # Start verification in background
             verification_thread = threading.Thread(target=verify_in_background)
