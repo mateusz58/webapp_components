@@ -82,39 +82,39 @@ check_content_quality "$DOCS_DIR/project_status.md" "project_status.md"
 echo
 
 # Test Reports (should be updated after test runs)
-check_file_status "$DOCS_DIR/test_reports.md" "test_reports.md" 24
-check_content_quality "$DOCS_DIR/test_reports.md" "test_reports.md"
-echo
+check_file_status "$DOCS_DIR/test_reports_generated/test_reports.md" "test_reports.md" 24
+check_content_quality "$DOCS_DIR/test_reports_generated/test_reports.md" "test_reports.md"
+
 
 # Development Rules (updated less frequently)
 check_file_status "$DOCS_DIR/development_rules.md" "development_rules.md" 168  # 1 week
 check_content_quality "$DOCS_DIR/development_rules.md" "development_rules.md"
-echo
+
 
 # Testing Rules (updated less frequently)
 check_file_status "$DOCS_DIR/testing_rules.md" "testing_rules.md" 168  # 1 week
 check_content_quality "$DOCS_DIR/testing_rules.md" "testing_rules.md"
-echo
+
 
 # API Documentation (should be current with API changes)
 check_file_status "$DOCS_DIR/api_documentation.md" "api_documentation.md" 72  # 3 days
 check_content_quality "$DOCS_DIR/api_documentation.md" "api_documentation.md"
-echo
+
 
 # Database Schema Guide (updated with schema changes)
 check_file_status "$DOCS_DIR/database_schema_guide.md" "database_schema_guide.md" 168  # 1 week
 check_content_quality "$DOCS_DIR/database_schema_guide.md" "database_schema_guide.md"
-echo
+
 
 # Architecture Overview (updated with major changes)
 check_file_status "$DOCS_DIR/architecture_overview.md" "architecture_overview.md" 336  # 2 weeks
 check_content_quality "$DOCS_DIR/architecture_overview.md" "architecture_overview.md"
-echo
+
 
 # Instructions for Claude (should be stable)
 check_file_status "$DOCS_DIR/instructions_for_claude.md" "instructions_for_claude.md" 720  # 1 month
 check_content_quality "$DOCS_DIR/instructions_for_claude.md" "instructions_for_claude.md"
-echo
+
 
 # Overall compliance check
 echo -e "${BOLD}${BLUE}Overall Compliance Summary:${NC}"
@@ -136,8 +136,8 @@ else
 fi
 
 # Check test coverage
-if [[ -f "$DOCS_DIR/test_reports.md" ]]; then
-    coverage_info=$(grep -i "coverage" "$DOCS_DIR/test_reports.md" | tail -1 || echo "")
+if [[ -f "$DOCS_DIR/test_reports_generated/test_reports.md" ]]; then
+    coverage_info=$(grep -i "coverage" "$DOCS_DIR/test_reports_generated/test_reports.md" | tail -1 || echo "")
     if [[ -n "$coverage_info" ]]; then
         echo -e "${BLUE}📊 Latest test coverage info: $coverage_info${NC}"
     fi
@@ -151,7 +151,7 @@ if [[ ! -f "$DOCS_DIR/project_status.md" ]] || [[ $((($(date +%s) - $(stat -c %Y
     echo -e "${YELLOW}📝 Update project_status.md with current task progress${NC}"
 fi
 
-if [[ ! -f "$DOCS_DIR/test_reports.md" ]] || [[ $((($(date +%s) - $(stat -c %Y "$DOCS_DIR/test_reports.md" 2>/dev/null || echo 0)) / 3600)) -gt 24 ]]; then
+if [[ ! -f "$DOCS_DIR/test_reports_generated/test_reports.md" ]] || [[ $((($(date +%s) - $(stat -c %Y "$DOCS_DIR/test_reports_generated/test_reports.md" 2>/dev/null || echo 0)) / 3600)) -gt 24 ]]; then
     echo -e "${YELLOW}🧪 Run tests and update test_reports.md${NC}"
 fi
 

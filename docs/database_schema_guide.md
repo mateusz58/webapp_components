@@ -28,6 +28,67 @@ Core Entities:
 
 ### Core Tables
 
+#### `property` - Master Property Definitions
+```sql
+PRIMARY KEY: id (serial)
+UNIQUE CONSTRAINT: property_key
+
+Columns:
+- id: Primary key
+- property_key: Unique identifier (e.g., 'material', 'color', 'style')
+- display_name: Human-readable name for UI
+- data_type: UI widget type ('select', 'text', 'pdf', 'picture', 'multiselect')
+- description: Property description
+- is_active: Enable/disable property
+- options: JSON array of options (populated from reference tables)
+- created_at, updated_at: Automatic timestamps
+
+Dynamic Options Population:
+- property_key 'material' → options from material table
+- property_key 'color' → options from color table  
+- property_key 'category' → options from category table
+- property_key 'gender' → options from gender table
+- property_key 'style' → options from style table
+- property_key 'brand' → options from brand table
+- property_key 'supplier' → options from supplier table
+- Custom properties → static options in JSON field
+
+Business Rules:
+- All options dynamically populated from reference tables (NO HARDCODING)
+- Universal additional table support - easy to add new reference tables
+- PropertyService.get_dynamic_options() manages option population
+- Extensible design supports any new property type
+- Options dynamically populated based on property_key naming convention
+- data_type determines UI rendering (select dropdown, text input, file upload)
+- property_key maps to reference tables for structured data
+```
+
+#### `component_type_property` - Component Type Property Configuration
+```sql
+PRIMARY KEY: id (serial)
+UNIQUE CONSTRAINT: (component_type_id, property_name)
+
+Columns:
+- id: Primary key
+- component_type_id: FK to component_type (REQUIRED)
+- property_name: Maps to property.property_key
+- property_type: Data type for validation
+- is_required: Validation flag
+- display_order: UI ordering
+
+Purpose: Defines which properties are available/required for each component type
+
+Business Logic:
+- Links component types to available properties from property table
+- Enables different component types to have different property sets
+- Supports validation rules (required/optional) per component type
+- Controls UI form generation order via display_order
+
+Example Configuration:
+- T-Shirt component type → material (required), color (required), style (optional)
+- Electronics component type → material (required), warranty (required)
+```
+
 #### `component` - Main Product Entity
 ```sql
 PRIMARY KEY: id (serial)
@@ -39,7 +100,7 @@ Columns:
 - description: Product description  
 - component_type_id: FK to component_type (REQUIRED)
 - supplier_id: FK to supplier (OPTIONAL)
-- properties: JSONB for flexible attributes
+- properties: JSONB for dual property system (predefined + custom properties)
 - proto_status, sms_status, pps_status: Workflow statuses ('pending'|'ok'|'not_ok')
 - proto_comment, sms_comment, pps_comment: Status comments
 - proto_date, sms_date, pps_date: Status timestamps
@@ -266,6 +327,86 @@ Triggered: ON UPDATE for all tables with updated_at column
 
 #### `ensure_picture_component_id()`
 - Automatically sets component_id when variant_id is provided
+
+## Dynamic Property System Architecture
+
+### Dual Property System Design
+
+The component management system implements a sophisticated dual property system:
+
+#### **1. Predefined Properties (Structured)**
+```
+property → component_type_property → component_type → component.properties (structured data)
+```
+
+**Flow**:
+1. **Property Definition**: Admin defines property in `property` table
+2. **Type Assignment**: Property linked to component types via `component_type_property`
+3. **Form Generation**: UI automatically generates form fields based on component type
+4. **Data Storage**: Values stored in component.properties JSONB with validation
+
+**Example**:
+```sql
+-- Property definition
+property: {property_key: "material", data_type: "select", options: ["Cotton", "Polyester"]}
+
+-- Type assignment  
+component_type_property: {component_type_id: 1, property_name: "material", is_required: true}
+
+-- Data storage
+component.properties: {"material": "Cotton", "custom_notes": "Special fabric"}
+```
+
+#### **2. Custom Properties (Flexible)**
+```
+User Input → component.properties (flexible JSONB)
+```
+
+Users can add any custom properties not defined in the predefined system:
+```json
+{
+  "material": "Cotton",           // Predefined property
+  "custom_thread_count": 200,     // Custom property
+  "special_treatment": "waterproof", // Custom property  
+  "internal_notes": "Handle with care" // Custom property
+}
+```
+
+#### **3. Dynamic Options Population**
+
+Options for predefined properties are populated dynamically:
+
+```python
+# System automatically populates options based on property_key
+if property.property_key == "material":
+    property.options = Material.query.all()  # From material table
+elif property.property_key == "color":
+    property.options = Color.query.all()     # From color table
+elif property.property_key == "category":
+    property.options = Category.query.all()  # From category table
+```
+
+#### **4. Form Generation Logic**
+
+The system generates forms automatically:
+
+1. **Get Component Type**: Identify component type from form/context
+2. **Load Properties**: Query component_type_property for available properties  
+3. **Resolve Options**: Populate options from reference tables
+4. **Render Form**: Generate appropriate UI widgets based on data_type
+5. **Validate Input**: Apply required/optional rules per component type
+
+#### **5. Data Validation**
+
+**Predefined Properties**: 
+- Validated against property.options
+- Required/optional per component_type_property.is_required
+- Type validation per property.data_type
+
+**Custom Properties**:
+- No structural validation (user freedom)
+- Stored as-is in JSONB field
+- Can be any JSON-compatible data type
 
 ## Data Flow & Business Rules
 

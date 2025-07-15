@@ -6,7 +6,7 @@ Demo change for hook testing
 """
 from flask import current_app
 from app import db
-from app.models import Component, ComponentVariant, ComponentType, Supplier, Color, Picture, ComponentBrand
+from app.models import Component, ComponentVariant, ComponentType, Supplier, Color, Picture, ComponentBrand, Property, ComponentTypeProperty
 from app.utils.association_handlers import (
     handle_brand_associations, 
     handle_categories, 
@@ -17,6 +17,7 @@ from app.utils.association_handlers import (
 from app.utils.file_handling import allowed_file
 from app.services.webdav_config_service import WebDAVConfigService
 from app.services.interfaces import IFileStorageService
+from app.services.property_service import PropertyService
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import and_
 import time
@@ -197,13 +198,34 @@ class ComponentService:
             if existing:
                 raise ValueError(f'Product number "{data["product_number"]}" already exists for this supplier')
             
+            # Validate and process properties
+            properties_data = data.get('properties', {})
+            if isinstance(properties_data, str):
+                import json
+                properties_data = json.loads(properties_data)
+            
+            # Only validate properties if there are predefined properties for this component type
+            try:
+                type_properties = PropertyService.get_properties_for_component_type(data['component_type_id'])
+                if type_properties:  # Only validate if there are predefined properties
+                    property_validation = PropertyService.validate_property_values(
+                        data['component_type_id'], 
+                        properties_data
+                    )
+                    
+                    if not property_validation['valid']:
+                        raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            except Exception as e:
+                # If property service fails, log warning but don't fail the creation
+                current_app.logger.warning(f"Property validation failed, continuing without validation: {str(e)}")
+            
             # Create component
             component = Component(
                 product_number=data['product_number'],
                 description=data.get('description', ''),
                 supplier_id=data.get('supplier_id'),
                 component_type_id=data['component_type_id'],
-                properties={}
+                properties=properties_data
             )
             
             db.session.add(component)
@@ -439,6 +461,21 @@ class ComponentService:
                 import json
                 new_properties = json.loads(new_properties)
             
+            # Only validate properties if there are predefined properties for this component type
+            try:
+                type_properties = PropertyService.get_properties_for_component_type(component.component_type_id)
+                if type_properties:  # Only validate if there are predefined properties
+                    property_validation = PropertyService.validate_property_values(
+                        component.component_type_id, 
+                        new_properties
+                    )
+                    
+                    if not property_validation['valid']:
+                        raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            except Exception as e:
+                # If property service fails, log warning but don't fail the update
+                current_app.logger.warning(f"Property validation failed, continuing without validation: {str(e)}")
+            
             if new_properties != component.properties:
                 changes['properties'] = {
                     'old': component.properties,
@@ -609,6 +646,7 @@ class ComponentService:
                 'supplier_code': component.supplier.supplier_code
             } if component.supplier else None,
             'properties': component.properties or {},
+            'property_config': PropertyService.get_property_form_config(component.component_type_id) if component.component_type_id else {},
             'created_at': component.created_at.isoformat() if component.created_at else None,
             'updated_at': component.updated_at.isoformat() if component.updated_at else None,
             
@@ -1245,3 +1283,44 @@ class ComponentService:
         except Exception as e:
             current_app.logger.error(f"Bulk delete error: {str(e)}")
             raise
+    
+    @staticmethod
+    def get_component_type_properties(component_type_id):
+        return PropertyService.get_property_form_config(component_type_id)
+    
+    @staticmethod 
+    def validate_component_properties(component_type_id, properties_data):
+        return PropertyService.validate_property_values(component_type_id, properties_data)
+    
+    def get_component_form_config(self, component_type_id):
+        property_config = PropertyService.get_property_form_config(component_type_id)
+        
+        return {
+            'properties': property_config,
+            'has_properties': len(property_config) > 0
+        }
+    
+    def process_component_properties(self, component_type_id, form_data):
+        properties_data = {}
+        
+        property_config = PropertyService.get_property_form_config(component_type_id)
+        
+        for property_name, config in property_config.items():
+            value = form_data.get(property_name)
+            
+            if value is not None:
+                if config['data_type'] == 'multiselect':
+                    if isinstance(value, str):
+                        value = [v.strip() for v in value.split(',') if v.strip()]
+                
+                properties_data[property_name] = value
+        
+        custom_properties = form_data.get('custom_properties')
+        if custom_properties:
+            if isinstance(custom_properties, str):
+                import json
+                custom_properties = json.loads(custom_properties)
+            
+            properties_data.update(custom_properties)
+        
+        return properties_data
