@@ -16,9 +16,9 @@ class PropertyService:
     
     @staticmethod
     def get_properties_for_component_type(component_type_id):
-        return db.session.query(ComponentTypeProperty).options(
-            selectinload(ComponentTypeProperty.component_type)
-        ).filter_by(component_type_id=component_type_id).order_by(ComponentTypeProperty.display_order).all()
+        return db.session.query(ComponentTypeProperty).filter_by(
+            component_type_id=component_type_id
+        ).order_by(ComponentTypeProperty.display_order).all()
     
     @staticmethod
     def get_property_form_config(component_type_id):

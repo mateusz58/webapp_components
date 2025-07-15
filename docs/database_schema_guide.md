@@ -47,9 +47,17 @@ Dynamic Options Population:
 - property_key 'material' → options from material table
 - property_key 'color' → options from color table  
 - property_key 'category' → options from category table
+- property_key 'gender' → options from gender table
+- property_key 'style' → options from style table
+- property_key 'brand' → options from brand table
+- property_key 'supplier' → options from supplier table
 - Custom properties → static options in JSON field
 
 Business Rules:
+- All options dynamically populated from reference tables (NO HARDCODING)
+- Universal additional table support - easy to add new reference tables
+- PropertyService.get_dynamic_options() manages option population
+- Extensible design supports any new property type
 - Options dynamically populated based on property_key naming convention
 - data_type determines UI rendering (select dropdown, text input, file upload)
 - property_key maps to reference tables for structured data

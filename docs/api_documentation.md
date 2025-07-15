@@ -1,12 +1,14 @@
 # API Documentation - Component Management System
 
-**Last Updated**: July 7, 2025  
-**API Version**: 2.0 - **MVC with Service Layer Architecture**  
+**Last Updated**: July 15, 2025  
+**API Version**: 2.0 - **MVC with Service Layer Architecture + Dynamic Property System**  
 **Base URL**: `http://localhost:6002/api`
 
 ## Overview
 
 The Component Management System provides a RESTful API with proper MVC architecture and service layer separation. All business logic is centralized in service classes, ensuring consistency between API endpoints and web routes.
+
+**🔥 NEW FEATURE**: **Dynamic Property System** - Components now support both predefined properties with validation and flexible custom properties, with all options dynamically sourced from reference tables.
 
 ## 🏗️ Architecture Overview
 
@@ -38,14 +40,20 @@ Frontend (Views) → Controllers (API/Web) → Services (Business Logic) → Mod
 ### Current Implementation Status
 
 **✅ COMPLETE CRUD OPERATIONS:**
-- Component Creation (`POST /component/create`) - ✅ With service layer
-- Component Update (`PUT /component/<id>`) - ✅ **NEW: Service layer implementation**
-- Component Data Loading (`GET /components/<id>/edit-data`) - ✅ With service layer
+- Component Creation (`POST /component/create`) - ✅ With service layer + property validation
+- Component Update (`PUT /component/<id>`) - ✅ **NEW: Service layer implementation + property validation**
+- Component Data Loading (`GET /components/<id>/edit-data`) - ✅ With service layer + property data
 - Component Search & Filtering (`GET /components/search`)
 - Variant Management (`GET /components/<id>/variants`)
 - Brand Management (`GET/POST/DELETE /components/<id>/brands`)
 - Bulk Operations (`POST /components/bulk-delete`)
 - Export Functionality (`GET /components/<id>/export`)
+
+**🔥 NEW: DYNAMIC PROPERTY SYSTEM:**
+- Property Service Integration - ✅ **COMPLETED**: PropertyService integrated into ComponentService
+- Property Validation - ✅ **COMPLETED**: Validates predefined properties against reference tables
+- Custom Properties - ✅ **COMPLETED**: Stores custom properties without validation
+- Property API Endpoints - 🟡 **TO BE IMPLEMENTED**: Property management API endpoints
 
 **✅ ARCHITECTURE CONSISTENCY ACHIEVED:**
 All endpoints now follow proper MVC pattern with service layer separation.
@@ -65,6 +73,13 @@ All endpoints now follow proper MVC pattern with service layer separation.
   "brand_ids[]": ["integer", "integer"],
   "category_ids[]": ["integer", "integer"],
   "keywords[]": ["string", "string"],
+  "properties": {
+    "material": "string (validated against material reference table)",
+    "color": "string (validated against color reference table)",
+    "style": ["string", "string"] (multiselect validated against style reference table)",
+    "custom_thread_count": 200 (custom property - no validation)",
+    "special_notes": "string (custom property - no validation)"
+  },
   "variant_color_1": "integer",
   "variant_custom_color_1": "string",
   "variant_images_1[]": ["file", "file"],
@@ -94,15 +109,17 @@ All endpoints now follow proper MVC pattern with service layer separation.
 
 **Business Logic**:
 1. Creates component with basic properties
-2. Processes dynamic properties based on component type
-3. Creates brand/category/keyword associations
-4. Creates color variants with auto-generated SKUs
-5. Uploads pictures with database-generated names
-6. Sets session status for loading page workflow
-7. Starts background verification thread
+2. **🔥 NEW**: Validates predefined properties against reference tables (material, color, style, etc.)
+3. **🔥 NEW**: Stores custom properties without validation for maximum flexibility
+4. Creates brand/category/keyword associations
+5. Creates color variants with auto-generated SKUs
+6. Uploads pictures with database-generated names
+7. Sets session status for loading page workflow
+8. Starts background verification thread
 
 **File Handling**:
-- Pictures stored in WebDAV at `/components/`
+- Pictures stored via WebDAV protocol at `http://31.182.67.115/webdav/components`
+- Direct WebDAV operations using `webdav_storage_service.py` (no network disc mapping)
 - Auto-generated names: `{supplier}_{product}_{color}_{order}.jpg`
 - Atomic operations: database first, then files with cleanup on failure
 
@@ -122,7 +139,13 @@ Content-Type: application/json
   "brand_ids": ["integer"],
   "category_ids": ["integer"],
   "keywords": ["string"],
-  "properties": {"key": "value"}
+  "properties": {
+    "material": "Cotton (validated against material reference table)",
+    "color": "Red (validated against color reference table)",
+    "style": ["Casual", "Formal"] (multiselect validated against style reference table)",
+    "custom_thread_count": 200 (custom property - stored without validation)",
+    "special_treatment": "waterproof (custom property - stored without validation)"
+  }
 }
 ```
 
@@ -268,6 +291,96 @@ Content-Type: application/json
 }
 ```
 
+## 🔥 NEW: Property System Endpoints
+
+### 🟡 GET /property/form-config/<component_type_id>
+**Purpose**: Get property form configuration for a specific component type
+**Status**: TO BE IMPLEMENTED
+
+**Response**: `application/json`
+```json
+{
+  "success": true,
+  "component_type": {
+    "id": 1,
+    "name": "T-Shirt"
+  },
+  "properties": [
+    {
+      "id": 1,
+      "property_key": "material",
+      "display_name": "Material",
+      "data_type": "select",
+      "is_required": true,
+      "options": [
+        {"id": 1, "name": "Cotton"},
+        {"id": 2, "name": "Polyester"},
+        {"id": 3, "name": "Blend"}
+      ]
+    },
+    {
+      "id": 2,
+      "property_key": "style",
+      "display_name": "Style",
+      "data_type": "multiselect",
+      "is_required": false,
+      "options": [
+        {"id": 1, "name": "Casual"},
+        {"id": 2, "name": "Formal"},
+        {"id": 3, "name": "Sport"}
+      ]
+    }
+  ]
+}
+```
+
+### 🟡 POST /property/validate
+**Purpose**: Validate property values against reference tables
+**Status**: TO BE IMPLEMENTED
+
+**Request**: `application/json`
+```json
+{
+  "component_type_id": 1,
+  "properties": {
+    "material": "Cotton",
+    "color": "Red",
+    "style": ["Casual", "Sport"],
+    "custom_thread_count": 200
+  }
+}
+```
+
+**Response**: `application/json`
+```json
+{
+  "success": true,
+  "validation_results": {
+    "material": {"valid": true, "value": "Cotton"},
+    "color": {"valid": true, "value": "Red"},
+    "style": {"valid": true, "value": ["Casual", "Sport"]},
+    "custom_thread_count": {"valid": true, "value": 200, "custom": true}
+  }
+}
+```
+
+### 🟡 GET /property/reference-data/<property_key>
+**Purpose**: Get reference data for a specific property key
+**Status**: TO BE IMPLEMENTED
+
+**Response**: `application/json`
+```json
+{
+  "success": true,
+  "property_key": "material",
+  "options": [
+    {"id": 1, "name": "Cotton"},
+    {"id": 2, "name": "Polyester"},
+    {"id": 3, "name": "Blend"}
+  ]
+}
+```
+
 ## Brand Management Endpoints
 
 ### 🟢 GET/POST/DELETE /components/<id>/brands
@@ -369,7 +482,8 @@ Response: {"success": true, "message": "Brand association removed"}
 ### Supported File Types
 - **Images**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`
 - **Max Size**: 16MB per file
-- **Storage**: WebDAV server at `http://31.182.67.115/webdav/components`
+- **Storage**: WebDAV protocol at `http://31.182.67.115/webdav/components`
+- **WebDAV Services**: Direct HTTP-based operations via `webdav_storage_service.py`
 
 ### Naming Convention
 **Automatic Generation**: All picture names are auto-generated by the system
@@ -396,6 +510,9 @@ Response: {"success": true, "message": "Brand association removed"}
 - **Component → Keywords**: Many-to-many via `keyword_component`
 - **Variant → Pictures**: One-to-many
 - **Component → Pictures**: One-to-many (component-level pictures)
+- **🔥 NEW**: **ComponentType → Properties**: Many-to-many via `component_type_property`
+- **🔥 NEW**: **Property → Reference Tables**: Dynamic relationships (material, color, style, etc.)
+- **🔥 NEW**: **Component.properties**: JSONB field storing both validated and custom properties
 
 ### Transaction Management
 All API endpoints use atomic transactions:

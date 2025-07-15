@@ -157,22 +157,29 @@ ensure_picture_component_id()             # Ensures data consistency
 
 ### Property System Overview
 
-The component management system implements a sophisticated **dual property system** that provides both structured validation and flexible customization:
+The component management system implements a sophisticated **dual property system** that provides both structured validation and flexible customization with **zero hardcoding** and **universal extensibility**:
+
+#### **🎯 Core Principles**
+
+1. **🚫 No Hardcoding Rule**: All options dynamically sourced from reference tables
+2. **🔗 Universal Additional Table**: Extensible design for any new property type
+3. **📊 Database-Driven Configuration**: All property definitions stored in database
+4. **⚡ Dynamic Option Population**: Runtime option loading from reference tables
 
 #### **1. Predefined Properties (Structured)**
 ```
-Property Master → Component Type Assignment → Form Generation → Data Storage
+Property Master → Component Type Assignment → Dynamic Options → Form Generation → Data Storage
 ```
 
 **Components**:
 - **Property Table**: Master definitions with data types and validation rules
 - **ComponentTypeProperty**: Links specific properties to component types
-- **Dynamic Options**: Options populated from reference tables (material, color, etc.)
+- **Reference Tables**: Dynamic option sources (material, color, gender, style, etc.)
 - **Form Generation**: Automatic UI form generation based on component type
 
 **Flow**:
 1. **Admin defines property**: `property_key="material"`, `data_type="select"`
-2. **System populates options**: From `material` table → `["Cotton", "Polyester", "Silk"]`
+2. **System populates options**: From `material` table → `[{"id": 1, "name": "Cotton"}, {"id": 2, "name": "Polyester"}]`
 3. **Type assignment**: Link "material" property to "T-Shirt" component type as required
 4. **Form generation**: UI automatically renders select dropdown with material options
 5. **Data storage**: Selected value stored in `component.properties` JSONB field
@@ -185,30 +192,55 @@ User Input → Direct Storage → component.properties (JSONB)
 **Purpose**: Users can add any custom properties not defined in the predefined system:
 ```json
 {
-  "material": "Cotton",                    // Predefined property
-  "custom_thread_count": 200,              // Custom property
-  "special_treatment": "waterproof",       // Custom property
-  "internal_notes": "Handle with care"     // Custom property
+  "material": "Cotton",                    // Predefined property (validated)
+  "color": "Red",                          // Predefined property (validated)
+  "style": ["Casual", "Formal"],           // Predefined property (validated)
+  "custom_thread_count": 200,              // Custom property (flexible)
+  "special_treatment": "waterproof",       // Custom property (flexible)
+  "internal_notes": "Handle with care"     // Custom property (flexible)
 }
 ```
 
-#### **3. Dynamic Options Population**
+#### **3. Dynamic Options Population (No Hardcoding)**
 
-The system automatically populates options based on property key naming conventions:
+The system automatically populates options from reference tables based on property key naming:
 
 ```python
-# PropertyService.populate_options()
-def populate_options(property_key):
-    if property_key == "material":
-        return Material.query.filter(Material.is_active == True).all()
-    elif property_key == "color":
-        return Color.query.all()
-    elif property_key == "category":
-        return Category.query.all()
-    # ... other reference tables
+# PropertyService.get_dynamic_options() - NO HARDCODING
+def get_dynamic_options(self):
+    if self.property_key == 'material':
+        return [{'id': m.id, 'name': m.name} for m in Material.query.all()]
+    elif self.property_key == 'color':
+        return [{'id': c.id, 'name': c.name} for c in Color.query.all()]
+    elif self.property_key == 'gender':
+        return [{'id': g.id, 'name': g.name} for g in Gender.query.all()]
+    elif self.property_key == 'style':
+        return [{'id': s.id, 'name': s.name} for s in Style.query.all()]
+    # ... extensible for any new reference table
+    return self.options or []
 ```
 
-#### **4. Form Generation Architecture**
+#### **4. Universal Additional Table Support**
+
+**Extensible Design**: Easy to add new property types without code changes:
+
+**Existing Reference Tables**:
+- `material` - Material types
+- `color` - Color options  
+- `gender` - Gender classifications
+- `style` - Style classifications
+- `category` - Category options
+- `brand` - Brand options
+- `supplier` - Supplier options
+
+**Future Extension Examples**:
+- `texture` - Texture options
+- `finish` - Finish types
+- `certification` - Certification options
+- `season` - Seasonal properties
+- Any new reference table following the same pattern
+
+#### **5. Form Generation Architecture**
 
 **Component Type Form Generation**:
 1. **Load component type**: Get component type from context
@@ -224,14 +256,17 @@ def populate_options(property_key):
 - `data_type="text"` → Text input field
 - `data_type="pdf"` → File upload (PDF only)
 - `data_type="picture"` → Image upload widget
+- `data_type="number"` → Numeric input
+- `data_type="date"` → Date picker
 
-#### **5. Business Logic Integration**
+#### **6. Business Logic Integration**
 
 **ComponentService Integration**:
-- **Property validation**: Validate predefined properties against available options
+- **Property validation**: Validate predefined properties against reference table options
 - **Custom property handling**: Store any custom properties without validation
 - **Form data processing**: Merge predefined and custom properties into JSONB
 - **API response building**: Return both structured and flexible property data
+- **Graceful fallback**: Only validates if component type has predefined properties
 
 **Data Flow**:
 ```
@@ -240,12 +275,14 @@ Form Submission → PropertyService.validate() → ComponentService.create/updat
 
 ### Property System Benefits
 
-1. **Flexibility**: Supports both structured and ad-hoc properties
-2. **Validation**: Predefined properties have proper validation and UI hints
-3. **Extensibility**: Easy to add new property types without schema changes
-4. **Performance**: JSONB indexing for efficient property queries
-5. **User Experience**: Automatic form generation with proper UI widgets
-6. **Maintainability**: Centralized property management through admin interface
+1. **🔧 Flexibility**: Supports both structured and ad-hoc properties
+2. **✅ Validation**: Predefined properties have proper validation and UI hints
+3. **⚡ Extensibility**: Easy to add new property types without schema changes
+4. **📊 Performance**: JSONB indexing for efficient property queries
+5. **🎨 User Experience**: Automatic form generation with proper UI widgets
+6. **🛠️ Maintainability**: Centralized property management through admin interface
+7. **🚫 No Hardcoding**: All options dynamically sourced from database tables
+8. **🔗 Universal Design**: Consistent pattern for all property types
 
 ---
 
@@ -309,7 +346,9 @@ utils/
 
 ### WebDAV Storage System
 - **External Storage**: `http://31.182.67.115/webdav/components`
-- **Local Mount**: `/components/` (mounted via `mount-webdav.sh`)
+- **Direct Protocol Access**: WebDAV protocol used directly (no network disc mapping)
+- **WebDAV Configuration**: `webdav_config_service.py` manages WebDAV settings
+- **WebDAV Storage Service**: `webdav_storage_service.py` handles file operations
 - **Automatic Naming**: Database triggers generate consistent file names
 - **File Validation**: Comprehensive type and size validation (16MB limit)
 
@@ -352,7 +391,8 @@ OLD: oldproduct-789_green_2.jpg      → NEW: newproduct-999_green_2.jpg
 - **Atomic Operations**: Database first, then files with cleanup on failure
 - **Image Processing**: PIL-based optimization and thumbnail generation
 - **Error Handling**: Comprehensive error handling and recovery
-- **Mount Detection**: Smart WebDAV availability detection
+- **WebDAV Protocol**: Direct HTTP-based file operations (no file system mounting)
+- **WebDAV Services**: Dedicated services for configuration and file operations
 
 ---
 

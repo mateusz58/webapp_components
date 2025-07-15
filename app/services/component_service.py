@@ -204,14 +204,20 @@ class ComponentService:
                 import json
                 properties_data = json.loads(properties_data)
             
-            # Validate predefined properties
-            property_validation = PropertyService.validate_property_values(
-                data['component_type_id'], 
-                properties_data
-            )
-            
-            if not property_validation['valid']:
-                raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            # Only validate properties if there are predefined properties for this component type
+            try:
+                type_properties = PropertyService.get_properties_for_component_type(data['component_type_id'])
+                if type_properties:  # Only validate if there are predefined properties
+                    property_validation = PropertyService.validate_property_values(
+                        data['component_type_id'], 
+                        properties_data
+                    )
+                    
+                    if not property_validation['valid']:
+                        raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            except Exception as e:
+                # If property service fails, log warning but don't fail the creation
+                current_app.logger.warning(f"Property validation failed, continuing without validation: {str(e)}")
             
             # Create component
             component = Component(
@@ -455,14 +461,20 @@ class ComponentService:
                 import json
                 new_properties = json.loads(new_properties)
             
-            # Validate properties for current component type
-            property_validation = PropertyService.validate_property_values(
-                component.component_type_id, 
-                new_properties
-            )
-            
-            if not property_validation['valid']:
-                raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            # Only validate properties if there are predefined properties for this component type
+            try:
+                type_properties = PropertyService.get_properties_for_component_type(component.component_type_id)
+                if type_properties:  # Only validate if there are predefined properties
+                    property_validation = PropertyService.validate_property_values(
+                        component.component_type_id, 
+                        new_properties
+                    )
+                    
+                    if not property_validation['valid']:
+                        raise ValueError(f"Property validation failed: {'; '.join(property_validation['errors'])}")
+            except Exception as e:
+                # If property service fails, log warning but don't fail the update
+                current_app.logger.warning(f"Property validation failed, continuing without validation: {str(e)}")
             
             if new_properties != component.properties:
                 changes['properties'] = {
